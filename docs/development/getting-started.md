@@ -17,6 +17,7 @@ pnpm dev
 | `pnpm check`         | Format, lint and types (vite-plus)              |
 | `pnpm typecheck`     | TypeScript check                                |
 | `pnpm test`          | Unit tests                                      |
+| `pnpm package`       | Both platforms in parallel, like a release (Windows host) |
 | `pnpm package:win`   | Windows installer (electron-builder)            |
 | `pnpm package:linux` | AppImage and `.deb` (Docker container on Windows) |
 | `pnpm release`       | Draft GitHub release                            |

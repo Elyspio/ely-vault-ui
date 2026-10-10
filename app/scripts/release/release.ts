@@ -10,11 +10,14 @@
  * prerelease followed by the "Dev" update channel. The version is injected at build time (package.json is unchanged),
  * the notes list the commits since the previous development build, and only the latest development builds are kept.
  *
+ * `pnpm package` (`release.ts package`) builds both platforms in parallel, like a release, without publishing.
+ *
  * `pnpm package:linux` (`release.ts package-linux`) only builds the Linux packages: electron-builder cannot build
  * the AppImage from Windows, so it runs in the container there, natively on Linux.
  */
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
+import { createInterface } from "node:readline";
 import path from "node:path";
 import semver from "semver";
 
@@ -186,12 +189,20 @@ function needsShell(command: string) {
 	return process.platform === "win32" && command === "pnpm";
 }
 
-function run(command: string, args: string[]) {
-	console.log(`\n> ${command} ${args.join(" ")}`);
+/**
+ * Runs a command; with a label (builds running in parallel), each output line is prefixed with it
+ */
+function run(command: string, args: string[], label?: string) {
+	const prefix = label ? `[${label}] ` : "";
+	console.log(`\n${prefix}> ${command} ${args.join(" ")}`);
 	return new Promise<void>((resolve, reject) => {
-		const child = spawn(command, args, { cwd: rootDir, stdio: "inherit", shell: needsShell(command) });
+		const child = spawn(command, args, { cwd: rootDir, stdio: label ? ["ignore", "pipe", "pipe"] : "inherit", shell: needsShell(command) });
+		if (label) {
+			createInterface({ input: child.stdout! }).on("line", (line) => console.log(prefix + line));
+			createInterface({ input: child.stderr! }).on("line", (line) => console.error(prefix + line));
+		}
 		child.on("error", reject);
-		child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`${command} ${args[0] ?? ""} failed with exit code ${code}`))));
+		child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`${prefix}${command} ${args[0] ?? ""} failed with exit code ${code}`))));
 	});
 }
 
@@ -255,26 +266,34 @@ function versionArgs(version?: string) {
 /**
  * Builds the AppImage and the deb into dist/: natively on Linux, in deploy/release/linux.Dockerfile elsewhere
  */
-async function packageLinux(runtime = process.platform === "linux" ? null : containerRuntime(), version?: string) {
+async function packageLinux(runtime = process.platform === "linux" ? null : containerRuntime(), version?: string, label?: string) {
 	mkdirSync(distDir, { recursive: true });
 
 	if (!runtime) {
-		await run("pnpm", ["build"]);
-		await run("pnpm", ["exec", "electron-builder", "--config", "config/electron-builder.yml", "--linux", "AppImage", "deb", "--publish", "never", ...versionArgs(version)]);
+		await run("pnpm", ["build"], label);
+		await run(
+			"pnpm",
+			["exec", "electron-builder", "--config", "config/electron-builder.yml", "--linux", "AppImage", "deb", "--publish", "never", ...versionArgs(version)],
+			label
+		);
 		return;
 	}
 
-	await run(runtime, ["build", "-f", path.join(repositoryDir, "deploy/release/linux.Dockerfile"), "-t", linuxImage, repositoryDir]);
-	await run(runtime, [
-		"run",
-		"--rm",
-		"--volume",
-		`${distDir.replaceAll("\\", "/")}:/project/dist`,
-		"--volume",
-		`${linuxImage}-cache:/root/.cache`,
-		...(version ? ["--env", `RELEASE_VERSION=${version}`] : []),
-		linuxImage,
-	]);
+	await run(runtime, ["build", "-f", path.join(repositoryDir, "deploy/release/linux.Dockerfile"), "-t", linuxImage, repositoryDir], label);
+	await run(
+		runtime,
+		[
+			"run",
+			"--rm",
+			"--volume",
+			`${distDir.replaceAll("\\", "/")}:/project/dist`,
+			"--volume",
+			`${linuxImage}-cache:/root/.cache`,
+			...(version ? ["--env", `RELEASE_VERSION=${version}`] : []),
+			linuxImage,
+		],
+		label
+	);
 }
 
 async function checkCode() {
@@ -291,10 +310,17 @@ async function buildAssets(name: string, release: ReleaseVersion, runtime: strin
 	rmSync(distDir, { recursive: true, force: true });
 	mkdirSync(distDir);
 
-	await packageLinux(runtime, version);
-
-	await run("pnpm", ["build"]);
-	await run("pnpm", ["exec", "electron-builder", "--config", "config/electron-builder.yml", "--win", "nsis", "--publish", "never", ...versionArgs(version)]);
+	// In parallel: the container builds its own out/ (app/out and app/dist are not in its build context),
+	// and both platforms write distinct files into dist/ (linux-unpacked, win-unpacked, latest-linux.yml, latest.yml)
+	const builds = await Promise.allSettled([
+		packageLinux(runtime, version, "linux"),
+		(async () => {
+			await run("pnpm", ["build"], "windows");
+			await run("pnpm", ["exec", "electron-builder", "--config", "config/electron-builder.yml", "--win", "nsis", "--publish", "never", ...versionArgs(version)], "windows");
+		})(),
+	]);
+	const failures = builds.filter((build): build is PromiseRejectedResult => build.status === "rejected").map((build) => (build.reason as Error).message);
+	if (failures.length > 0) throw new Error(`Build failed:\n- ${failures.join("\n- ")}`);
 
 	const assets = releaseAssets(name, release).map((file) => path.join(distDir, file));
 	const missing = assets.filter((file) => !existsSync(file));
@@ -338,6 +364,16 @@ async function main() {
 	console.log("Review the notes, then publish it on GitHub: the applications only see published releases.");
 }
 
+/**
+ * Builds the packages of both platforms in parallel, like a release, without publishing anything
+ */
+async function packageAll() {
+	if (process.platform !== "win32") throw new Error("Both platforms are built from Windows: the NSIS installer is built locally");
+	const packageJson = readPackageJson();
+	const assets = await buildAssets(packageJson.name, parseReleaseVersion(packageJson.version), containerRuntime());
+	console.log(`\nPackages built:\n- ${assets.join("\n- ")}`);
+}
+
 async function mainDev() {
 	const packageJson = readPackageJson();
 	if (process.platform !== "win32") throw new Error("Releases are built from Windows: the NSIS installer is built locally");
@@ -377,6 +413,7 @@ async function mainDev() {
 if (import.meta.main) {
 	try {
 		if (process.argv[2] === "package-linux") await packageLinux();
+		else if (process.argv[2] === "package") await packageAll();
 		else if (process.argv[2] === "dev") await mainDev();
 		else await main();
 	} catch (error) {
