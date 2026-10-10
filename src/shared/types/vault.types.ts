@@ -135,6 +135,19 @@ export type VaultSnapshot = {
 	lastSync: string | null;
 };
 
+/**
+ * Generator modes: Bitwarden password (character classes) or random bytes encoded in hex / base64
+ */
+export type PasswordGeneratorMode = "password" | "hex" | "base64";
+
+export type PasswordGeneratorOptions = {
+	mode: PasswordGeneratorMode;
+	/** Number of characters of the result */
+	length: number;
+	/** Special characters (password mode only) */
+	special: boolean;
+};
+
 /** A secret value of an item, fetched on demand */
 export type SecretRef = { kind: "password" } | { kind: "cardNumber" } | { kind: "cardCode" } | { kind: "sshPrivateKey" } | { kind: "field"; index: number };
 

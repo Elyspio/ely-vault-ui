@@ -1,5 +1,5 @@
 import { injectable } from "inversify";
-import type { CopyRef, SecretRef } from "@shared/types/vault.types";
+import type { CopyRef, PasswordGeneratorOptions, SecretRef } from "@shared/types/vault.types";
 
 @injectable()
 export class VaultService {
@@ -37,8 +37,8 @@ export class VaultService {
 		return window.preload.ipc.send.vault.verifyReprompt(password);
 	}
 
-	public generatePassword(length: number) {
-		return window.preload.ipc.send.vault.generatePassword(length);
+	public generatePassword(options: PasswordGeneratorOptions) {
+		return window.preload.ipc.send.vault.generatePassword(options);
 	}
 
 	/**
