@@ -8,19 +8,19 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 
 ## Commands
 
-| Task                                 | Command                                                                                  |
-| ------------------------------------ | ---------------------------------------------------------------------------------------- |
-| Install deps                         | `pnpm install`                                                                           |
-| Dev mode                             | `pnpm dev` (electron-vite, watch)                                                        |
-| Build                                | `pnpm build` (electron-vite build, output in `out/`)                                     |
-| Preview built app                    | `pnpm start`                                                                             |
-| Check (fmt + lint + types, auto-fix) | `pnpm check` (`vp check --fix`)                                                          |
-| Typecheck                            | `pnpm typecheck` (`tsc -b --noEmit`)                                                     |
-| Test                                 | `pnpm test` (`vp test`, `src/**/*.test.ts` and `scripts/**/*.test.ts`, node environment) |
-| Package Windows (NSIS)               | `pnpm package:win`                                                                       |
-| Package Linux (AppImage, .deb)       | `pnpm package:linux`                                                                     |
-| Draft GitHub release (Windows host)  | `pnpm release` (`scripts/release/release.ts`, see readme)                                |
-| Local test vault                     | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see readme)                           |
+| Task                                 | Command                                                                                              |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Install deps                         | `pnpm install`                                                                                       |
+| Dev mode                             | `pnpm dev` (electron-vite, watch)                                                                    |
+| Build                                | `pnpm build` (electron-vite build, output in `out/`)                                                 |
+| Preview built app                    | `pnpm start`                                                                                         |
+| Check (fmt + lint + types, auto-fix) | `pnpm check` (`vp check --fix`)                                                                      |
+| Typecheck                            | `pnpm typecheck` (`tsc -b --noEmit`)                                                                 |
+| Test                                 | `pnpm test` (`vp test`, `src/**/*.test.ts` and `scripts/**/*.test.ts`, node environment)             |
+| Package Windows (NSIS)               | `pnpm package:win`                                                                                   |
+| Package Linux (AppImage, .deb)       | `pnpm package:linux` (native on Linux, in the `deploy/release/linux.Dockerfile` container elsewhere) |
+| Draft GitHub release (Windows host)  | `pnpm release` (`scripts/release/release.ts`, see readme)                                            |
+| Local test vault                     | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see readme)                                       |
 
 Package manager: **pnpm 12.5.1**, Node **26+**. Build/dev use electron-vite (`config/electron.vite.config.ts`, also injects the renderer CSP), builder config at `config/electron-builder.yml`. The vite-plus toolchain (fmt/lint/test) is configured in `vite.config.ts`; `vite` is aliased to `@voidzero-dev/vite-plus-core` via the pnpm catalog (`pnpm-workspace.yaml`).
 

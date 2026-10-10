@@ -5,6 +5,9 @@
  * checks the repository, builds the Windows installer locally and the Linux packages in a container,
  * pushes the tag then creates the draft release (notes generated from the merged PRs) with the artifacts.
  * The release is only seen by the applications once published from GitHub.
+ *
+ * `pnpm package:linux` (`release.ts package-linux`) only builds the Linux packages: electron-builder cannot build
+ * the AppImage from Windows, so it runs in the container there, natively on Linux.
  */
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, rmSync, mkdirSync } from "node:fs";
@@ -121,6 +124,22 @@ function containerRuntime() {
 	return runtime;
 }
 
+/**
+ * Builds the AppImage and the deb into dist/: natively on Linux, in deploy/release/linux.Dockerfile elsewhere
+ */
+async function packageLinux(runtime = process.platform === "linux" ? null : containerRuntime()) {
+	mkdirSync(distDir, { recursive: true });
+
+	if (!runtime) {
+		await run("pnpm", ["build"]);
+		await run("pnpm", ["exec", "electron-builder", "--config", "config/electron-builder.yml", "--linux", "AppImage", "deb", "--publish", "never"]);
+		return;
+	}
+
+	await run(runtime, ["build", "-f", "deploy/release/linux.Dockerfile", "-t", linuxImage, "."]);
+	await run(runtime, ["run", "--rm", "--volume", `${distDir.replaceAll("\\", "/")}:/project/dist`, "--volume", `${linuxImage}-cache:/root/.cache`, linuxImage]);
+}
+
 async function main() {
 	const packageJson = JSON.parse(readFileSync(path.join(rootDir, "package.json"), "utf-8")) as { name: string; version: string };
 	const release = parseReleaseVersion(packageJson.version);
@@ -141,8 +160,7 @@ async function main() {
 	rmSync(distDir, { recursive: true, force: true });
 	mkdirSync(distDir);
 
-	await run(runtime, ["build", "-f", "deploy/release/linux.Dockerfile", "-t", linuxImage, "."]);
-	await run(runtime, ["run", "--rm", "--volume", `${distDir.replaceAll("\\", "/")}:/project/dist`, "--volume", `${linuxImage}-cache:/root/.cache`, linuxImage]);
+	await packageLinux(runtime);
 
 	await run("pnpm", ["build"]);
 	await run("pnpm", ["exec", "electron-builder", "--config", "config/electron-builder.yml", "--win", "nsis", "--publish", "never"]);
@@ -163,7 +181,8 @@ async function main() {
 
 if (import.meta.main) {
 	try {
-		await main();
+		if (process.argv[2] === "package-linux") await packageLinux();
+		else await main();
 	} catch (error) {
 		console.error(`\n${(error as Error).message}`);
 		process.exitCode = 1;

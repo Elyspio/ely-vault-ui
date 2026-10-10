@@ -3,8 +3,10 @@
 	"version": "0.1.0",
 	"private": true,
 	"description": "Desktop client for a Vaultwarden / Bitwarden server, built on the official Bitwarden CLI",
+	"homepage": "https://github.com/Elyspio/ely-vault-ui",
 	"license": "MIT",
 	"author": "jona.guich69@gmail.com",
+	"repository": "github:Elyspio/ely-vault-ui",
 	"main": "./out/main/index.js",
 	"scripts": {
 		"postinstall": "install-electron",
@@ -15,7 +17,7 @@
 		"start": "electron-vite -c config/electron.vite.config.ts preview",
 		"build": "electron-vite -c config/electron.vite.config.ts build",
 		"package:win": "pnpm build && electron-builder --config config/electron-builder.yml --win",
-		"package:linux": "pnpm build && electron-builder --config config/electron-builder.yml --linux",
+		"package:linux": "node scripts/release/release.ts package-linux",
 		"release": "node scripts/release/release.ts",
 		"dev:vault:register": "node --env-file=scripts/dev/dev-vault.env scripts/dev/register-test-account.mjs",
 		"dev:vault:seed": "node --env-file=scripts/dev/dev-vault.env scripts/dev/seed-test-vault.mjs"
