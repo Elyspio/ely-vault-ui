@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Avatar, Box, ButtonBase, Typography } from "@mui/material";
 import AppsRounded from "@mui/icons-material/AppsRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
@@ -8,6 +8,8 @@ import BadgeRounded from "@mui/icons-material/BadgeRounded";
 import StickyNote2Rounded from "@mui/icons-material/StickyNote2Rounded";
 import VpnKeyRounded from "@mui/icons-material/VpnKeyRounded";
 import FolderRounded from "@mui/icons-material/FolderRounded";
+import FolderOpenRounded from "@mui/icons-material/FolderOpenRounded";
+import ChevronRightRounded from "@mui/icons-material/ChevronRightRounded";
 import FolderOffRounded from "@mui/icons-material/FolderOffRounded";
 import BusinessRounded from "@mui/icons-material/BusinessRounded";
 import CollectionsBookmarkRounded from "@mui/icons-material/CollectionsBookmarkRounded";
@@ -15,6 +17,7 @@ import { useAppDispatch, useAppSelector } from "@store";
 import { selectCounts } from "@modules/vault/vault.selectors";
 import { setFilter } from "@modules/vault/vault.reducer";
 import type { VaultFilter } from "@modules/vault/vault.search";
+import { buildFolderTree, countFolderTree, type FolderNode } from "@modules/vault/vault.folders";
 import { setSettingsOpen } from "@modules/ui/ui.reducer";
 import { CipherType } from "@shared/types/vault.types";
 
@@ -47,11 +50,44 @@ export function Sidebar() {
 	const counts = useAppSelector(selectCounts);
 	const account = useAppSelector((state) => state.session.current);
 
+	const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+
 	const entry = (target: VaultFilter, icon: ReactNode, label: string, count: number) => (
 		<SidebarEntry key={JSON.stringify(target)} icon={icon} label={label} count={count} active={sameFilter(filter, target)} onClick={() => dispatch(setFilter(target))} />
 	);
 
-	const folders = (snapshot?.folders ?? []).toSorted((a, b) => a.name.localeCompare(b.name, "fr"));
+	const folders = useMemo(() => buildFolderTree(snapshot?.folders ?? []), [snapshot?.folders]);
+
+	const toggleFolder = (path: string) =>
+		setCollapsed((current) => {
+			const next = new Set(current);
+			if (!next.delete(path)) next.add(path);
+			return next;
+		});
+
+	const folderEntry = (node: FolderNode, depth: number): ReactNode => {
+		const expanded = !collapsed.has(node.path);
+		const hasChildren = node.children.length > 0;
+		const target: VaultFilter | null = node.id ? { kind: "folder", id: node.id } : null;
+		// Collapsed or virtual folder: the count includes the subfolders
+		const count = node.id && (expanded || !hasChildren) ? (counts.folders[node.id] ?? 0) : countFolderTree(node, counts.folders);
+
+		return (
+			<Box key={node.path}>
+				<SidebarEntry
+					icon={hasChildren && expanded ? <FolderOpenRounded /> : <FolderRounded />}
+					label={node.name}
+					count={count}
+					depth={depth}
+					expanded={hasChildren ? expanded : undefined}
+					onToggle={() => toggleFolder(node.path)}
+					active={target !== null && sameFilter(filter, target)}
+					onClick={() => (target ? dispatch(setFilter(target)) : toggleFolder(node.path))}
+				/>
+				{hasChildren && expanded && node.children.map((child) => folderEntry(child, depth + 1))}
+			</Box>
+		);
+	};
 
 	return (
 		<Box component="nav" sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "var(--surface-0)", borderRight: "1px solid var(--border-subtle)" }}>
@@ -63,8 +99,17 @@ export function Sidebar() {
 				{typeOrder.filter((type) => counts.types[type] > 0).map((type) => entry({ kind: "type", type }, typeIcons[type], typeLabels[type], counts.types[type]))}
 
 				{(folders.length > 0 || counts.noFolder > 0) && <SectionTitle>Dossiers</SectionTitle>}
-				{folders.map((folder) => entry({ kind: "folder", id: folder.id }, <FolderRounded />, folder.name, counts.folders[folder.id] ?? 0))}
-				{counts.noFolder > 0 && entry({ kind: "folder", id: null }, <FolderOffRounded />, "Sans dossier", counts.noFolder)}
+				{folders.map((node) => folderEntry(node, 0))}
+				{counts.noFolder > 0 && (
+					<SidebarEntry
+						icon={<FolderOffRounded />}
+						label="Sans dossier"
+						count={counts.noFolder}
+						depth={0}
+						active={sameFilter(filter, { kind: "folder", id: null })}
+						onClick={() => dispatch(setFilter({ kind: "folder", id: null }))}
+					/>
+				)}
 
 				{(snapshot?.organizations.length ?? 0) > 0 && <SectionTitle>Organisations</SectionTitle>}
 				{snapshot?.organizations.map((organization) => (
@@ -119,9 +164,22 @@ function SectionTitle({ children }: Readonly<{ children: string }>) {
 	);
 }
 
-type EntryProps = { icon: ReactNode; label: string; count: number; active: boolean; onClick: () => void };
+type EntryProps = {
+	icon: ReactNode;
+	label: string;
+	count: number;
+	active: boolean;
+	onClick: () => void;
+	/** Level in the folder tree */
+	depth?: number;
+	/** Defined for tree nodes with children: shows a chevron */
+	expanded?: boolean;
+	onToggle?: () => void;
+};
 
-function SidebarEntry({ icon, label, count, active, onClick }: Readonly<EntryProps>) {
+function SidebarEntry({ icon, label, count, active, onClick, depth, expanded, onToggle }: Readonly<EntryProps>) {
+	const inTree = depth !== undefined;
+
 	return (
 		<ButtonBase
 			onClick={onClick}
@@ -130,7 +188,8 @@ function SidebarEntry({ icon, label, count, active, onClick }: Readonly<EntryPro
 				display: "flex",
 				alignItems: "center",
 				gap: 1.25,
-				px: 1.25,
+				pl: inTree ? 0.25 + depth * 1.5 : 1.25,
+				pr: 1.25,
 				py: 0.7,
 				mb: 0.25,
 				borderRadius: 1.5,
@@ -142,6 +201,27 @@ function SidebarEntry({ icon, label, count, active, onClick }: Readonly<EntryPro
 				"& .MuiSvgIcon-root": { fontSize: 17 },
 			}}
 		>
+			{inTree && (
+				<Box
+					component="span"
+					aria-hidden
+					onClick={(event) => {
+						if (expanded === undefined) return;
+						event.stopPropagation();
+						onToggle?.();
+					}}
+					sx={{
+						display: "flex",
+						mr: -0.75,
+						borderRadius: 1,
+						visibility: expanded === undefined ? "hidden" : "visible",
+						"&:hover": { color: "text.primary" },
+						"& .MuiSvgIcon-root": { fontSize: 16, transform: expanded ? "rotate(90deg)" : "none", transition: "transform 120ms ease" },
+					}}
+				>
+					<ChevronRightRounded />
+				</Box>
+			)}
 			{icon}
 			<Typography noWrap sx={{ flex: 1, fontSize: "0.82rem", fontWeight: active ? 600 : 500, textAlign: "left" }}>
 				{label}
