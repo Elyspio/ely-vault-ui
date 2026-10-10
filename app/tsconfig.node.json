@@ -1,0 +1,21 @@
+{
+	"extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+	"include": ["./config", "./src/main", "./src/preload", "./src/shared", "./scripts/release", "vite.config.ts"],
+	"compilerOptions": {
+		"composite": true,
+		"tsBuildInfoFile": "dist/.tsbuild.node.info",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"lib": ["ESNext"],
+		"paths": {
+			"@main/*": ["./src/main/*"],
+			"@preload/*": ["./src/preload/*"],
+			"@shared/*": ["./src/shared/*"]
+		},
+		"resolveJsonModule": true,
+		"sourceMap": true,
+		"target": "ESNext",
+		"types": ["electron-vite/node"],
+		"useDefineForClassFields": false
+	}
+}

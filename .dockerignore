@@ -1,0 +1,8 @@
+# Build context of deploy/release/linux.Dockerfile: the repository root
+**/node_modules
+app/out
+app/dist
+.git
+.idea
+**/*.log*
+app/scripts/dev/ssl

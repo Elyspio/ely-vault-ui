@@ -1,0 +1,42 @@
+appId: fr.elyspio.elyvault.app
+productName: ElyVault
+directories:
+    buildResources: build
+    output: dist
+files:
+    - "out/**/*"
+    - "resources/**/*"
+    - "package.json"
+win:
+    executableName: ElyVault
+nsis:
+    artifactName: ${name}-${version}-setup.${ext}
+    shortcutName: ${productName}
+    uninstallDisplayName: ${productName}
+linux:
+    target:
+        - AppImage
+        - deb
+    maintainer: jona.guich69@gmail.com
+    category: Utility
+deb:
+    # Auto-type on X11
+    recommends:
+        - xdotool
+appImage:
+    artifactName: ${name}-${version}.${ext}
+# Auto update (electron-updater) from the GitHub releases: generates app-update.yml and the latest*.yml files.
+# Builds never publish (--publish never): scripts/release/release.ts uploads to a draft release.
+publish:
+    provider: github
+    owner: Elyspio
+    repo: ely-vault-ui
+    releaseType: draft
+electronFuses:
+    # The Bitwarden CLI runs with the Electron binary in Node mode (ELECTRON_RUN_AS_NODE)
+    runAsNode: true
+    enableCookieEncryption: true
+    enableNodeOptionsEnvironmentVariable: false
+    enableNodeCliInspectArguments: false
+    enableEmbeddedAsarIntegrityValidation: true
+    onlyLoadAppFromAsar: true
