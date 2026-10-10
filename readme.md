@@ -4,10 +4,10 @@
 
 # Ely Vault UI
 
-**Client de bureau rapide et sobre pour Vaultwarden / Bitwarden, pensé pour le clavier.**
+**Fast, clean, keyboard-first desktop client for Vaultwarden / Bitwarden.**
 
-[![Licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
-![Plateformes](https://img.shields.io/badge/plateformes-Windows%20%7C%20Linux-informational)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-informational)
 ![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)
@@ -16,39 +16,39 @@
 
 ---
 
-Ely Vault UI est une interface de bureau au-dessus du **CLI Bitwarden officiel** (`@bitwarden/cli`). Elle se connecte à n'importe quel serveur **Vaultwarden** ou **Bitwarden** et permet de retrouver, consulter et utiliser ses secrets sans quitter le clavier.
+Ely Vault UI is a desktop interface on top of the **official Bitwarden CLI** (`@bitwarden/cli`). It connects to any **Vaultwarden** or **Bitwarden** server and lets you find, view and use your secrets without leaving the keyboard.
 
-Toute la cryptographie est déléguée au CLI officiel : l'application n'implémente aucun algorithme de chiffrement.
+All cryptography is delegated to the official CLI: the application implements no encryption algorithm.
 
-> **Statut** : version 1, en lecture seule. La création et la modification d'éléments se font depuis le coffre web.
+> **Status**: version 1, read-only. Items are created and edited from the web vault.
 
-## Fonctionnalités
+## Features
 
-- **Recherche instantanée** dans tout le coffre, filtres par type, dossier, organisation et collection.
-- **Palette de commandes** (`Ctrl K`) : chercher et copier un mot de passe, un identifiant ou un code TOTP en deux touches.
-- **Saisie automatique** façon KeePass : `Ctrl V` tape l'identifiant puis le mot de passe dans l'application ouverte juste avant.
-- **Tous les types d'éléments** : identifiants, codes TOTP, cartes, identités, notes sécurisées, clés SSH, champs personnalisés.
-- **Presse-papiers maîtrisé** : effacement automatique, exclusion de l'historique Windows (`Win V`) et du presse-papiers cloud.
-- **Verrouillage automatique** : inactivité, verrouillage de session, mise en veille, fermeture.
-- **Re-saisie du mot de passe maître** pour les éléments protégés (« reprompt »).
-- **Générateur de mot de passe**.
-- **PKI d'entreprise et certificats auto-signés** : revue et approbation explicite de l'autorité racine, sans jamais désactiver la vérification TLS.
+- **Instant search** across the whole vault, filters by type, folder, organization and collection.
+- **Command palette** (`Ctrl K`): find and copy a password, a username or a TOTP code in two keystrokes.
+- **KeePass-style auto-type**: `Ctrl V` types the username then the password into the application opened just before.
+- **Every item type**: logins, TOTP codes, cards, identities, secure notes, SSH keys, custom fields.
+- **Controlled clipboard**: automatic clearing, excluded from the Windows history (`Win V`) and the cloud clipboard.
+- **Auto-lock**: inactivity, session lock, sleep, quit.
+- **Master password re-entry** for protected items ("reprompt").
+- **Password generator**.
+- **Corporate PKI and self-signed certificates**: explicit review and approval of the root authority, without ever disabling TLS verification.
 
 ## Installation
 
-Les installeurs Windows (NSIS) et Linux (AppImage, `.deb`) sont publiés dans les [releases GitHub](https://github.com/Elyspio/ely-vault-ui/releases) ; l'application se met ensuite à jour seule. Détails : [Installation](docs/utilisation/installation.md), [Mises à jour](docs/utilisation/mises-a-jour.md).
+Windows (NSIS) and Linux (AppImage, `.deb`) installers are published in the [GitHub releases](https://github.com/Elyspio/ely-vault-ui/releases); the application then updates itself. Details: [Installation](docs/usage/installation.md), [Updates](docs/usage/updates.md).
 
 ## Documentation
 
-| Utilisation                                                       | Technique                                          | Développement                                                        |
-| ----------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------- |
-| [Installation](docs/utilisation/installation.md)                  | [Architecture](docs/technique/architecture.md)     | [Démarrage](docs/developpement/demarrage.md)                         |
-| [Mises à jour](docs/utilisation/mises-a-jour.md)                  | [Modèle de sécurité](docs/technique/securite.md)   | [Publier une version](docs/developpement/publier-une-version.md)     |
-| [Saisie automatique](docs/utilisation/saisie-automatique.md)      |                                                    | [Serveur de test local](docs/developpement/serveur-de-test-local.md) |
-| [Raccourcis clavier](docs/utilisation/raccourcis-clavier.md)      |                                                    |                                                                      |
+| Usage                                                  | Technical                                      | Development                                                |
+| ------------------------------------------------------ | ---------------------------------------------- | ---------------------------------------------------------- |
+| [Installation](docs/usage/installation.md)             | [Architecture](docs/technical/architecture.md) | [Getting started](docs/development/getting-started.md)     |
+| [Updates](docs/usage/updates.md)                       | [Security model](docs/technical/security.md)   | [Releasing](docs/development/releasing.md)                 |
+| [Auto-type](docs/usage/auto-type.md)                   |                                                | [Local test server](docs/development/local-test-server.md) |
+| [Keyboard shortcuts](docs/usage/keyboard-shortcuts.md) |                                                |                                                            |
 
-## Licence
+## License
 
-Distribué sous licence [MIT](LICENSE).
+Distributed under the [MIT](LICENSE) license.
 
-Projet indépendant, non affilié à Bitwarden Inc. ni au projet Vaultwarden. « Bitwarden » est une marque de Bitwarden Inc.
+Independent project, not affiliated with Bitwarden Inc. nor the Vaultwarden project. "Bitwarden" is a trademark of Bitwarden Inc.

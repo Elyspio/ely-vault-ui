@@ -9,7 +9,7 @@ export type VaultFilter =
 	| { kind: "organization"; id: string }
 	| { kind: "collection"; id: string };
 
-const collator = new Intl.Collator("fr", { sensitivity: "base", numeric: true });
+const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
 
 export function normalize(value: string) {
 	return value

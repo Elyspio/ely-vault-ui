@@ -14,7 +14,7 @@ export const syncVault = createAsyncThunk("sync", async (_, { extra, dispatch, r
 	const services = getServices({ vault: VaultService }, extra);
 	try {
 		const snapshot = await services.vault.sync();
-		dispatch(showToast("Coffre synchronisé"));
+		dispatch(showToast("Vault synced"));
 		return snapshot;
 	} catch (error) {
 		dispatch(showToast(`Synchronisation impossible : ${ipcErrorMessage(error)}`, "error"));

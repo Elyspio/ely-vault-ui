@@ -26,14 +26,14 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 			</Alert>
 
 			<Box sx={{ borderRadius: 2, border: "1px solid var(--border-subtle)", bgcolor: "var(--surface-0)", px: 2, py: 1.5, display: "grid", gap: 1 }}>
-				<Detail label="Serveur" value={certificate.host} />
-				<Detail label="Chaîne" value={certificate.chain.join("  →  ")} />
-				<Detail label="Certificat du serveur valide jusqu'au" value={formatDateTime(certificate.validTo)} />
+				<Detail label="Server" value={certificate.host} />
+				<Detail label="Chain" value={certificate.chain.join("  →  ")} />
+				<Detail label="Server certificate valid until" value={formatDateTime(certificate.validTo)} />
 				{certificate.trustable && (
 					<>
-						<Detail label={certificate.chain.length > 1 ? "Autorité racine à approuver" : "Certificat à approuver"} value={certificate.anchor.subject} />
+						<Detail label={certificate.chain.length > 1 ? "Root authority to approve" : "Certificate to approve"} value={certificate.anchor.subject} />
 						<Box>
-							<Typography sx={{ fontSize: "0.7rem", color: "var(--text-faint)" }}>Empreinte SHA-256</Typography>
+							<Typography sx={{ fontSize: "0.7rem", color: "var(--text-faint)" }}>SHA-256 fingerprint</Typography>
 							<Typography className="mono" sx={{ fontSize: "0.78rem", lineHeight: 1.6, overflowWrap: "anywhere", userSelect: "text" }}>
 								{certificate.anchor.fingerprint256}
 							</Typography>
@@ -45,17 +45,16 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 			{certificate.trustable ? (
 				<>
 					<Typography variant="body2" sx={{ color: "text.secondary" }}>
-						Comparez cette empreinte avec celle communiquée par l'administrateur du serveur. Approuver un certificat inconnu permettrait à un intermédiaire
-						d'intercepter la connexion.
+						Compare this fingerprint with the one given by the server administrator. Approving an unknown certificate would let a third party intercept the connection.
 					</Typography>
 					<FormControlLabel
 						control={<Checkbox size="small" checked={checked} onChange={(_, value) => setChecked(value)} />}
-						label={<Typography variant="body2">J'ai vérifié l'empreinte</Typography>}
+						label={<Typography variant="body2">I checked the fingerprint</Typography>}
 					/>
 				</>
 			) : (
 				<Typography variant="body2" sx={{ color: "text.secondary" }}>
-					Importez le certificat de l'autorité racine de votre organisation (fichier .crt, .cer ou .pem) pour approuver ce serveur.
+					Import the root authority certificate of your organization (.crt, .cer or .pem file) to approve this server.
 				</Typography>
 			)}
 
@@ -67,7 +66,7 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 
 			<Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
 				<Button color="inherit" disabled={pending} onClick={() => dispatch(dismissCertificate())}>
-					Annuler
+					Cancel
 				</Button>
 				<Button
 					variant={certificate.trustable ? "text" : "contained"}
@@ -75,7 +74,7 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 					startIcon={<FileUploadRounded />}
 					onClick={() => void dispatch(importAuthority(request))}
 				>
-					Importer une autorité…
+					Import an authority…
 				</Button>
 				{certificate.trustable && (
 					<Button
@@ -84,7 +83,7 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 						startIcon={pending ? <CircularProgress size={16} color="inherit" /> : undefined}
 						onClick={() => void dispatch(trustCertificate({ fingerprint256: certificate.anchor.fingerprint256, request }))}
 					>
-						Approuver et continuer
+						Approve and continue
 					</Button>
 				)}
 			</Box>

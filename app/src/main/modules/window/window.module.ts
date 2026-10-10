@@ -24,14 +24,14 @@ export class WindowModule extends LogModule {
 	}
 
 	/**
-	 * Adresse chargée par la fenêtre : seuls ses messages IPC sont acceptés
+	 * Address loaded by the window: only its IPC messages are accepted
 	 */
 	public get rendererUrl() {
 		return is.dev && process.env["ELECTRON_RENDERER_URL"] ? process.env["ELECTRON_RENDERER_URL"] : null;
 	}
 
 	/**
-	 * Refuse toute permission web, toute navigation et toute nouvelle fenêtre
+	 * Denies every web permission, navigation and new window
 	 */
 	public hardenSession() {
 		session.defaultSession.setPermissionRequestHandler((_, __, callback) => callback(false));
@@ -125,12 +125,12 @@ export class WindowModule extends LogModule {
 	}
 
 	/**
-	 * Ouvre une adresse web dans le navigateur par défaut ; tout autre protocole est refusé
+	 * Opens a web address in the default browser; any other protocol is refused
 	 */
 	public async openExternal(url: string) {
 		const parsed = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(url) ? url : `https://${url}`);
 		if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-			throw new Error(`Protocole non autorisé : ${parsed.protocol}`);
+			throw new Error(`Protocol not allowed: ${parsed.protocol}`);
 		}
 		await shell.openExternal(parsed.toString());
 	}

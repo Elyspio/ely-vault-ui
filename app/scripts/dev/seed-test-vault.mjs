@@ -1,4 +1,4 @@
-// Seeds the local development vault with sample items through `bw serve` (see readme, "Local test server").
+// Seeds the local development vault with sample items through `bw serve` (see docs/development/local-test-server.md).
 // Usage: node scripts/dev/seed-test-vault.mjs <serverUrl> <email> <password>
 import { spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -59,14 +59,14 @@ try {
 	}
 
 	const folders = {};
-	for (const name of ["Perso", "Travail", "Finances", "Serveurs"]) {
+	for (const name of ["Personal", "Work", "Finance", "Servers"]) {
 		folders[name] = (await api("POST", "/object/folder", { name })).id;
 	}
 
 	const items = [
 		login({
 			name: "GitHub",
-			folderId: folders.Travail,
+			folderId: folders.Work,
 			favorite: true,
 			login: {
 				username: "dev-octocat",
@@ -74,59 +74,59 @@ try {
 				totp: "JBSWY3DPEHPK3PXP",
 				uris: [{ match: null, uri: "https://github.com/login" }],
 			},
-			notes: "Compte principal, clés SSH associées dans « Serveurs ».",
+			notes: "Main account, related SSH keys in \"Servers\".",
 			fields: [
 				{ name: "Recovery code", value: "a1b2-c3d4-e5f6", type: 1 },
-				{ name: "Organisation", value: "elyspio", type: 0 },
+				{ name: "Organization", value: "elyspio", type: 0 },
 			],
 		}),
 		login({
 			name: "Google",
-			folderId: folders.Perso,
+			folderId: folders.Personal,
 			favorite: true,
 			login: { username: "jean.dupont@gmail.com", password: "G00gle-Pa55!", uris: [{ match: null, uri: "https://accounts.google.com" }] },
 		}),
 		login({
 			name: "Netflix",
-			folderId: folders.Perso,
+			folderId: folders.Personal,
 			login: { username: "jean.dupont@gmail.com", password: "netflix-and-chill", uris: [{ match: null, uri: "https://www.netflix.com" }] },
 		}),
 		login({
 			name: "Amazon",
-			folderId: folders.Perso,
+			folderId: folders.Personal,
 			login: { username: "jean.dupont@gmail.com", password: "Amz-2026-xY!", uris: [{ match: null, uri: "https://www.amazon.fr" }] },
 		}),
 		login({
 			name: "Banque Populaire",
-			folderId: folders.Finances,
+			folderId: folders.Finance,
 			reprompt: 1,
 			login: { username: "12345678", password: "BP-0099-secret", uris: [{ match: null, uri: "https://www.banquepopulaire.fr" }] },
 		}),
 		login({
 			name: "Proxmox",
-			folderId: folders.Serveurs,
+			folderId: folders.Servers,
 			login: { username: "root@pam", password: "pve-R00t-pass", uris: [{ match: null, uri: "https://pve.home.lan:8006" }] },
 		}),
 		login({
 			name: "Home Assistant",
-			folderId: folders.Serveurs,
+			folderId: folders.Servers,
 			login: { username: "admin", password: "ha-Admin-2026", totp: "otpauth://totp/HA:admin?secret=KRSXG5CTMVRXEZLUKN2XAZLSOI&issuer=HA&period=30", uris: [{ match: null, uri: "https://ha.home.lan" }] },
 		}),
 		login({
 			name: "Slack",
-			folderId: folders.Travail,
+			folderId: folders.Work,
 			login: { username: "jean.dupont@entreprise.fr", password: "Sl4ck-Work!", uris: [{ match: null, uri: "https://entreprise.slack.com" }] },
 		}),
 		login({
 			name: "Jira",
-			folderId: folders.Travail,
+			folderId: folders.Work,
 			login: { username: "jdupont", password: "Jira-Pass-01", uris: [{ match: null, uri: "https://entreprise.atlassian.net" }] },
 		}),
-		login({ name: "Wi-Fi maison", folderId: null, login: { username: null, password: "wifi-Maison-5GHz-2026", uris: [] } }),
+		login({ name: "Home Wi-Fi", folderId: null, login: { username: null, password: "wifi-Home-5GHz-2026", uris: [] } }),
 		{
 			type: 3,
-			name: "Visa perso",
-			folderId: folders.Finances,
+			name: "Personal Visa",
+			folderId: folders.Finance,
 			favorite: false,
 			reprompt: 0,
 			notes: null,
@@ -135,8 +135,8 @@ try {
 		},
 		{
 			type: 4,
-			name: "Identité",
-			folderId: folders.Perso,
+			name: "Identity",
+			folderId: folders.Personal,
 			favorite: false,
 			reprompt: 0,
 			notes: null,
@@ -155,11 +155,11 @@ try {
 		},
 		{
 			type: 2,
-			name: "Codes alarme",
-			folderId: folders.Perso,
+			name: "Alarm codes",
+			folderId: folders.Personal,
 			favorite: false,
 			reprompt: 0,
-			notes: "Code entrée : 4821\nCode garage : 7310",
+			notes: "Entrance code: 4821\nGarage code: 7310",
 			fields: [],
 			secureNote: { type: 0 },
 		},

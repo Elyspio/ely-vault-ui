@@ -58,7 +58,7 @@ export function parseAutoTypeSequence(sequence: string): AutoTypeToken[] {
 		}
 
 		if (CONTROL_CHARACTERS.test(sequence[index])) {
-			throw new AutoTypeSequenceError(`Caractère de contrôle à la position ${index + 1} : utilisez {TAB} ou {ENTER}`, index + 1);
+			throw new AutoTypeSequenceError(`Control character at position ${index + 1}: use {TAB} or {ENTER}`, index + 1);
 		}
 
 		if (sequence[index] !== "{") {
@@ -68,7 +68,7 @@ export function parseAutoTypeSequence(sequence: string): AutoTypeToken[] {
 		}
 
 		const end = sequence.indexOf("}", index + 1);
-		if (end === -1) throw new AutoTypeSequenceError(`Accolade non fermée à la position ${index + 1}`, index + 1);
+		if (end === -1) throw new AutoTypeSequenceError(`Unclosed brace at position ${index + 1}`, index + 1);
 
 		const content = sequence.slice(index + 1, end).trim();
 		flushText();
@@ -88,7 +88,7 @@ function parsePlaceholder(content: string, position: number): AutoTypeToken {
 	const delay = /^DELAY\s+(\d+)$/.exec(upper);
 	if (delay) {
 		const ms = Number(delay[1]);
-		if (ms > MAX_AUTOTYPE_DELAY_MS) throw new AutoTypeSequenceError(`Délai trop long : {${content}} (${MAX_AUTOTYPE_DELAY_MS} ms au plus)`, position);
+		if (ms > MAX_AUTOTYPE_DELAY_MS) throw new AutoTypeSequenceError(`Delay too long: {${content}} (${MAX_AUTOTYPE_DELAY_MS} ms at most)`, position);
 		return { kind: "delay", ms };
 	}
 

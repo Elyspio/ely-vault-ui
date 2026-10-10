@@ -60,7 +60,7 @@ export const importAuthority = createAsyncThunk("import-authority", async (reque
 	try {
 		const imported = await services.certificate.import();
 		if (imported.length === 0) return false;
-		dispatch(showToast(`Autorité « ${imported.map((c) => c.subject).join(", ")} » importée`));
+		dispatch(showToast(`Authority "${imported.map((c) => c.subject).join(", ")}" imported`));
 	} catch (error) {
 		return rejectWithValue(ipcErrorMessage(error));
 	}
@@ -96,7 +96,7 @@ export const logout = createAsyncThunk("logout", async (_, { extra, dispatch }) 
 
 export const initApp = createAsyncThunk("init-app", async (_, { dispatch }) => {
 	window.preload.ipc.on.session.state((state) => dispatch(sessionStateChanged(state)));
-	window.preload.ipc.on.clipboard.cleared(() => dispatch(showToast("Presse-papiers effacé", "info")));
+	window.preload.ipc.on.clipboard.cleared(() => dispatch(showToast("Clipboard cleared", "info")));
 
 	await dispatch(initConfig());
 	void dispatch(initUpdate());

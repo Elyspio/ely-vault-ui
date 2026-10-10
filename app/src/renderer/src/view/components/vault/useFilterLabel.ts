@@ -10,15 +10,15 @@ export function useFilterLabel() {
 
 	switch (filter.kind) {
 		case "all":
-			return "Tous les éléments";
+			return "All items";
 		case "favorites":
-			return "Favoris";
+			return "Favorites";
 		case "type":
 			return typeLabels[filter.type];
 		case "folder":
-			return filter.id ? (snapshot?.folders.find((f) => f.id === filter.id)?.name ?? "Dossier") : "Sans dossier";
+			return filter.id ? (snapshot?.folders.find((f) => f.id === filter.id)?.name ?? "Folder") : "No folder";
 		case "organization":
-			return snapshot?.organizations.find((o) => o.id === filter.id)?.name ?? "Organisation";
+			return snapshot?.organizations.find((o) => o.id === filter.id)?.name ?? "Organization";
 		case "collection":
 			return snapshot?.collections.find((c) => c.id === filter.id)?.name ?? "Collection";
 	}

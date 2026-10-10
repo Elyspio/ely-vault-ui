@@ -79,7 +79,7 @@ export function Titlebar() {
 				>
 					<SearchRounded sx={{ fontSize: 15 }} />
 					<Box component="span" sx={{ flex: 1, textAlign: "left" }}>
-						Rechercher et copier…
+						Search and copy…
 					</Box>
 					<Kbd>Ctrl</Kbd>
 					<Kbd>K</Kbd>
@@ -91,12 +91,12 @@ export function Titlebar() {
 			<Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.25 }}>
 				{unlocked && (
 					<>
-						<Tooltip title="Générateur de mot de passe (Ctrl G)">
+						<Tooltip title="Password generator (Ctrl G)">
 							<IconButton sx={controlSx} onClick={() => dispatch(setGeneratorOpen(true))}>
 								<PasswordRounded sx={{ fontSize: 17 }} />
 							</IconButton>
 						</Tooltip>
-						<Tooltip title={`Synchroniser (F5)${lastSync ? ` · ${formatRelative(lastSync)}` : ""}`}>
+						<Tooltip title={`Sync (F5)${lastSync ? ` · ${formatRelative(lastSync)}` : ""}`}>
 							<IconButton sx={controlSx} onClick={() => dispatch(syncVault())} disabled={syncing}>
 								<SyncRounded
 									sx={{
@@ -107,7 +107,7 @@ export function Titlebar() {
 								/>
 							</IconButton>
 						</Tooltip>
-						<Tooltip title="Verrouiller (Ctrl L)">
+						<Tooltip title="Lock (Ctrl L)">
 							<IconButton sx={controlSx} onClick={() => dispatch(lock())}>
 								<LockRounded sx={{ fontSize: 16 }} />
 							</IconButton>
@@ -116,9 +116,9 @@ export function Titlebar() {
 							title={
 								pendingUpdate
 									? pendingUpdate.downgrade && pendingUpdate.state === "available"
-										? `Version stable ${pendingUpdate.latestVersion} disponible`
-										: `Version ${pendingUpdate.latestVersion} prête à installer`
-									: "Paramètres (Ctrl ,)"
+										? `Stable version ${pendingUpdate.latestVersion} available`
+										: `Version ${pendingUpdate.latestVersion} ready to install`
+									: "Settings (Ctrl ,)"
 							}
 						>
 							<IconButton sx={controlSx} onClick={() => dispatch(setSettingsOpen(true))}>

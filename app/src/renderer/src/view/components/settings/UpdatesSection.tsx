@@ -43,7 +43,7 @@ export function UpdatesSection() {
 			{showNotes && (
 				<Box sx={{ ...rowSx, display: "block" }}>
 					<Typography variant="overline" component="div" sx={{ color: "var(--text-faint)", lineHeight: 1.6 }}>
-						Notes de version · {status.latestVersion}
+						Release notes · {status.latestVersion}
 					</Typography>
 					<ReleaseNotes html={status.releaseNotes!} />
 				</Box>
@@ -51,7 +51,7 @@ export function UpdatesSection() {
 
 			<Box sx={{ ...rowSx, py: 1 }}>
 				<Typography sx={{ flex: 1, fontSize: "0.72rem", color: "var(--text-faint)" }}>
-					{status.isPackaged ? lastCheck(status) : "Version de développement : vérification via dev-app-update.yml, aucune installation"}
+					{status.isPackaged ? lastCheck(status) : "Development build: checks through dev-app-update.yml, nothing is installed"}
 				</Typography>
 				<Link
 					component="button"
@@ -59,7 +59,7 @@ export function UpdatesSection() {
 					sx={{ fontSize: "0.75rem" }}
 					onClick={() => void window.preload.ipc.send.app.openExternal(window.preload.config.releasesUrl)}
 				>
-					Toutes les versions
+					All releases
 				</Link>
 			</Box>
 		</>
@@ -72,14 +72,14 @@ function Action({ status, onCheck, onDownload, onInstall }: Readonly<{ status: U
 			if (status.downgrade) {
 				return (
 					<Button size="small" variant="contained" onClick={onDownload}>
-						Revenir à la {status.latestVersion}
+						Go back to {status.latestVersion}
 					</Button>
 				);
 			}
 			// Development builds do not download automatically
 			return status.isPackaged ? null : (
 				<Button size="small" variant="outlined" onClick={onDownload}>
-					Télécharger
+					Download
 				</Button>
 			);
 		case "downloading":
@@ -87,13 +87,13 @@ function Action({ status, onCheck, onDownload, onInstall }: Readonly<{ status: U
 		case "downloaded":
 			return (
 				<Button size="small" variant="contained" startIcon={<RestartAltRounded />} disabled={!status.isPackaged} onClick={onInstall}>
-					Redémarrer et installer
+					Restart and install
 				</Button>
 			);
 		default:
 			return (
 				<Button size="small" variant="outlined" disabled={status.state === "checking"} onClick={onCheck}>
-					{status.state === "checking" ? "Vérification…" : "Vérifier"}
+					{status.state === "checking" ? "Checking…" : "Check"}
 				</Button>
 			);
 	}
@@ -102,17 +102,17 @@ function Action({ status, onCheck, onDownload, onInstall }: Readonly<{ status: U
 function title(status: UpdateStatus) {
 	switch (status.state) {
 		case "checking":
-			return "Recherche d'une mise à jour…";
+			return "Checking for updates…";
 		case "up-to-date":
-			return "Vault est à jour";
+			return "Vault is up to date";
 		case "available":
-			return status.downgrade ? `Version stable ${status.latestVersion} disponible` : `Version ${status.latestVersion} trouvée`;
+			return status.downgrade ? `Stable version ${status.latestVersion} available` : `Version ${status.latestVersion} found`;
 		case "downloading":
-			return `Téléchargement de la version ${status.latestVersion}`;
+			return `Downloading version ${status.latestVersion}`;
 		case "downloaded":
-			return `Version ${status.latestVersion} prête à installer`;
+			return `Version ${status.latestVersion} ready to install`;
 		case "error":
-			return "La mise à jour a échoué";
+			return "The update failed";
 		default:
 			return `Version ${status.currentVersion}`;
 	}
@@ -121,18 +121,18 @@ function title(status: UpdateStatus) {
 function description(status: UpdateStatus) {
 	switch (status.state) {
 		case "available":
-			if (status.downgrade) return `Plus ancienne que la bêta installée (${status.currentVersion}) : installée seulement à votre demande`;
-			return status.isPackaged ? "Le téléchargement va commencer" : "Version de développement : téléchargement manuel";
+			if (status.downgrade) return `Older than the installed beta (${status.currentVersion}): only installed on your request`;
+			return status.isPackaged ? "The download is starting" : "Development build: manual download";
 		case "downloaded":
-			return status.downgrade ? "Installée au redémarrage de Vault" : "Installée au redémarrage ou à la fermeture de Vault";
+			return status.downgrade ? "Installed when Vault restarts" : "Installed when Vault restarts or quits";
 		case "error":
 			return status.error ?? "";
 		default:
-			return `Version installée : ${status.currentVersion}`;
+			return `Installed version: ${status.currentVersion}`;
 	}
 }
 
 function lastCheck(status: UpdateStatus) {
-	const last = status.lastCheckAt ? `Dernière vérification ${formatRelative(status.lastCheckAt)}` : "Aucune vérification depuis le démarrage";
-	return status.nextCheckAt ? `${last} · prochaine ${formatRelative(status.nextCheckAt)}` : last;
+	const last = status.lastCheckAt ? `Last checked ${formatRelative(status.lastCheckAt)}` : "Not checked since startup";
+	return status.nextCheckAt ? `${last} · next check ${formatRelative(status.nextCheckAt)}` : last;
 }

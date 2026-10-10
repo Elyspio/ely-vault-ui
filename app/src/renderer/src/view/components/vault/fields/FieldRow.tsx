@@ -60,7 +60,7 @@ export function FieldRow({ label, children, onCopy, actions, mono, multiline }: 
 			>
 				{actions}
 				{onCopy && (
-					<Tooltip title="Copier">
+					<Tooltip title="Copy">
 						<IconButton size="small" onClick={onCopy}>
 							<ContentCopyRounded sx={{ fontSize: 16 }} />
 						</IconButton>

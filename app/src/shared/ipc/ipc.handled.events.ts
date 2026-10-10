@@ -16,9 +16,9 @@ import type {
 } from "@shared/types/vault.types";
 
 /**
- * Les événements IPC qui sont envoyés par les browserWindow vers le process main.
+ * IPC events sent by the browser windows to the main process.
  *
- * Attention il faut que la callback prenne en paramètre un event de type Electron.IpcMainInvokeEvent
+ * Each callback takes an Electron.IpcMainInvokeEvent as first parameter
  */
 export interface IpcHandledEvents {
 	"app:close": (event: IpcMainInvokeEvent) => void;
@@ -26,7 +26,7 @@ export interface IpcHandledEvents {
 	"app:screen:toggle-fullscreen": (event: IpcMainInvokeEvent) => void;
 	"app:screen:is-fullscreen": (event: IpcMainInvokeEvent) => boolean;
 	/**
-	 * Ouvre une adresse http(s) dans le navigateur par défaut
+	 * Opens an http(s) address in the default browser
 	 */
 	"app:open-external": (event: IpcMainInvokeEvent, url: string) => Promise<void>;
 
@@ -34,7 +34,7 @@ export interface IpcHandledEvents {
 	"config:set": (event: IpcMainInvokeEvent, config: AppConfig) => Promise<void>;
 
 	/**
-	 * État de la session : compte connecté, coffre verrouillé ou non
+	 * Session state: logged in account, vault locked or not
 	 */
 	"session:state:get": (event: IpcMainInvokeEvent) => Promise<SessionState>;
 	"session:login": (event: IpcMainInvokeEvent, request: LoginRequest) => Promise<LoginResult>;
@@ -45,25 +45,25 @@ export interface IpcHandledEvents {
 	"session:logout": (event: IpcMainInvokeEvent) => Promise<void>;
 
 	/**
-	 * Contenu du coffre, sans aucun secret
+	 * Vault content, without any secret
 	 */
 	"vault:snapshot:get": (event: IpcMainInvokeEvent) => Promise<VaultSnapshot>;
 	"vault:sync": (event: IpcMainInvokeEvent) => Promise<VaultSnapshot>;
 	/**
-	 * Valeur d'un secret, pour l'afficher
+	 * Value of a secret, to show it
 	 */
 	"vault:secret:get": (event: IpcMainInvokeEvent, itemId: string, ref: SecretRef) => Promise<string>;
 	/**
-	 * Copie une valeur d'un élément dans le presse-papiers, effacé ensuite selon la configuration
+	 * Copies a value of an item to the clipboard, cleared afterwards according to the settings
 	 */
 	"vault:copy": (event: IpcMainInvokeEvent, itemId: string | null, ref: CopyRef) => Promise<void>;
 	"vault:totp:get": (event: IpcMainInvokeEvent, itemId: string) => Promise<TotpCode>;
 	/**
-	 * Vérifie le mot de passe maître pour les éléments protégés (reprompt), sans appel réseau
+	 * Checks the master password for the protected items (reprompt), without network call
 	 */
 	"vault:reprompt:verify": (event: IpcMainInvokeEvent, password: string) => Promise<boolean>;
 	/**
-	 * Favicon d'un site, en data URL, via le service d'icônes du serveur
+	 * Website favicon, as a data URL, through the server's icon service
 	 */
 	"vault:icon:get": (event: IpcMainInvokeEvent, host: string) => Promise<string | null>;
 	"vault:generate-password": (event: IpcMainInvokeEvent, options: PasswordGeneratorOptions) => Promise<string>;
@@ -75,30 +75,30 @@ export interface IpcHandledEvents {
 	"autotype:perform": (event: IpcMainInvokeEvent, itemId: string) => Promise<void>;
 
 	/**
-	 * Approuve l'autorité d'un certificat présenté à la connexion (par son empreinte SHA-256)
+	 * Approves the authority of a certificate presented at login (by its SHA-256 fingerprint)
 	 */
 	"certificate:trust": (event: IpcMainInvokeEvent, fingerprint256: string) => Promise<void>;
 	/**
-	 * Importe un certificat d'autorité depuis un fichier choisi par l'utilisateur
+	 * Imports an authority certificate from a file chosen by the user
 	 */
 	"certificate:import": (event: IpcMainInvokeEvent) => Promise<TrustedCertificate[]>;
 	"certificate:list": (event: IpcMainInvokeEvent) => Promise<TrustedCertificate[]>;
 	/**
-	 * Retire une autorité approuvée ; le coffre est verrouillé pour relancer le CLI sans elle
+	 * Removes an approved authority; the vault is locked to restart the CLI without it
 	 */
 	"certificate:remove": (event: IpcMainInvokeEvent, fingerprint256: string) => Promise<void>;
 
 	"update:status:get": (event: IpcMainInvokeEvent) => UpdateStatus;
 	/**
-	 * Cherche une nouvelle version sur GitHub ; elle est téléchargée dès qu'elle est trouvée
+	 * Checks GitHub for a new version; it is downloaded as soon as it is found
 	 */
 	"update:check": (event: IpcMainInvokeEvent) => Promise<void>;
 	/**
-	 * Télécharge la version trouvée : utilisé pour revenir d'une bêta à la version stable
+	 * Downloads the version found: used to go back from a beta to the stable version
 	 */
 	"update:download": (event: IpcMainInvokeEvent) => Promise<void>;
 	/**
-	 * Verrouille le coffre puis redémarre sur la version téléchargée
+	 * Locks the vault then restarts on the downloaded version
 	 */
 	"update:quit-and-install": (event: IpcMainInvokeEvent) => Promise<void>;
 }

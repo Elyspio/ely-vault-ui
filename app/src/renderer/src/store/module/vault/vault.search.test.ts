@@ -25,8 +25,8 @@ function item(name: string, overrides: Partial<VaultItem> = {}): VaultItem {
 const items = [
 	item("Slack", {
 		login: {
-			username: "jean@entreprise.fr",
-			uris: [{ uri: "https://entreprise.slack.com", host: "entreprise.slack.com" }],
+			username: "jean@company.com",
+			uris: [{ uri: "https://company.slack.com", host: "company.slack.com" }],
 			hasPassword: true,
 			hasTotp: false,
 			passwordRevisionDate: null,
@@ -35,7 +35,7 @@ const items = [
 	item("GitHub", { favorite: true, folderId: "work" }),
 	item("Banque Populaire", { folderId: "money" }),
 	item("Électricité EDF"),
-	item("Visa perso", {
+	item("Visa personal", {
 		type: CipherType.Card,
 		login: undefined,
 		card: { cardholderName: "JEAN", brand: "Visa", expMonth: "08", expYear: "2029", numberLast4: "1111", hasNumber: true, hasCode: true },
@@ -44,12 +44,12 @@ const items = [
 
 describe("searchItems", () => {
 	it("sorts by name without query", () => {
-		expect(searchItems(items, { kind: "all" }, "").map((i) => i.name)).toEqual(["Banque Populaire", "Électricité EDF", "GitHub", "Slack", "Visa perso"]);
+		expect(searchItems(items, { kind: "all" }, "").map((i) => i.name)).toEqual(["Banque Populaire", "Électricité EDF", "GitHub", "Slack", "Visa personal"]);
 	});
 
 	it("ranks a name prefix before a match in other fields", () => {
-		const names = searchItems([...items, item("Entreprise VPN")], { kind: "all" }, "entre").map((i) => i.name);
-		expect(names).toEqual(["Entreprise VPN", "Slack"]);
+		const names = searchItems([...items, item("Company VPN")], { kind: "all" }, "comp").map((i) => i.name);
+		expect(names).toEqual(["Company VPN", "Slack"]);
 	});
 
 	it("ignores accents and case, and needs every word", () => {
@@ -61,13 +61,13 @@ describe("searchItems", () => {
 	it("applies the filter", () => {
 		expect(searchItems(items, { kind: "favorites" }, "").map((i) => i.name)).toEqual(["GitHub"]);
 		expect(searchItems(items, { kind: "folder", id: "money" }, "").map((i) => i.name)).toEqual(["Banque Populaire"]);
-		expect(searchItems(items, { kind: "type", type: CipherType.Card }, "").map((i) => i.name)).toEqual(["Visa perso"]);
+		expect(searchItems(items, { kind: "type", type: CipherType.Card }, "").map((i) => i.name)).toEqual(["Visa personal"]);
 	});
 });
 
 describe("getItemSubtitle", () => {
 	it("shows the username of a login and the masked number of a card", () => {
-		expect(getItemSubtitle(items[0])).toBe("jean@entreprise.fr");
+		expect(getItemSubtitle(items[0])).toBe("jean@company.com");
 		expect(getItemSubtitle(items[4])).toBe("Visa •••• 1111");
 	});
 });

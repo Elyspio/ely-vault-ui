@@ -1,4 +1,4 @@
-// Registers a test account on a local development Vaultwarden (see readme, "Local test server").
+// Registers a test account on a local development Vaultwarden (see docs/development/local-test-server.md).
 // Usage: node scripts/dev/register-test-account.mjs <serverUrl> <email> <password>
 // The client-side key derivation mirrors the Bitwarden clients: PBKDF2-SHA256 (600 000 iterations),
 // HKDF stretched master key, a random 512-bit user key and an RSA-2048 key pair.

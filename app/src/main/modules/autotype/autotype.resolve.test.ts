@@ -42,7 +42,7 @@ describe("getItemSequence", () => {
 
 	it("explains which sequence is invalid", () => {
 		const item: BwItem = { ...base, fields: [{ name: "autotype", value: "x{secret}", type: FieldType.Hidden }] };
-		expect(() => getItemSequence(item, config)).toThrow("Séquence « autotype » de l'élément invalide (position 2)");
-		expect(() => getItemSequence(base, { ...config, defaultSequence: "{FOO" })).toThrow(/^Séquence par défaut invalide/);
+		expect(() => getItemSequence(item, config)).toThrow('Invalid "autotype" sequence of the item (position 2)');
+		expect(() => getItemSequence(base, { ...config, defaultSequence: "{FOO" })).toThrow(/^Invalid default sequence/);
 	});
 });

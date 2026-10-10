@@ -16,7 +16,7 @@ export function UnlockScreen() {
 
 	return (
 		<AuthLayout
-			title="Coffre verrouillé"
+			title="Vault locked"
 			subtitle={
 				<>
 					{account?.email}
@@ -42,7 +42,7 @@ export function UnlockScreen() {
 			}
 			footer={
 				<Link component="button" variant="body2" underline="hover" sx={{ color: "var(--text-muted)" }} onClick={() => dispatch(logout())}>
-					Se déconnecter ou changer de compte
+					Log out or switch account
 				</Link>
 			}
 		>
@@ -53,7 +53,7 @@ export function UnlockScreen() {
 				}}
 			>
 				<Stack spacing={2}>
-					<PasswordField autoFocus label="Mot de passe maître" value={password} onChange={(event) => setPassword(event.target.value)} />
+					<PasswordField autoFocus label="Master password" value={password} onChange={(event) => setPassword(event.target.value)} />
 					{error && (
 						<Alert severity="error" variant="outlined">
 							{error}
@@ -66,7 +66,7 @@ export function UnlockScreen() {
 						disabled={!password || pending}
 						startIcon={pending ? <CircularProgress size={16} color="inherit" /> : <LockOpenRounded />}
 					>
-						{pending ? "Déchiffrement…" : "Déverrouiller"}
+						{pending ? "Decrypting…" : "Unlock"}
 					</Button>
 				</Stack>
 			</form>

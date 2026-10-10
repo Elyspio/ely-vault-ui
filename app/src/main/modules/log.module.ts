@@ -13,9 +13,9 @@ export type AppLoggerService = {
 };
 
 /**
- * Classe de base des modules permettant de gérer les logs.
+ * Base class of the modules, providing their logger.
  *
- * Aucun secret (mot de passe, clé de session, valeur d'un élément) ne doit passer par un logger.
+ * No secret (password, session key, item value) may go through a logger.
  */
 export class LogModule {
 	private static logFolder: string;

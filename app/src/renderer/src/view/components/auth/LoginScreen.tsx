@@ -9,8 +9,8 @@ import { CertificateReview } from "./CertificateReview";
 import { TwoFactorMethod } from "@shared/types/vault.types";
 
 const twoFactorMethods = [
-	{ value: TwoFactorMethod.Authenticator, label: "Application d'authentification" },
-	{ value: TwoFactorMethod.Email, label: "Code reçu par e-mail" },
+	{ value: TwoFactorMethod.Authenticator, label: "Authenticator app" },
+	{ value: TwoFactorMethod.Email, label: "Code sent by email" },
 	{ value: TwoFactorMethod.Yubikey, label: "YubiKey (OTP)" },
 ];
 
@@ -39,7 +39,7 @@ export function LoginScreen() {
 
 	if (untrustedCertificate) {
 		return (
-			<AuthLayout title="Certificat non reconnu" subtitle="Ce poste ne fait pas confiance au certificat présenté par le serveur">
+			<AuthLayout title="Certificate not recognized" subtitle="This computer does not trust the certificate presented by the server">
 				<CertificateReview certificate={untrustedCertificate} request={{ serverUrl, email, password }} />
 			</AuthLayout>
 		);
@@ -47,11 +47,11 @@ export function LoginScreen() {
 
 	if (ssoRequired) {
 		return (
-			<AuthLayout title="Connexion SSO" subtitle={`Ce serveur impose l'authentification de votre organisation pour ${email}`}>
+			<AuthLayout title="SSO login" subtitle={`This server requires your organization's authentication for ${email}`}>
 				<Stack spacing={2}>
 					<Typography variant="body2" sx={{ color: "var(--text-muted)" }}>
-						La page de connexion de votre organisation va s'ouvrir dans le navigateur. Une fois authentifié, revenez ici : le mot de passe maître saisi déchiffrera le
-						coffre sur ce poste.
+						Your organization's login page opens in the browser. Once authenticated, come back here: the master password you entered decrypts the vault on this
+						computer.
 					</Typography>
 
 					{error && (
@@ -61,12 +61,12 @@ export function LoginScreen() {
 					)}
 
 					<Button variant="contained" size="large" disabled={pending} onClick={submit} startIcon={pending ? <CircularProgress size={16} color="inherit" /> : undefined}>
-						{pending ? "Terminez la connexion dans le navigateur…" : "Continuer avec le SSO"}
+						{pending ? "Finish logging in in the browser…" : "Continue with SSO"}
 					</Button>
 
 					<Box sx={{ textAlign: "center" }}>
 						<Link component="button" type="button" variant="body2" underline="hover" onClick={() => void dispatch(pending ? cancelLogin() : resetSso())}>
-							{pending ? "Annuler" : "Revenir à la connexion"}
+							{pending ? "Cancel" : "Back to login"}
 						</Link>
 					</Box>
 				</Stack>
@@ -78,11 +78,11 @@ export function LoginScreen() {
 
 	return (
 		<AuthLayout
-			title={twoFactorRequired ? "Vérification en deux étapes" : "Connexion"}
-			subtitle={twoFactorRequired ? `Saisissez le code de vérification pour ${email}` : "Connectez-vous à votre serveur Vaultwarden ou Bitwarden"}
+			title={twoFactorRequired ? "Two-step verification" : "Log in"}
+			subtitle={twoFactorRequired ? `Enter the verification code for ${email}` : "Log in to your Vaultwarden or Bitwarden server"}
 			footer={
 				<Typography variant="caption" sx={{ color: "var(--text-faint)" }}>
-					Le mot de passe maître ne quitte jamais cet ordinateur : le coffre est déchiffré localement.
+					The master password never leaves this computer: the vault is decrypted locally.
 				</Typography>
 			}
 		>
@@ -95,7 +95,7 @@ export function LoginScreen() {
 				<Stack spacing={2}>
 					{twoFactorRequired ? (
 						<>
-							<TextField select label="Méthode" size="small" value={method} onChange={(event) => setMethod(Number(event.target.value) as TwoFactorMethod)}>
+							<TextField select label="Method" size="small" value={method} onChange={(event) => setMethod(Number(event.target.value) as TwoFactorMethod)}>
 								{twoFactorMethods.map((m) => (
 									<MenuItem key={m.value} value={m.value}>
 										{m.label}
@@ -115,14 +115,14 @@ export function LoginScreen() {
 					) : (
 						<>
 							<TextField
-								label="Serveur"
-								placeholder="https://vault.exemple.fr"
+								label="Server"
+								placeholder="https://vault.example.com"
 								value={serverUrl}
 								onChange={(event) => setServerUrl(event.target.value)}
 								autoFocus={!previousServer}
 							/>
-							<TextField label="Adresse e-mail" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoFocus={!!previousServer} />
-							<PasswordField label="Mot de passe maître" value={password} onChange={(event) => setPassword(event.target.value)} />
+							<TextField label="Email address" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoFocus={!!previousServer} />
+							<PasswordField label="Master password" value={password} onChange={(event) => setPassword(event.target.value)} />
 						</>
 					)}
 
@@ -139,7 +139,7 @@ export function LoginScreen() {
 						disabled={!canSubmit || pending}
 						startIcon={pending ? <CircularProgress size={16} color="inherit" /> : undefined}
 					>
-						{pending ? "Connexion et déchiffrement…" : twoFactorRequired ? "Vérifier" : "Se connecter"}
+						{pending ? "Logging in and decrypting…" : twoFactorRequired ? "Verify" : "Log in"}
 					</Button>
 
 					{twoFactorRequired && method === TwoFactorMethod.Email && (
@@ -149,14 +149,14 @@ export function LoginScreen() {
 							disabled={pending}
 							onClick={() => void dispatch(login({ serverUrl, email, password, twoFactor: { method, code: "" } }))}
 						>
-							Envoyer le code par e-mail
+							Send the code by email
 						</Button>
 					)}
 
 					{twoFactorRequired && (
 						<Box sx={{ textAlign: "center" }}>
 							<Link component="button" type="button" variant="body2" underline="hover" onClick={() => dispatch(resetTwoFactor())}>
-								Revenir à la connexion
+								Back to login
 							</Link>
 						</Box>
 					)}

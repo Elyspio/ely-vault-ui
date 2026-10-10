@@ -13,7 +13,7 @@ export type FolderNode = {
 	children: FolderNode[];
 };
 
-const collator = new Intl.Collator("fr", { sensitivity: "base", numeric: true });
+const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
 
 export function buildFolderTree(folders: VaultFolder[]): FolderNode[] {
 	const roots: FolderNode[] = [];

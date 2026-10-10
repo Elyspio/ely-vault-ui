@@ -11,7 +11,7 @@ export class IpcModule extends LogModule {
 	}
 
 	/**
-	 * Envoie un message IPC à la fenêtre principale, s'il y en a une
+	 * Sends an IPC message to the main window, if there is one
 	 */
 	public sendToMainWindow<Channel extends keyof IpcSentEvents>(channel: Channel, ...args: SkipFirst<Parameters<IpcSentEvents[Channel]>>) {
 		const window = BrowserWindow.getAllWindows()[0];

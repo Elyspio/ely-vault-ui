@@ -2,20 +2,20 @@
 
 [← Ely Vault UI](../readme.md)
 
-## Utilisation
+## Usage
 
-- [Installation](utilisation/installation.md) : installeurs, premier lancement
-- [Mises à jour](utilisation/mises-a-jour.md) : mise à jour automatique, versions bêta
-- [Saisie automatique](utilisation/saisie-automatique.md) : séquences, garde-fous, plateformes
-- [Raccourcis clavier](utilisation/raccourcis-clavier.md)
+- [Installation](usage/installation.md): installers, first launch
+- [Updates](usage/updates.md): automatic updates, beta versions
+- [Auto-type](usage/auto-type.md): sequences, safeguards, platforms
+- [Keyboard shortcuts](usage/keyboard-shortcuts.md)
 
-## Technique
+## Technical
 
-- [Architecture](technique/architecture.md) : CLI Bitwarden, technologies, organisation du dépôt
-- [Modèle de sécurité](technique/securite.md)
+- [Architecture](technical/architecture.md): Bitwarden CLI, technologies, repository layout
+- [Security model](technical/security.md)
 
-## Développement
+## Development
 
-- [Démarrage](developpement/demarrage.md) : prérequis, commandes
-- [Publier une version](developpement/publier-une-version.md)
-- [Serveur de test local](developpement/serveur-de-test-local.md) : Vaultwarden jetable en HTTPS
+- [Getting started](development/getting-started.md): prerequisites, commands
+- [Releasing](development/releasing.md)
+- [Local test server](development/local-test-server.md): disposable Vaultwarden over HTTPS

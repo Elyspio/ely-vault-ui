@@ -71,12 +71,12 @@ export class VaultModule extends LogModule {
 	@log("info")
 	public async login(request: LoginRequest): Promise<LoginResult> {
 		const serverUrl = normalizeServerUrl(request.serverUrl);
-		if (!serverUrl) return { status: "error", message: "Adresse du serveur invalide (https:// requis)" };
+		if (!serverUrl) return { status: "error", message: "Invalid server address (https:// required)" };
 
 		// The CLI only says "certificate error": check first, so the user can review and approve the certificate
 		const certificate = await this.certificateModule.check(serverUrl);
 		if (certificate.status === "untrusted") return { status: "untrusted-certificate", certificate: certificate.certificate };
-		if (certificate.status === "unreachable") return { status: "error", message: `Serveur injoignable : ${certificate.message}` };
+		if (certificate.status === "unreachable") return { status: "error", message: `Server unreachable: ${certificate.message}` };
 
 		// Login, logout and server config write the CLI data file: the server must be down
 		await this.bwServeModule.stop();
@@ -90,7 +90,7 @@ export class VaultModule extends LogModule {
 			if (request.sso) await this.bwCliModule.loginSso();
 			else await this.bwCliModule.login(request.email.trim(), request.password, request.twoFactor);
 		} catch (error) {
-			if (error instanceof Error && error.name === "AbortError") return { status: "error", message: "Connexion SSO annulée ou expirée" };
+			if (error instanceof Error && error.name === "AbortError") return { status: "error", message: "SSO login cancelled or expired" };
 			const message = errorMessage(error);
 			// CLI message only: the password goes through the environment, never in arguments or output
 			this.logger.warn("Login failed", message);
@@ -303,7 +303,7 @@ export class VaultModule extends LogModule {
 
 	private getItem(itemId: string) {
 		const item = this.items.get(itemId);
-		if (!item) throw new BwError(this.snapshot ? "Élément introuvable" : "Le coffre est verrouillé");
+		if (!item) throw new BwError(this.snapshot ? "Item not found" : "The vault is locked");
 		return item;
 	}
 
@@ -336,10 +336,10 @@ function isTwoFactorError(message: string) {
 }
 
 function translateError(message: string) {
-	if (/username or password is incorrect/i.test(message)) return "Adresse e-mail ou mot de passe incorrect";
-	if (/decryption operation failed|invalid master password/i.test(message)) return "Mot de passe maître incorrect";
-	if (/two[- ]?step token is invalid|invalid.*code/i.test(message)) return "Code de vérification invalide";
-	if (/fetch failed|ECONNREFUSED|ENOTFOUND|getaddrinfo/i.test(message)) return "Serveur injoignable";
-	if (/certificate|self[- ]signed|UNABLE_TO_VERIFY/i.test(message)) return "Certificat du serveur non reconnu : approuvez son autorité dans les paramètres";
+	if (/username or password is incorrect/i.test(message)) return "Incorrect email address or password";
+	if (/decryption operation failed|invalid master password/i.test(message)) return "Incorrect master password";
+	if (/two[- ]?step token is invalid|invalid.*code/i.test(message)) return "Invalid verification code";
+	if (/fetch failed|ECONNREFUSED|ENOTFOUND|getaddrinfo/i.test(message)) return "Server unreachable";
+	if (/certificate|self[- ]signed|UNABLE_TO_VERIFY/i.test(message)) return "Server certificate not recognized: approve its authority in the settings";
 	return message;
 }

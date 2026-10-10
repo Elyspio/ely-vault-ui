@@ -51,7 +51,7 @@ const slice = createSlice({
 			state.current = action.payload;
 		});
 		builder.addCase(initApp.rejected, (state, action) => {
-			state.fatalError = action.error.message ?? "Erreur inconnue";
+			state.fatalError = action.error.message ?? "Unknown error";
 		});
 
 		for (const thunk of [login, unlock, trustCertificate, importAuthority]) {
@@ -61,7 +61,7 @@ const slice = createSlice({
 			});
 			builder.addCase(thunk.rejected, (state, action) => {
 				state.pending = false;
-				state.error = (action.payload as string | undefined) ?? action.error.message ?? "Erreur inconnue";
+				state.error = (action.payload as string | undefined) ?? action.error.message ?? "Unknown error";
 				// The certificate is checked before the CLI login: a failed login is past the review, show its error on the login form
 				if (thunk === login) state.untrustedCertificate = null;
 			});

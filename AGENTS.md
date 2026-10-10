@@ -4,12 +4,12 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 
 ## Project Overview
 
-**Ely Vault UI** (`vault-desktop`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all cryptography is delegated to the CLI, the app implements none. Version 1 is read-only (no item creation/edit). UI strings, the readme and `docs/` are in French.
+**Ely Vault UI** (`vault-desktop`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all cryptography is delegated to the CLI, the app implements none. Version 1 is read-only (no item creation/edit). UI strings, the readme and `docs/` are in English.
 
 ## Repository Layout
 
 - `app/` — the application project: `package.json`, pnpm files, `src/`, `config/`, `resources/`, `build/`, `scripts/`, tsconfigs, `vite.config.ts`. **Run every command from `app/`**; paths in this file are relative to `app/` unless stated otherwise.
-- Repository root — `AGENTS.md`, `CLAUDE.md`, `readme.md` (overview + documentation index), `docs/` (`utilisation/`, `technique/`, `developpement/`), `LICENSE`, `.gitignore`, `.dockerignore` and `deploy/` (`deploy/release/linux.Dockerfile`, built with the repository root as context).
+- Repository root — `AGENTS.md`, `CLAUDE.md`, `readme.md` (overview + documentation index), `docs/` (`usage/`, `technical/`, `development/`), `LICENSE`, `.gitignore`, `.dockerignore` and `deploy/` (`deploy/release/linux.Dockerfile`, built with the repository root as context).
 
 ## Commands
 
@@ -24,8 +24,8 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 | Test                                 | `pnpm test` (`vp test`, `src/**/*.test.ts` and `scripts/**/*.test.ts`, node environment)             |
 | Package Windows (NSIS)               | `pnpm package:win`                                                                                   |
 | Package Linux (AppImage, .deb)       | `pnpm package:linux` (native on Linux, in the root `deploy/release/linux.Dockerfile` container elsewhere) |
-| Draft GitHub release (Windows host)  | `pnpm release` (`scripts/release/release.ts`, see `docs/developpement/publier-une-version.md`)                                            |
-| Local test vault                     | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see `docs/developpement/serveur-de-test-local.md`)                                       |
+| Draft GitHub release (Windows host)  | `pnpm release` (`scripts/release/release.ts`, see `docs/development/releasing.md`)                                            |
+| Local test vault                     | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see `docs/development/local-test-server.md`)                                       |
 
 Package manager: **pnpm 12.5.1**, Node **26+**. Build/dev use electron-vite (`config/electron.vite.config.ts`, also injects the renderer CSP), builder config at `config/electron-builder.yml`. The vite-plus toolchain (fmt/lint/test) is configured in `vite.config.ts`; `vite` is aliased to `@voidzero-dev/vite-plus-core` via the pnpm catalog (`pnpm-workspace.yaml`).
 
@@ -89,12 +89,12 @@ App folder: `%LOCALAPPDATA%/vault-desktop` (Linux: Electron `appData`), see `Mai
 ## Development Workflow
 
 - Make sure to run `pnpm check` and `pnpm test` before committing.
-- The CLI requires HTTPS: for a local Vaultwarden test server, follow `docs/developpement/serveur-de-test-local.md` and run with `NODE_EXTRA_CA_CERTS=scripts/dev/ssl/ca.pem`.
+- The CLI requires HTTPS: for a local Vaultwarden test server, follow `docs/development/local-test-server.md` and run with `NODE_EXTRA_CA_CERTS=scripts/dev/ssl/ca.pem`.
 - Commits follow Conventional Commits (`feat:`, `fix:`, …); PRs are squash-merged.
 
 ## Git & Release Conventions
 
 - Releases: bump `version` in `package.json` through a `chore: release vX.Y.Z` PR, then run `pnpm release` on an up to date `main` (Windows, Docker/Podman, authenticated `gh`). It builds Windows locally and Linux in `deploy/release/linux.Dockerfile`, pushes the tag and creates a **draft** GitHub release with generated notes; publish it by hand. Only `x.y.z` and `x.y.z-beta.n` versions are allowed.
 
-- No `Co-Authored-By` trailer (nor any AI attribution line such as « Generated with Claude Code ») in commit messages, PR descriptions or squash merge messages.
+- No `Co-Authored-By` trailer (nor any AI attribution line such as "Generated with Claude Code") in commit messages, PR descriptions or squash merge messages.
 - Release notes come from the squash merge commit of the PR: keep them free of these attribution lines too (pass an explicit `--body` to `gh pr merge --squash` when the branch commits carry trailers).

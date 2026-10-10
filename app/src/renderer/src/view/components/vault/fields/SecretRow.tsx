@@ -38,7 +38,7 @@ export function SecretRow({ label, itemId, secret, maskedHint, multiline, colore
 			multiline={multiline && value !== null}
 			onCopy={() => void actions.copy(itemId, secret, label)}
 			actions={
-				<Tooltip title={value === null ? "Afficher" : "Masquer"}>
+				<Tooltip title={value === null ? "Show" : "Hide"}>
 					<IconButton size="small" onClick={() => void toggle()}>
 						{value === null ? <VisibilityRounded sx={{ fontSize: 16 }} /> : <VisibilityOffRounded sx={{ fontSize: 16 }} />}
 					</IconButton>

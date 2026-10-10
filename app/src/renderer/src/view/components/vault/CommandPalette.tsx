@@ -70,16 +70,16 @@ function PaletteContent({ close }: Readonly<{ close: () => void }>) {
 
 	const commands = useMemo<Command[]>(
 		() => [
-			{ id: "lock", label: "Verrouiller le coffre", icon: <LockRounded />, keywords: "verrouiller lock", run: () => dispatch(lock()) },
-			{ id: "sync", label: "Synchroniser", icon: <SyncRounded />, keywords: "synchroniser sync rafraichir", run: () => dispatch(syncVault()) },
+			{ id: "lock", label: "Lock the vault", icon: <LockRounded />, keywords: "lock", run: () => dispatch(lock()) },
+			{ id: "sync", label: "Sync", icon: <SyncRounded />, keywords: "synchroniser sync rafraichir", run: () => dispatch(syncVault()) },
 			{
 				id: "generate",
-				label: "Générer un mot de passe",
+				label: "Generate a password",
 				icon: <PasswordRounded />,
-				keywords: "generer generateur mot de passe password",
+				keywords: "generate generator password",
 				run: () => dispatch(setGeneratorOpen(true)),
 			},
-			{ id: "settings", label: "Paramètres", icon: <TuneRounded />, keywords: "parametres reglages settings", run: () => dispatch(setSettingsOpen(true)) },
+			{ id: "settings", label: "Settings", icon: <TuneRounded />, keywords: "settings preferences", run: () => dispatch(setSettingsOpen(true)) },
 		],
 		[dispatch]
 	);
@@ -110,7 +110,7 @@ function PaletteContent({ close }: Readonly<{ close: () => void }>) {
 			dispatch(setQuery(""));
 			dispatch(selectItem(item.id));
 		} else if (event.shiftKey) {
-			if (item.login?.username) void actions.copy(item.id, { kind: "username" }, "Identifiant");
+			if (item.login?.username) void actions.copy(item.id, { kind: "username" }, "Username");
 		} else if (event.ctrlKey || event.metaKey) {
 			if (item.login?.hasTotp) void actions.copy(item.id, { kind: "totp" }, "Code");
 		} else {
@@ -146,7 +146,7 @@ function PaletteContent({ close }: Readonly<{ close: () => void }>) {
 				<InputBase
 					autoFocus
 					fullWidth
-					placeholder="Rechercher un élément ou une action…"
+					placeholder="Search an item or an action…"
 					value={query}
 					onChange={(event) => {
 						setLocalQuery(event.target.value);
@@ -155,18 +155,18 @@ function PaletteContent({ close }: Readonly<{ close: () => void }>) {
 					onKeyDown={onKeyDown}
 					sx={{ fontSize: "1rem" }}
 				/>
-				<Kbd>Échap</Kbd>
+				<Kbd>Esc</Kbd>
 			</Box>
 
 			<Box ref={listRef} sx={{ maxHeight: 420, overflow: "auto", p: 0.75 }}>
 				{!query.trim() && entries.length > 0 && (
 					<Typography variant="overline" component="div" sx={{ px: 1.25, color: "var(--text-faint)" }}>
-						Favoris
+						Favorites
 					</Typography>
 				)}
 				{entries.length === 0 && (
 					<Typography sx={{ p: 3, textAlign: "center", color: "var(--text-faint)", fontSize: "0.85rem" }}>
-						{query ? "Aucun résultat" : "Tapez pour rechercher dans tout le coffre"}
+						{query ? "No results" : "Type to search the whole vault"}
 					</Typography>
 				)}
 				{entries.map((entry, i) => (
@@ -213,18 +213,18 @@ function PaletteContent({ close }: Readonly<{ close: () => void }>) {
 			</Box>
 
 			<Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", px: 2, py: 1, borderTop: "1px solid var(--border-subtle)", bgcolor: "var(--surface-0)" }}>
-				<Shortcut keys={["↵"]} label="Copier" />
-				<Shortcut keys={["Maj", "↵"]} label="Identifiant" />
+				<Shortcut keys={["↵"]} label="Copy" />
+				<Shortcut keys={["Shift", "↵"]} label="Username" />
 				<Shortcut keys={["Ctrl", "↵"]} label="Code TOTP" />
-				<Shortcut keys={["Alt", "↵"]} label="Afficher" />
-				<Shortcut keys={["Ctrl", "Maj", "V"]} label="Saisie auto" />
+				<Shortcut keys={["Alt", "↵"]} label="Show" />
+				<Shortcut keys={["Ctrl", "Shift", "V"]} label="Auto-type" />
 			</Box>
 		</>
 	);
 }
 
 function Hint({ item }: Readonly<{ item: VaultItem }>) {
-	const label = item.login?.hasPassword ? "Copier le mot de passe" : item.card?.hasNumber ? "Copier le numéro" : item.notes ? "Copier la note" : "Copier";
+	const label = item.login?.hasPassword ? "Copy password" : item.card?.hasNumber ? "Copy number" : item.notes ? "Copy note" : "Copy";
 	return <Typography sx={{ fontSize: "0.72rem", color: "primary.main", whiteSpace: "nowrap" }}>{label} ↵</Typography>;
 }
 

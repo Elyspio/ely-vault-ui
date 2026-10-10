@@ -1,5 +1,5 @@
-const relative = new Intl.RelativeTimeFormat("fr", { numeric: "auto" });
-const dateTime = new Intl.DateTimeFormat("fr", { dateStyle: "long", timeStyle: "short" });
+const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+const dateTime = new Intl.DateTimeFormat("en", { dateStyle: "long", timeStyle: "short" });
 
 export function formatRelative(iso: string) {
 	const seconds = Math.round((new Date(iso).getTime() - Date.now()) / 1000);

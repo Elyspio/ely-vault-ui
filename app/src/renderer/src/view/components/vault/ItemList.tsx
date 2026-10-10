@@ -67,7 +67,7 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 					inputRef={searchRef}
 					fullWidth
 					size="small"
-					placeholder={`Rechercher dans ${filterLabel.toLowerCase()}`}
+					placeholder={`Search ${filterLabel.toLowerCase()}`}
 					value={query}
 					onChange={(event) => dispatch(setQuery(event.target.value))}
 					onKeyDown={onKeyDown}
@@ -89,7 +89,7 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 					}}
 				/>
 				<Typography sx={{ mt: 1.25, px: 0.5, fontSize: "0.72rem", color: "var(--text-faint)" }}>
-					{filterLabel} · {items.length} élément{items.length > 1 ? "s" : ""}
+					{filterLabel} · {items.length} item{items.length > 1 ? "s" : ""}
 				</Typography>
 			</Box>
 
@@ -97,7 +97,7 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 				{items.length === 0 ? (
 					<Box sx={{ textAlign: "center", color: "var(--text-faint)", mt: 8 }}>
 						<SearchOffRounded sx={{ fontSize: 36, mb: 1 }} />
-						<Typography variant="body2">{query ? `Aucun résultat pour « ${query} »` : "Aucun élément"}</Typography>
+						<Typography variant="body2">{query ? `No results for "${query}"` : "No items"}</Typography>
 					</Box>
 				) : (
 					items.map((item) => (

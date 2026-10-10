@@ -12,8 +12,8 @@ import type { PasswordGeneratorMode, PasswordGeneratorOptions } from "@shared/ty
 import { ColoredSecret } from "./fields/SecretRow";
 
 const modeLabels: Record<PasswordGeneratorMode, string> = {
-	password: "Mot de passe",
-	hex: "Hexadécimal",
+	password: "Password",
+	hex: "Hexadecimal",
 	base64: "Base64",
 };
 
@@ -55,7 +55,7 @@ export function GeneratorDialog() {
 
 	return (
 		<Dialog open={open} onClose={close} maxWidth="sm" fullWidth>
-			<DialogTitle>Générateur de mot de passe</DialogTitle>
+			<DialogTitle>Password generator</DialogTitle>
 			<DialogContent>
 				<ToggleButtonGroup
 					exclusive
@@ -87,7 +87,7 @@ export function GeneratorDialog() {
 					}}
 				>
 					<Box sx={{ flex: 1 }}>{password && <ColoredSecret value={password} />}</Box>
-					<Tooltip title="Regénérer">
+					<Tooltip title="Regenerate">
 						<IconButton onClick={() => void generate(options)}>
 							<RefreshRounded />
 						</IconButton>
@@ -107,22 +107,22 @@ export function GeneratorDialog() {
 					sx={{ mt: 1 }}
 					disabled={options.mode !== "password"}
 					control={<Switch checked={options.special} onChange={(_, special) => update({ special })} />}
-					label={<Typography sx={{ fontSize: "0.85rem" }}>Caractères spéciaux (!@#$%^&amp;*)</Typography>}
+					label={<Typography sx={{ fontSize: "0.85rem" }}>Special characters (!@#$%^&amp;*)</Typography>}
 				/>
 				<Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
 					<Button color="inherit" onClick={close}>
-						Fermer
+						Close
 					</Button>
 					<Button
 						variant="contained"
 						startIcon={<ContentCopyRounded />}
 						disabled={!password}
 						onClick={() => {
-							void actions.copy(null, { kind: "text", value: password }, "Mot de passe");
+							void actions.copy(null, { kind: "text", value: password }, "Password");
 							close();
 						}}
 					>
-						Copier
+						Copy
 					</Button>
 				</Box>
 			</DialogContent>

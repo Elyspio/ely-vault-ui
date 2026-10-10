@@ -52,7 +52,7 @@ export function VaultScreen() {
 				combo: "ctrl+shift+c",
 				handler: () => {
 					const item = selected();
-					if (item?.login?.hasPassword) void actions.copy(item.id, { kind: "password" }, "Mot de passe");
+					if (item?.login?.hasPassword) void actions.copy(item.id, { kind: "password" }, "Password");
 				},
 				allowInInput: true,
 			},
@@ -60,7 +60,7 @@ export function VaultScreen() {
 				combo: "ctrl+shift+u",
 				handler: () => {
 					const item = selected();
-					if (item?.login?.username) void actions.copy(item.id, { kind: "username" }, "Identifiant");
+					if (item?.login?.username) void actions.copy(item.id, { kind: "username" }, "Username");
 				},
 				allowInInput: true,
 			},

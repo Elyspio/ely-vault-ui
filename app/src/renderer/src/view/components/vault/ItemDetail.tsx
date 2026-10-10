@@ -54,11 +54,11 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 							{organization && (
 								<Chip size="small" icon={<BusinessRounded />} label={organization.name} variant="outlined" sx={{ borderColor: "var(--border-subtle)" }} />
 							)}
-							{item.reprompt && <Chip size="small" icon={<LockPersonRounded />} label="Protégé par mot de passe maître" variant="outlined" color="warning" />}
+							{item.reprompt && <Chip size="small" icon={<LockPersonRounded />} label="Protected by the master password" variant="outlined" color="warning" />}
 						</Box>
 					</Box>
 					{canAutoType(item) && (
-						<Tooltip title={autoType?.available === false ? autoType.reason : "Tape l'identifiant et le mot de passe dans la fenêtre précédente (Ctrl+V)"}>
+						<Tooltip title={autoType?.available === false ? autoType.reason : "Types the username and password into the previous window (Ctrl+V)"}>
 							<span>
 								<Button
 									variant="outlined"
@@ -67,14 +67,14 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 									disabled={!autoType?.available}
 									onClick={() => void actions.autoType(item.id)}
 								>
-									Saisie auto
+									Auto-type
 								</Button>
 							</span>
 						</Tooltip>
 					)}
 					{firstUri && (
 						<Button variant="outlined" size="small" endIcon={<OpenInNewRounded />} onClick={() => void actions.open(firstUri.uri)}>
-							Ouvrir
+							Open
 						</Button>
 					)}
 				</Box>
@@ -83,23 +83,23 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 					<>
 						<FieldCard>
 							{item.login.username && (
-								<FieldRow label="Identifiant" onCopy={() => void actions.copy(item.id, { kind: "username" }, "Identifiant")}>
+								<FieldRow label="Username" onCopy={() => void actions.copy(item.id, { kind: "username" }, "Username")}>
 									{item.login.username}
 								</FieldRow>
 							)}
-							{item.login.hasPassword && <SecretRow label="Mot de passe" itemId={item.id} secret={{ kind: "password" }} />}
+							{item.login.hasPassword && <SecretRow label="Password" itemId={item.id} secret={{ kind: "password" }} />}
 							{item.login.hasTotp && <TotpRow itemId={item.id} reprompt={item.reprompt} />}
 						</FieldCard>
 						{item.login.uris.length > 0 && (
-							<FieldCard title={item.login.uris.length > 1 ? "Sites web" : "Site web"}>
+							<FieldCard title={item.login.uris.length > 1 ? "Websites" : "Website"}>
 								{item.login.uris.map((uri, index) => (
 									<FieldRow
 										key={index}
-										label={uri.host ?? "Adresse"}
-										onCopy={() => void actions.copy(item.id, { kind: "uri", index }, "Adresse")}
+										label={uri.host ?? "URL"}
+										onCopy={() => void actions.copy(item.id, { kind: "uri", index }, "URL")}
 										actions={
 											uri.host && (
-												<Tooltip title="Ouvrir dans le navigateur">
+												<Tooltip title="Open in the browser">
 													<IconButton size="small" onClick={() => void actions.open(uri.uri)}>
 														<OpenInNewRounded sx={{ fontSize: 16 }} />
 													</IconButton>
@@ -120,13 +120,13 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 				{item.type === CipherType.Card && item.card && (
 					<FieldCard>
 						{item.card.cardholderName && (
-							<FieldRow label="Titulaire" onCopy={copyText(item.card.cardholderName, "Titulaire")}>
+							<FieldRow label="Cardholder" onCopy={copyText(item.card.cardholderName, "Cardholder")}>
 								{item.card.cardholderName}
 							</FieldRow>
 						)}
 						{item.card.hasNumber && (
 							<SecretRow
-								label="Numéro"
+								label="Number"
 								itemId={item.id}
 								secret={{ kind: "cardNumber" }}
 								maskedHint={item.card.numberLast4 ? `•••• •••• •••• ${item.card.numberLast4}` : undefined}
@@ -138,8 +138,8 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 								{item.card.expMonth?.padStart(2, "0") ?? "--"} / {item.card.expYear ?? "----"}
 							</FieldRow>
 						)}
-						{item.card.hasCode && <SecretRow label="Code de sécurité" itemId={item.id} secret={{ kind: "cardCode" }} colored={false} />}
-						{item.card.brand && <FieldRow label="Réseau">{item.card.brand}</FieldRow>}
+						{item.card.hasCode && <SecretRow label="Security code" itemId={item.id} secret={{ kind: "cardCode" }} colored={false} />}
+						{item.card.brand && <FieldRow label="Brand">{item.card.brand}</FieldRow>}
 					</FieldCard>
 				)}
 
@@ -148,16 +148,16 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 				{item.type === CipherType.SshKey && item.sshKey && (
 					<FieldCard>
 						{item.sshKey.publicKey && (
-							<FieldRow label="Clé publique" mono onCopy={copyText(item.sshKey.publicKey, "Clé publique")}>
+							<FieldRow label="Public key" mono onCopy={copyText(item.sshKey.publicKey, "Public key")}>
 								{item.sshKey.publicKey}
 							</FieldRow>
 						)}
 						{item.sshKey.keyFingerprint && (
-							<FieldRow label="Empreinte" mono onCopy={copyText(item.sshKey.keyFingerprint, "Empreinte")}>
+							<FieldRow label="Fingerprint" mono onCopy={copyText(item.sshKey.keyFingerprint, "Fingerprint")}>
 								{item.sshKey.keyFingerprint}
 							</FieldRow>
 						)}
-						{item.sshKey.hasPrivateKey && <SecretRow label="Clé privée" itemId={item.id} secret={{ kind: "sshPrivateKey" }} multiline />}
+						{item.sshKey.hasPrivateKey && <SecretRow label="Private key" itemId={item.id} secret={{ kind: "sshPrivateKey" }} multiline />}
 					</FieldCard>
 				)}
 
@@ -170,7 +170,7 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 				)}
 
 				{item.fields.length > 0 && (
-					<FieldCard title="Champs personnalisés">
+					<FieldCard title="Custom fields">
 						{item.fields.map((field, index) => {
 							const label = field.name || `Champ ${index + 1}`;
 							if (field.type === FieldType.Hidden) return <SecretRow key={index} label={label} itemId={item.id} secret={{ kind: "field", index }} />;
@@ -184,7 +184,7 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 								return (
 									<FieldRow key={index} label={label}>
 										<Box component="span" sx={{ color: "var(--text-muted)" }}>
-											Champ lié
+											Linked field
 										</Box>
 									</FieldRow>
 								);
@@ -202,15 +202,10 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 				)}
 
 				<Box sx={{ mt: 3, px: 0.5, display: "flex", flexDirection: "column", gap: 0.25 }}>
-					<Meta label="Modifié" value={formatDateTime(item.revisionDate)} />
-					{item.creationDate && <Meta label="Créé" value={formatDateTime(item.creationDate)} />}
-					{item.login?.passwordRevisionDate && <Meta label="Mot de passe changé" value={formatDateTime(item.login.passwordRevisionDate)} />}
-					{item.passwordHistoryCount > 0 && (
-						<Meta
-							label="Historique"
-							value={`${item.passwordHistoryCount} ancien${item.passwordHistoryCount > 1 ? "s" : ""} mot${item.passwordHistoryCount > 1 ? "s" : ""} de passe`}
-						/>
-					)}
+					<Meta label="Modified" value={formatDateTime(item.revisionDate)} />
+					{item.creationDate && <Meta label="Created" value={formatDateTime(item.creationDate)} />}
+					{item.login?.passwordRevisionDate && <Meta label="Password changed" value={formatDateTime(item.login.passwordRevisionDate)} />}
+					{item.passwordHistoryCount > 0 && <Meta label="History" value={`${item.passwordHistoryCount} old password${item.passwordHistoryCount > 1 ? "s" : ""}`} />}
 				</Box>
 			</Box>
 		</Box>
@@ -218,17 +213,17 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 }
 
 const identityRows: { label: string; keys: IdentityKey[]; separator?: string }[] = [
-	{ label: "Nom", keys: ["title", "firstName", "middleName", "lastName"], separator: " " },
-	{ label: "Nom d'utilisateur", keys: ["username"] },
-	{ label: "Société", keys: ["company"] },
+	{ label: "Name", keys: ["title", "firstName", "middleName", "lastName"], separator: " " },
+	{ label: "Username", keys: ["username"] },
+	{ label: "Company", keys: ["company"] },
 	{ label: "E-mail", keys: ["email"] },
-	{ label: "Téléphone", keys: ["phone"] },
-	{ label: "Adresse", keys: ["address1", "address2", "address3"], separator: "\n" },
-	{ label: "Ville", keys: ["postalCode", "city"], separator: " " },
-	{ label: "Région / Pays", keys: ["state", "country"], separator: ", " },
-	{ label: "N° de sécurité sociale", keys: ["ssn"] },
-	{ label: "N° de passeport", keys: ["passportNumber"] },
-	{ label: "N° de permis", keys: ["licenseNumber"] },
+	{ label: "Phone", keys: ["phone"] },
+	{ label: "Address", keys: ["address1", "address2", "address3"], separator: "\n" },
+	{ label: "City", keys: ["postalCode", "city"], separator: " " },
+	{ label: "State / Country", keys: ["state", "country"], separator: ", " },
+	{ label: "Social security number", keys: ["ssn"] },
+	{ label: "Passport number", keys: ["passportNumber"] },
+	{ label: "License number", keys: ["licenseNumber"] },
 ];
 
 function IdentityFields({ identity, copyText }: Readonly<{ identity: Record<IdentityKey, string | null>; copyText: (value: string, label: string) => () => void }>) {
@@ -259,13 +254,13 @@ function Meta({ label, value }: Readonly<{ label: string; value: string }>) {
 }
 
 const shortcuts: [string[], string][] = [
-	[["Ctrl", "K"], "Rechercher et copier partout"],
-	[["Ctrl", "F"], "Filtrer la liste"],
-	[["↑", "↓"], "Parcourir les éléments"],
-	[["Entrée"], "Copier le mot de passe"],
-	[["Ctrl", "Maj", "U"], "Copier l'identifiant"],
-	[["Ctrl", "Maj", "O"], "Copier le code TOTP"],
-	[["Ctrl", "L"], "Verrouiller"],
+	[["Ctrl", "K"], "Search and copy anywhere"],
+	[["Ctrl", "F"], "Filter the list"],
+	[["↑", "↓"], "Browse the items"],
+	[["Enter"], "Copy the password"],
+	[["Ctrl", "Shift", "U"], "Copy the username"],
+	[["Ctrl", "Shift", "O"], "Copy the TOTP code"],
+	[["Ctrl", "L"], "Lock"],
 ];
 
 function EmptyDetail() {
@@ -273,7 +268,7 @@ function EmptyDetail() {
 		<Box sx={{ height: "100%", display: "grid", placeItems: "center", bgcolor: "var(--surface-0)" }}>
 			<Box sx={{ textAlign: "center" }}>
 				<Logo size={64} sx={{ mx: "auto", mb: 1.5, opacity: 0.25, filter: "grayscale(0.6)" }} />
-				<Typography sx={{ color: "var(--text-muted)", mb: 3 }}>Sélectionnez un élément</Typography>
+				<Typography sx={{ color: "var(--text-muted)", mb: 3 }}>Select an item</Typography>
 				<Box sx={{ display: "grid", gridTemplateColumns: "auto auto", columnGap: 2, rowGap: 1, alignItems: "center", textAlign: "left" }}>
 					{shortcuts.map(([keys, label]) => (
 						<Box key={label} sx={{ display: "contents" }}>

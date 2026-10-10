@@ -43,7 +43,7 @@ export class AutoTypeModule extends LogModule {
 	@log("info")
 	public async perform(itemId: string) {
 		// Taken before any await: two quick Ctrl+V would interleave their keystrokes
-		if (this.running) throw new Error("Saisie automatique déjà en cours");
+		if (this.running) throw new Error("Auto-type already in progress");
 		this.running = true;
 		try {
 			await this.run(itemId);
@@ -60,29 +60,29 @@ export class AutoTypeModule extends LogModule {
 		// Everything that can fail or ask for the master password happens before the window is minimized
 		const item = this.vaultModule.getProtectedItem(itemId);
 		const login = item.type === CipherType.Login ? item.login : undefined;
-		if (!login?.username && !login?.password) throw new Error("La saisie automatique demande un identifiant avec un nom d'utilisateur ou un mot de passe");
+		if (!login?.username && !login?.password) throw new Error("Auto-type needs a login with a username or a password");
 
 		const config = (await this.configModule.getConfig()).autoType;
 		const tokens = getItemSequence(item, config);
 		const values: Record<Exclude<AutoTypeField, "totp">, string> = { username: login.username ?? "", password: login.password ?? "" };
 		if (tokens.some((token) => token.kind === "field" && token.field !== "totp" && CONTROL_CHARACTERS.test(values[token.field]))) {
-			throw new Error("Saisie impossible : l'identifiant ou le mot de passe contient une tabulation ou un retour à la ligne");
+			throw new Error("Cannot type: the username or the password contains a tab or a line break");
 		}
 
 		const window = this.windowModule.window;
-		if (!window) throw new Error("Fenêtre introuvable");
+		if (!window) throw new Error("Window not found");
 
 		try {
 			const ownId = nativeWindowId(window);
 			window.minimize();
 
 			const target = await this.waitForTarget(driver, ownId);
-			if (!target) throw new Error("Aucune fenêtre cible : la saisie automatique tape dans la fenêtre ouverte avant Vault");
-			if (!(await driver.waitForKeysReleased(KEYS_TIMEOUT_MS))) throw new Error("Saisie annulée : relâchez Ctrl, Maj, Alt et V");
+			if (!target) throw new Error("No target window: auto-type types into the window opened before Vault");
+			if (!(await driver.waitForKeysReleased(KEYS_TIMEOUT_MS))) throw new Error("Auto-type cancelled: release Ctrl, Shift, Alt and V");
 
 			const check = async () => {
-				if (!this.vaultModule.isUnlocked) throw new Error("Saisie interrompue : le coffre a été verrouillé");
-				if ((await driver.getForegroundWindow()) !== target) throw new Error("Saisie interrompue : la fenêtre active a changé");
+				if (!this.vaultModule.isUnlocked) throw new Error("Auto-type stopped: the vault was locked");
+				if ((await driver.getForegroundWindow()) !== target) throw new Error("Auto-type stopped: the active window changed");
 			};
 
 			for (const token of tokens) {
@@ -141,10 +141,10 @@ export class AutoTypeModule extends LogModule {
 				return reason ? { reason } : { driver: new LinuxAutoTypeDriver() };
 			}
 
-			return { reason: "Saisie automatique non disponible sur ce système" };
+			return { reason: "Auto-type is not available on this system" };
 		} catch (error) {
 			this.logger.error("Auto-type driver unavailable", error instanceof Error ? error.message : error);
-			return { reason: "Saisie automatique indisponible : module système introuvable" };
+			return { reason: "Auto-type unavailable: system module not found" };
 		}
 	}
 }

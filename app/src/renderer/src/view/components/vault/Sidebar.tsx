@@ -22,11 +22,11 @@ import { setSettingsOpen } from "@modules/ui/ui.reducer";
 import { CipherType } from "@shared/types/vault.types";
 
 export const typeLabels: Record<CipherType, string> = {
-	[CipherType.Login]: "Identifiants",
-	[CipherType.Card]: "Cartes",
-	[CipherType.Identity]: "Identités",
+	[CipherType.Login]: "Logins",
+	[CipherType.Card]: "Cards",
+	[CipherType.Identity]: "Identities",
 	[CipherType.SecureNote]: "Notes",
-	[CipherType.SshKey]: "Clés SSH",
+	[CipherType.SshKey]: "SSH keys",
 };
 
 const typeIcons: Record<CipherType, ReactNode> = {
@@ -92,18 +92,18 @@ export function Sidebar() {
 	return (
 		<Box component="nav" sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "var(--surface-0)", borderRight: "1px solid var(--border-subtle)" }}>
 			<Box sx={{ flex: 1, overflow: "auto", px: 1, py: 1.5 }}>
-				{entry({ kind: "all" }, <AppsRounded />, "Tous les éléments", counts.all)}
-				{entry({ kind: "favorites" }, <StarRounded />, "Favoris", counts.favorites)}
+				{entry({ kind: "all" }, <AppsRounded />, "All items", counts.all)}
+				{entry({ kind: "favorites" }, <StarRounded />, "Favorites", counts.favorites)}
 
 				<SectionTitle>Types</SectionTitle>
 				{typeOrder.filter((type) => counts.types[type] > 0).map((type) => entry({ kind: "type", type }, typeIcons[type], typeLabels[type], counts.types[type]))}
 
-				{(folders.length > 0 || counts.noFolder > 0) && <SectionTitle>Dossiers</SectionTitle>}
+				{(folders.length > 0 || counts.noFolder > 0) && <SectionTitle>Folders</SectionTitle>}
 				{folders.map((node) => folderEntry(node, 0))}
 				{counts.noFolder > 0 && (
 					<SidebarEntry
 						icon={<FolderOffRounded />}
-						label="Sans dossier"
+						label="No folder"
 						count={counts.noFolder}
 						depth={0}
 						active={sameFilter(filter, { kind: "folder", id: null })}
@@ -111,7 +111,7 @@ export function Sidebar() {
 					/>
 				)}
 
-				{(snapshot?.organizations.length ?? 0) > 0 && <SectionTitle>Organisations</SectionTitle>}
+				{(snapshot?.organizations.length ?? 0) > 0 && <SectionTitle>Organizations</SectionTitle>}
 				{snapshot?.organizations.map((organization) => (
 					<Box key={organization.id}>
 						{entry({ kind: "organization", id: organization.id }, <BusinessRounded />, organization.name, counts.organizations[organization.id] ?? 0)}

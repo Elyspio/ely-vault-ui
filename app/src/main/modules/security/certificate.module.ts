@@ -144,7 +144,7 @@ export class CertificateModule extends LogModule {
 	@log("info")
 	public async trust(fingerprint256: string) {
 		const pending = this.pending.get(fingerprint256);
-		if (!pending) throw new Error("Certificat inconnu : relancez la connexion");
+		if (!pending) throw new Error("Unknown certificate: log in again");
 
 		const [leaf, ...authorities] = pending.chain;
 		const anchor = pending.chain.at(-1)!;
@@ -163,7 +163,7 @@ export class CertificateModule extends LogModule {
 			await this.handshake(hostname, Number(port), true);
 		} catch (error) {
 			this.saveStore(previous);
-			throw new Error(`Le serveur reste non approuvé : ${(error as Error).message}`);
+			throw new Error(`The server is still not trusted: ${(error as Error).message}`);
 		}
 	}
 
@@ -173,7 +173,7 @@ export class CertificateModule extends LogModule {
 	@log("info")
 	public async importAuthority(window: BrowserWindow | null): Promise<TrustedCertificate[]> {
 		const options: Electron.OpenDialogOptions = {
-			title: "Importer un certificat d'autorité",
+			title: "Import an authority certificate",
 			properties: ["openFile"],
 			filters: [{ name: "Certificats", extensions: ["pem", "crt", "cer", "der"] }],
 		};
@@ -181,9 +181,9 @@ export class CertificateModule extends LogModule {
 		if (result.canceled || result.filePaths.length === 0) return [];
 
 		const certificates = parseCertificates(fs.readFileSync(result.filePaths[0]));
-		if (certificates.length === 0) throw new Error("Aucun certificat dans ce fichier");
+		if (certificates.length === 0) throw new Error("No certificate in this file");
 		const notAuthority = certificates.find((c) => !c.ca);
-		if (notAuthority) throw new Error(`« ${commonName(notAuthority.subject)} » n'est pas un certificat d'autorité`);
+		if (notAuthority) throw new Error(`"${commonName(notAuthority.subject)}" is not an authority certificate`);
 
 		const added: StoredTrust[] = certificates.map((c) => ({
 			host: null,
@@ -240,7 +240,7 @@ export class CertificateModule extends LogModule {
 				socket.end();
 				resolve(chain);
 			});
-			socket.once("timeout", () => socket.destroy(new Error(`Délai dépassé pour ${host}:${port}`)));
+			socket.once("timeout", () => socket.destroy(new Error(`Timed out connecting to ${host}:${port}`)));
 			socket.once("error", reject);
 		});
 	}
@@ -280,11 +280,11 @@ export class CertificateModule extends LogModule {
 		const complete = isSelfSigned(anchor);
 
 		let reason: string;
-		if (!hostOk) reason = `Le certificat n'est pas émis pour ${hostname}`;
-		else if (!valid) reason = "Un certificat de la chaîne est expiré ou pas encore valide";
-		else if (!complete) reason = "L'autorité racine est introuvable : importez son certificat";
-		else if (chain.length === 1) reason = "Certificat auto-signé";
-		else reason = `Autorité « ${commonName(anchor.subject)} » inconnue de ce poste`;
+		if (!hostOk) reason = `The certificate is not issued for ${hostname}`;
+		else if (!valid) reason = "A certificate of the chain is expired or not yet valid";
+		else if (!complete) reason = "Root authority not found: import its certificate";
+		else if (chain.length === 1) reason = "Self-signed certificate";
+		else reason = `Authority "${commonName(anchor.subject)}" unknown to this computer`;
 
 		const trustable = hostOk && valid && complete;
 		if (trustable) this.pending.set(anchor.fingerprint256, { host: hostPort, chain });

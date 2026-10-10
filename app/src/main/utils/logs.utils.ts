@@ -5,9 +5,9 @@ interface ILoggable {
 }
 
 /**
- * Décorateur qui logge l'entrée, la sortie et la durée d'une méthode.
+ * Decorator logging the entry, the exit and the duration of a method.
  *
- * Volontairement sans les paramètres ni la valeur de retour : ils peuvent contenir des secrets.
+ * Deliberately without the parameters nor the return value: they may contain secrets.
  */
 export function log(level: "debug" | "info" = "debug") {
 	return (_target: unknown, propertyKey: string, descriptor: PropertyDescriptor) => {

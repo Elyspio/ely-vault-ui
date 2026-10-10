@@ -99,6 +99,6 @@ export class WindowsAutoTypeDriver implements AutoTypeDriver {
 
 	private send(inputs: KeyboardInput[]) {
 		const sent = this.api.SendInput(inputs.length, inputs, this.api.inputSize) as number;
-		if (sent !== inputs.length) throw new Error("Saisie bloquée par le système");
+		if (sent !== inputs.length) throw new Error("Typing blocked by the system");
 	}
 }

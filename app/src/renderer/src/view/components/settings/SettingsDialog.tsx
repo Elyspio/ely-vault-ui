@@ -19,24 +19,24 @@ const autoLockOptions = [
 	{ value: 5, label: "5 minutes" },
 	{ value: 15, label: "15 minutes" },
 	{ value: 30, label: "30 minutes" },
-	{ value: 60, label: "1 heure" },
-	{ value: 240, label: "4 heures" },
-	{ value: 0, label: "Jamais" },
+	{ value: 60, label: "1 hour" },
+	{ value: 240, label: "4 hours" },
+	{ value: 0, label: "Never" },
 ];
 
 const clipboardOptions = [
-	{ value: 10, label: "10 secondes" },
-	{ value: 20, label: "20 secondes" },
-	{ value: 30, label: "30 secondes" },
+	{ value: 10, label: "10 seconds" },
+	{ value: 20, label: "20 seconds" },
+	{ value: 30, label: "30 seconds" },
 	{ value: 60, label: "1 minute" },
 	{ value: 120, label: "2 minutes" },
-	{ value: 0, label: "Jamais" },
+	{ value: 0, label: "Never" },
 ];
 
 const afterTypingOptions: { value: AutoTypeAfter; label: string }[] = [
-	{ value: "minimized", label: "Rester réduite" },
-	{ value: "restore", label: "Revenir au premier plan" },
-	{ value: "lock", label: "Verrouiller le coffre" },
+	{ value: "minimized", label: "Stay minimized" },
+	{ value: "restore", label: "Come back to the front" },
+	{ value: "lock", label: "Lock the vault" },
 ];
 
 export function SettingsDialog() {
@@ -67,14 +67,14 @@ export function SettingsDialog() {
 			slotProps={{ transition: { onEntered: () => pendingUpdate && updatesRef.current?.scrollIntoView({ block: "start" }) } }}
 		>
 			<DialogTitle sx={{ display: "flex", alignItems: "center" }}>
-				<Box sx={{ flex: 1 }}>Paramètres</Box>
+				<Box sx={{ flex: 1 }}>Settings</Box>
 				<IconButton size="small" onClick={close}>
 					<CloseRounded fontSize="small" />
 				</IconButton>
 			</DialogTitle>
 			<DialogContent sx={{ pb: 3 }}>
-				<Section title="Sécurité">
-					<Setting label="Verrouillage automatique" description="Après une période d'inactivité de l'ordinateur">
+				<Section title="Security">
+					<Setting label="Auto-lock" description="After a period of computer inactivity">
 						<Select
 							size="small"
 							value={config.security.autoLockMinutes ?? 0}
@@ -88,13 +88,13 @@ export function SettingsDialog() {
 							))}
 						</Select>
 					</Setting>
-					<Setting label="Verrouiller avec la session" description="Quand l'ordinateur est verrouillé ou mis en veille">
+					<Setting label="Lock with the session" description="When the computer is locked or goes to sleep">
 						<Switch
 							checked={config.security.lockOnSystemLock}
 							onChange={(_, checked) => update((c) => ({ ...c, security: { ...c.security, lockOnSystemLock: checked } }))}
 						/>
 					</Setting>
-					<Setting label="Effacer le presse-papiers" description="Après la copie d'une valeur, si elle y est encore">
+					<Setting label="Clear the clipboard" description="After copying a value, if it is still there">
 						<Select
 							size="small"
 							value={config.security.clipboardClearSeconds ?? 0}
@@ -110,32 +110,29 @@ export function SettingsDialog() {
 					</Setting>
 				</Section>
 
-				<Section title="Affichage">
-					<Setting label="Icônes des sites" description="Récupérées via le service d'icônes de votre serveur">
+				<Section title="Display">
+					<Setting label="Website icons" description="Fetched through your server's icon service">
 						<Switch checked={config.display.showFavicons} onChange={(_, checked) => update((c) => ({ ...c, display: { ...c.display, showFavicons: checked } }))} />
 					</Setting>
 				</Section>
 
-				<Section title="Saisie automatique">
+				<Section title="Auto-type">
 					{autoType?.available === false && (
-						<Setting label="Indisponible" description={autoType.reason}>
+						<Setting label="Unavailable" description={autoType.reason}>
 							{null}
 						</Setting>
 					)}
-					<Setting
-						label="Séquence par défaut"
-						description="{USERNAME} {PASSWORD} {TOTP} {TAB} {ENTER} {DELAY n}. Un champ personnalisé « autotype » la remplace pour un élément."
-					>
+					<Setting label="Default sequence" description="{USERNAME} {PASSWORD} {TOTP} {TAB} {ENTER} {DELAY n}. An autotype custom field replaces it for an item.">
 						<SequenceInput
 							key={config.autoType.defaultSequence}
 							value={config.autoType.defaultSequence}
 							onSave={(defaultSequence) => update((c) => ({ ...c, autoType: { ...c.autoType, defaultSequence } }))}
 						/>
 					</Setting>
-					<Setting label="Valider avec Entrée" description="Appuie sur Entrée après la séquence par défaut">
+					<Setting label="Press Enter" description="Presses Enter after the default sequence">
 						<Switch checked={config.autoType.pressEnter} onChange={(_, checked) => update((c) => ({ ...c, autoType: { ...c.autoType, pressEnter: checked } }))} />
 					</Setting>
-					<Setting label="Après la saisie" description="Fenêtre de Vault une fois la séquence tapée">
+					<Setting label="After typing" description="Vault window once the sequence is typed">
 						<Select
 							size="small"
 							value={config.autoType.afterTyping}
@@ -151,22 +148,22 @@ export function SettingsDialog() {
 					</Setting>
 				</Section>
 
-				<Section title="Mises à jour" ref={updatesRef}>
+				<Section title="Updates" ref={updatesRef}>
 					<UpdatesSection />
-					<Setting label="Mises à jour automatiques" description="Recherche une nouvelle version au démarrage puis toutes les heures, et la télécharge">
+					<Setting label="Automatic updates" description="Checks for a new version at startup then every hour, and downloads it">
 						<Switch checked={config.updates.autoCheck} onChange={(_, checked) => update((c) => ({ ...c, updates: { ...c.updates, autoCheck: checked } }))} />
 					</Setting>
-					<Setting label="Versions bêta" description="Reçoit les préversions. Les désactiver propose de revenir à la dernière version stable">
+					<Setting label="Beta versions" description="Receives the prereleases. Turning them off offers to go back to the latest stable version">
 						<Switch checked={config.updates.beta} onChange={(_, checked) => update((c) => ({ ...c, updates: { ...c.updates, beta: checked } }))} />
 					</Setting>
 				</Section>
 
-				<Section title="Certificats approuvés">
+				<Section title="Approved certificates">
 					<CertificatesSection />
 				</Section>
 
-				<Section title="Compte">
-					<Setting label={account?.email ?? ""} description={`${account?.serverUrl ?? ""}${lastSync ? ` · synchronisé le ${formatDateTime(lastSync)}` : ""}`}>
+				<Section title="Account">
+					<Setting label={account?.email ?? ""} description={`${account?.serverUrl ?? ""}${lastSync ? ` · synced on ${formatDateTime(lastSync)}` : ""}`}>
 						<Button
 							color={confirmLogout ? "error" : "inherit"}
 							variant={confirmLogout ? "contained" : "outlined"}
@@ -181,7 +178,7 @@ export function SettingsDialog() {
 								void dispatch(logout());
 							}}
 						>
-							{confirmLogout ? "Confirmer" : "Se déconnecter"}
+							{confirmLogout ? "Confirm" : "Log out"}
 						</Button>
 					</Setting>
 				</Section>

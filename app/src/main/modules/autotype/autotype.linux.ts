@@ -17,13 +17,13 @@ const desktopTypes = ["_NET_WM_WINDOW_TYPE_DESKTOP", "_NET_WM_WINDOW_TYPE_DOCK"]
 export async function getXdotoolUnavailableReason(): Promise<string | null> {
 	// Under XWayland, DISPLAY is set too, but the other applications are mostly native Wayland
 	if (process.env["XDG_SESSION_TYPE"] === "wayland" || process.env["WAYLAND_DISPLAY"]) {
-		return "Non disponible sous Wayland : la saisie de touches dans les autres applications y est bloquée";
+		return "Not available on Wayland: it blocks typing keys into other applications";
 	}
 	try {
 		await execFileAsync("xdotool", ["version"]);
 		return null;
 	} catch {
-		return "Installez xdotool pour utiliser la saisie automatique";
+		return "Install xdotool to use auto-type";
 	}
 }
 
@@ -70,7 +70,7 @@ function typeBatch(text: string) {
 			child.kill();
 			reject(error);
 		});
-		child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`xdotool a échoué (code ${code})`))));
+		child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`xdotool failed (code ${code})`))));
 		child.stdin.end(text);
 	});
 }

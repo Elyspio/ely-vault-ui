@@ -10,11 +10,11 @@ describe("buildFolderTree", () => {
 		const tree = buildFolderTree([
 			{ id: "b", name: "Work/Projects" },
 			{ id: "a", name: "Work" },
-			{ id: "c", name: "Perso" },
+			{ id: "c", name: "Personal" },
 		]);
 
 		expect(shape(tree)).toEqual([
-			{ name: "Perso", id: "c", children: [] },
+			{ name: "Personal", id: "c", children: [] },
 			{ name: "Work", id: "a", children: [{ name: "Projects", id: "b", children: [] }] },
 		]);
 	});
@@ -47,12 +47,12 @@ describe("buildFolderTree", () => {
 
 	it("sorts siblings naturally", () => {
 		const tree = buildFolderTree([
-			{ id: "1", name: "Dossier 10" },
-			{ id: "2", name: "dossier 2" },
+			{ id: "1", name: "Folder 10" },
+			{ id: "2", name: "folder 2" },
 			{ id: "3", name: "Écoles" },
 		]);
 
-		expect(tree.map((node) => node.name)).toEqual(["dossier 2", "Dossier 10", "Écoles"]);
+		expect(tree.map((node) => node.name)).toEqual(["Écoles", "folder 2", "Folder 10"]);
 	});
 });
 

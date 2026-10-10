@@ -37,7 +37,7 @@ function Screen() {
 			<Box sx={{ height: "100%", display: "grid", placeItems: "center", p: 4 }}>
 				<Box sx={{ textAlign: "center", maxWidth: 480 }}>
 					<Typography variant="h6" gutterBottom>
-						Impossible de démarrer le client Bitwarden
+						Cannot start the Bitwarden client
 					</Typography>
 					<Typography variant="body2" sx={{ color: "text.secondary" }}>
 						{fatalError}

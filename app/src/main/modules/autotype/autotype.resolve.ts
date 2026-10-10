@@ -17,7 +17,7 @@ export function getItemSequence(item: BwItem, config: AppConfig["autoType"]): Au
 		} catch (error) {
 			// The field may be hidden: its content never goes back to the renderer
 			if (error instanceof AutoTypeSequenceError) {
-				throw new AutoTypeSequenceError(`Séquence « ${AUTOTYPE_FIELD_NAME} » de l'élément invalide (position ${error.position})`, error.position);
+				throw new AutoTypeSequenceError(`Invalid "${AUTOTYPE_FIELD_NAME}" sequence of the item (position ${error.position})`, error.position);
 			}
 			throw error;
 		}
@@ -27,7 +27,7 @@ export function getItemSequence(item: BwItem, config: AppConfig["autoType"]): Au
 		const tokens = parseAutoTypeSequence(config.defaultSequence);
 		return config.pressEnter ? [...tokens, { kind: "key", key: "enter" }] : tokens;
 	} catch (error) {
-		if (error instanceof AutoTypeSequenceError) throw new AutoTypeSequenceError(`Séquence par défaut invalide : ${error.message}`, error.position);
+		if (error instanceof AutoTypeSequenceError) throw new AutoTypeSequenceError(`Invalid default sequence: ${error.message}`, error.position);
 		throw error;
 	}
 }

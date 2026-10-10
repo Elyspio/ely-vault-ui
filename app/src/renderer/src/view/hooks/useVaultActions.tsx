@@ -61,18 +61,18 @@ export function RepromptProvider({ children }: Readonly<{ children: ReactNode }>
 				>
 					<DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 						<LockPersonRounded fontSize="small" color="primary" />
-						Élément protégé
+						Protected item
 					</DialogTitle>
 					<DialogContent>
 						<Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
-							Saisissez votre mot de passe maître pour accéder à ce secret.
+							Enter your master password to access this secret.
 						</Typography>
 						<TextField
 							autoFocus
 							fullWidth
 							size="small"
 							type="password"
-							label="Mot de passe maître"
+							label="Master password"
 							value={password}
 							error={error}
 							onChange={(event) => {
@@ -82,16 +82,16 @@ export function RepromptProvider({ children }: Readonly<{ children: ReactNode }>
 						/>
 						{error && (
 							<Alert severity="error" variant="outlined" sx={{ mt: 2, py: 0 }}>
-								Mot de passe incorrect
+								Incorrect password
 							</Alert>
 						)}
 					</DialogContent>
 					<DialogActions sx={{ px: 3, pb: 2 }}>
 						<Button onClick={() => close(false)} color="inherit">
-							Annuler
+							Cancel
 						</Button>
 						<Button type="submit" variant="contained" disabled={!password || pending}>
-							Valider
+							Confirm
 						</Button>
 					</DialogActions>
 				</form>
@@ -130,7 +130,7 @@ export function useVaultActions() {
 					await service.copy(itemId, ref);
 					return true;
 				});
-				if (done) dispatch(showToast(clearSeconds ? `${label} copié · effacé dans ${clearSeconds} s` : `${label} copié`));
+				if (done) dispatch(showToast(clearSeconds ? `${label} copied · cleared in ${clearSeconds} s` : `${label} copied`));
 			},
 			reveal(itemId: string, ref: SecretRef) {
 				return withReprompt(() => service.secret(itemId, ref));

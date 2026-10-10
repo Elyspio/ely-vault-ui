@@ -6,7 +6,7 @@ export function getIpcReceiver() {
 	return {
 		session: {
 			/**
-			 * Changement d'état sans action du renderer (verrouillage automatique, veille...)
+			 * State change without a renderer action (auto-lock, sleep...)
 			 */
 			state: (callback: (state: SessionState) => void) => ipcRendererWrapper.on("session:state", callback),
 		},

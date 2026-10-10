@@ -45,12 +45,12 @@ export function TotpRow({ itemId, reprompt }: Readonly<{ itemId: string; repromp
 
 	return (
 		<FieldRow
-			label="Code de vérification (TOTP)"
+			label="Verification code (TOTP)"
 			onCopy={() => void actions.copy(itemId, { kind: "totp" }, "Code")}
 			actions={
 				!enabled && (
 					<Button size="small" onClick={() => setEnabled(true)}>
-						Afficher
+						Show
 					</Button>
 				)
 			}

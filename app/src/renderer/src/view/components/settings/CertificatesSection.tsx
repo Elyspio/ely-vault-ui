@@ -43,14 +43,14 @@ export function CertificatesSection() {
 					<Box sx={{ flex: 1, minWidth: 0 }}>
 						<Typography sx={{ fontSize: "0.85rem", fontWeight: 500 }}>{certificate.subject}</Typography>
 						<Typography sx={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-							{certificate.host ? `Approuvé pour ${certificate.host}` : "Importé"} · expire le {formatDateTime(certificate.validTo)}
+							{certificate.host ? `Approved for ${certificate.host}` : "Imported"} · expires on {formatDateTime(certificate.validTo)}
 						</Typography>
 						<Typography className="mono" noWrap sx={{ fontSize: "0.66rem", color: "var(--text-faint)" }}>
 							{certificate.fingerprint256}
 						</Typography>
 					</Box>
-					<Tooltip title="Retirer (verrouille le coffre)">
-						<IconButton size="small" onClick={() => void run(() => service.remove(certificate.fingerprint256), `« ${certificate.subject} » retiré`)}>
+					<Tooltip title="Remove (locks the vault)">
+						<IconButton size="small" onClick={() => void run(() => service.remove(certificate.fingerprint256), `"${certificate.subject}" removed`)}>
 							<DeleteOutlineRounded fontSize="small" />
 						</IconButton>
 					</Tooltip>
@@ -58,8 +58,8 @@ export function CertificatesSection() {
 			))}
 			<Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 2, py: 1.5 }}>
 				<Box sx={{ flex: 1 }}>
-					<Typography sx={{ fontSize: "0.88rem", fontWeight: 500 }}>{certificates.length ? "Ajouter une autorité" : "Aucune autorité approuvée"}</Typography>
-					<Typography sx={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Pour un serveur derrière une PKI d'entreprise (.crt, .cer, .pem)</Typography>
+					<Typography sx={{ fontSize: "0.88rem", fontWeight: 500 }}>{certificates.length ? "Add an authority" : "No approved authority"}</Typography>
+					<Typography sx={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>For a server behind a corporate PKI (.crt, .cer, .pem)</Typography>
 				</Box>
 				<Button
 					size="small"
@@ -68,11 +68,11 @@ export function CertificatesSection() {
 					onClick={() =>
 						void run(async () => {
 							const imported = await service.import();
-							if (imported.length === 0) throw new Error("Import annulé");
-						}, "Autorité importée")
+							if (imported.length === 0) throw new Error("Import cancelled");
+						}, "Authority imported")
 					}
 				>
-					Importer…
+					Import…
 				</Button>
 			</Box>
 		</>

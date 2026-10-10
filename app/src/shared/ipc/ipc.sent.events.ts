@@ -1,7 +1,7 @@
 /*************************************************************************************
- * Les événements IPC qui sont envoyés par le process main vers les browserWindow.
+ * IPC events sent by the main process to the browser windows.
  *
- * Attention, on ne peut pas utiliser des types des librairies NodeJS, electron pour IpcSentEvents
+ * IpcSentEvents cannot use types of the Node.js or Electron libraries
  * *************************************************************************************/
 import type { IpcMainInvokeEvent } from "electron";
 import type { SessionState } from "@shared/types/vault.types";
@@ -9,16 +9,16 @@ import type { UpdateStatus } from "@shared/types/update.types";
 
 export type IpcSentEvents = {
 	/**
-	 * L'état de la session a changé sans action du renderer (verrouillage automatique, veille...)
+	 * The session state changed without a renderer action (auto-lock, sleep...)
 	 */
 	"session:state": (event: IpcMainInvokeEvent, state: SessionState) => void;
 	/**
-	 * Une valeur copiée a été effacée du presse-papiers
+	 * A copied value was cleared from the clipboard
 	 */
 	"clipboard:cleared": (event: IpcMainInvokeEvent) => void;
 	"app:screen:toggle-full-screen": (event: IpcMainInvokeEvent, isMaximized: boolean) => void;
 	/**
-	 * L'état de la mise à jour automatique a changé
+	 * The auto update state changed
 	 */
 	"update:status": (event: IpcMainInvokeEvent, status: UpdateStatus) => void;
 };

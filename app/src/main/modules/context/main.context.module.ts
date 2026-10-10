@@ -10,7 +10,7 @@ export class MainContextModule {
 	#appFolder: string = "";
 
 	/**
-	 * Renvoie le dossier de l'application dans le dossier de l'utilisateur
+	 * Application folder, in the user's local application data
 	 */
 	public get appFolder() {
 		if (this.#appFolder) return this.#appFolder;
@@ -24,7 +24,7 @@ export class MainContextModule {
 	}
 
 	/**
-	 * Dossier de données du CLI Bitwarden (coffre chiffré, jetons), isolé d'une éventuelle installation globale de `bw`
+	 * Data folder of the Bitwarden CLI (encrypted vault, tokens), isolated from a global `bw` installation
 	 */
 	public get bitwardenDataFolder() {
 		const folder = path.join(this.appFolder, "bitwarden");
