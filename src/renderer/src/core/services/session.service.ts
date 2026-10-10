@@ -11,6 +11,10 @@ export class SessionService {
 		return window.preload.ipc.send.session.login(request);
 	}
 
+	public cancelLogin() {
+		return window.preload.ipc.send.session.cancelLogin();
+	}
+
 	public unlock(password: string) {
 		return window.preload.ipc.send.session.unlock(password);
 	}

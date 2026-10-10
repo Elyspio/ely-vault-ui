@@ -86,9 +86,14 @@ export class VaultModule extends LogModule {
 			if (status.status !== "unauthenticated") await this.bwCliModule.logout();
 			if (status.serverUrl !== serverUrl) await this.bwCliModule.configServer(serverUrl);
 
-			await this.bwCliModule.login(request.email.trim(), request.password, request.twoFactor);
+			if (request.sso) await this.bwCliModule.loginSso();
+			else await this.bwCliModule.login(request.email.trim(), request.password, request.twoFactor);
 		} catch (error) {
+			if (error instanceof Error && error.name === "AbortError") return { status: "error", message: "Connexion SSO annulée ou expirée" };
 			const message = errorMessage(error);
+			// CLI message only: the password goes through the environment, never in arguments or output
+			this.logger.warn("Login failed", message);
+			if (/SSO sign-in is required/i.test(message)) return { status: "sso-required" };
 			// No code yet: the server asked for one (or just sent it by e-mail)
 			if (!request.twoFactor?.code && (request.twoFactor || isTwoFactorError(message))) return { status: "two-factor-required" };
 			return { status: "error", message: translateError(message) };
@@ -98,13 +103,21 @@ export class VaultModule extends LogModule {
 		return unlock.status === "success" ? { status: "success" } : unlock;
 	}
 
+	public cancelLogin() {
+		this.bwCliModule.cancelSso();
+	}
+
 	@log("info")
 	public async unlock(password: string): Promise<UnlockResult> {
 		await this.bwServeModule.ensureStarted();
 		try {
 			await this.bwServeModule.request<BwMessage>("POST", "/unlock", { password });
 		} catch (error) {
-			return { status: "error", message: translateError(errorMessage(error)) };
+			// The CLI runs its key migrations after unlocking and does not catch their failures
+			// (e.g. Vaultwarden has no user key id endpoint): the vault may be unlocked despite the error
+			const status = await this.bwServeModule.request<BwStatus>("GET", "/status").catch(() => null);
+			if (status?.template.status !== "unlocked") return { status: "error", message: translateError(errorMessage(error)) };
+			this.logger.warn("Unlock reported an error but the vault is unlocked", errorMessage(error));
 		}
 
 		const salt = crypto.randomBytes(16);

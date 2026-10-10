@@ -18,14 +18,20 @@ type StoredTrust = TrustedCertificate & {
 };
 
 const MAX_CHAIN = 6;
+const BUNDLE_ENV = "VAULT_CA_BUNDLE";
+const PRELOAD = `const fs = require("node:fs");
+const tls = require("node:tls");
+const pems = fs.readFileSync(process.env.${BUNDLE_ENV}, "utf-8").match(/-----BEGIN CERTIFICATE-----[\\s\\S]+?-----END CERTIFICATE-----/g) ?? [];
+tls.setDefaultCACertificates([...tls.getCACertificates("default"), ...pems]);
+`;
 const TIMEOUT_MS = 8000;
 
 /**
  * Server certificates approved by the user, for servers behind a private PKI or with a self-signed certificate.
  *
  * Nothing is trusted silently: the user approves one authority (shown with its SHA-256 fingerprint) or imports one from a file.
- * Approved certificates reach the Bitwarden CLI through NODE_EXTRA_CA_CERTS (a bundle written here)
- * and the Chromium network stack (favicons) through the session certificate verifier.
+ * Approved certificates reach the Bitwarden CLI through a preload adding them to the default TLS authorities
+ * (packaged Electron ignores NODE_EXTRA_CA_CERTS) and the Chromium network stack (favicons) through the session certificate verifier.
  */
 @injectable()
 export class CertificateModule extends LogModule {
@@ -53,6 +59,10 @@ export class CertificateModule extends LogModule {
 		return path.join(this.folder, "ca-bundle.pem");
 	}
 
+	private get preloadFile() {
+		return path.join(this.folder, "ca-preload.cjs");
+	}
+
 	// region Trust store
 
 	private getStore(): StoredTrust[] {
@@ -74,10 +84,12 @@ export class CertificateModule extends LogModule {
 	}
 
 	/**
-	 * NODE_EXTRA_CA_CERTS for the Bitwarden CLI: the bundle when certificates are approved, the inherited value otherwise
+	 * Node arguments and environment making the Bitwarden CLI trust the approved certificates (and the inherited NODE_EXTRA_CA_CERTS)
 	 */
-	public get extraCaCertsPath(): string | undefined {
-		return this.getStore().length > 0 ? this.bundleFile : this.inheritedExtraCa;
+	public cliTrust(): { args: string[]; env: Record<string, string> } {
+		if (this.getStore().length === 0) return { args: [], env: {} };
+		fs.writeFileSync(this.preloadFile, PRELOAD);
+		return { args: ["--require", this.preloadFile], env: { [BUNDLE_ENV]: this.bundleFile } };
 	}
 
 	public list(): TrustedCertificate[] {

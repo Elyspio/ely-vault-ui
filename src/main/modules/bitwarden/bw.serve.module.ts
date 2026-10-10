@@ -100,7 +100,14 @@ export class BwServeModule extends LogModule {
 		}
 		const response = await fetch(`http://127.0.0.1:${this.port}${route}`, init);
 
-		const json = (await response.json()) as BwResponse<T>;
+		// Unhandled CLI errors answer a plain "Internal Server Error"
+		const text = await response.text();
+		let json: BwResponse<T>;
+		try {
+			json = JSON.parse(text) as BwResponse<T>;
+		} catch {
+			throw new BwError(`bw serve ${route}: HTTP ${response.status} ${text.slice(0, 200)}`);
+		}
 		if (!json.success) throw new BwError(json.message);
 		return json.data;
 	}

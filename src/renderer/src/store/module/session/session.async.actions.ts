@@ -30,6 +30,14 @@ export const login = createAsyncThunk("login", async (request: LoginRequest, { e
 });
 
 /**
+ * Stops a login waiting for the browser (SSO): the pending login then fails with a cancellation message
+ */
+export const cancelLogin = createAsyncThunk("cancel-login", async (_, { extra }) => {
+	const services = getServices({ session: SessionService }, extra);
+	await services.session.cancelLogin();
+});
+
+/**
  * Approves the certificate authority the user reviewed, then retries the login
  */
 export const trustCertificate = createAsyncThunk("trust-certificate", async (arg: { fingerprint256: string; request: LoginRequest }, { extra, dispatch, rejectWithValue }) => {
