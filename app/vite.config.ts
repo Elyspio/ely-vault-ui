@@ -5,7 +5,7 @@ import tsconfigNode from "./tsconfig.node.json";
 
 // Build and dev still go through electron-vite (config/electron.vite.config.ts).
 // This file only configures the vite-plus toolchain: fmt, lint and test.
-const ignorePatterns = ["out/**", "resources/**", "build/**", "scripts/dev/**"];
+const ignorePatterns = ["out/**", "resources/**", "build/**"];
 
 export default defineConfig({
 	fmt: {

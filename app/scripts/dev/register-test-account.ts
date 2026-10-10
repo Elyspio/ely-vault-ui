@@ -1,5 +1,5 @@
 // Registers a test account on a local development Vaultwarden (see docs/development/local-test-server.md).
-// Usage: node scripts/dev/register-test-account.mjs <serverUrl> <email> <password>
+// Usage: node scripts/dev/register-test-account.ts <serverUrl> <email> <password>
 // The client-side key derivation mirrors the Bitwarden clients: PBKDF2-SHA256 (600 000 iterations),
 // HKDF stretched master key, a random 512-bit user key and an RSA-2048 key pair.
 import crypto from "node:crypto";
@@ -8,7 +8,7 @@ import crypto from "node:crypto";
 const [serverUrl = process.env.DEV_VAULT_SERVER, email = process.env.DEV_VAULT_EMAIL, password = process.env.DEV_VAULT_PASSWORD] = process.argv.slice(2);
 
 if (!serverUrl || !email || !password) {
-	console.error("Usage: node scripts/dev/register-test-account.mjs <serverUrl> <email> <password>");
+	console.error("Usage: node scripts/dev/register-test-account.ts <serverUrl> <email> <password>");
 	process.exit(1);
 }
 
@@ -19,9 +19,9 @@ const masterKey = crypto.pbkdf2Sync(password, normalizedEmail, iterations, 32, "
 const masterPasswordHash = crypto.pbkdf2Sync(masterKey, password, 1, 32, "sha256").toString("base64");
 
 /** HKDF-Expand only (the master key is already a uniform PRK), as in the Bitwarden clients */
-function hkdfExpand(prk, info, length) {
+function hkdfExpand(prk: Buffer, info: string, length: number): Buffer {
 	const infoBuffer = Buffer.from(info, "utf8");
-	const output = [];
+	const output: Buffer[] = [];
 	let previous = Buffer.alloc(0);
 	for (let i = 0; output.reduce((sum, block) => sum + block.length, 0) < length; i++) {
 		previous = crypto
@@ -34,11 +34,14 @@ function hkdfExpand(prk, info, length) {
 }
 
 /** EncString type 2: AES-256-CBC + HMAC-SHA256 */
-function encrypt(data, encKey, macKey) {
+function encrypt(data: Buffer, encKey: Buffer, macKey: Buffer): string {
 	const iv = crypto.randomBytes(16);
 	const cipher = crypto.createCipheriv("aes-256-cbc", encKey, iv);
 	const ct = Buffer.concat([cipher.update(data), cipher.final()]);
-	const mac = crypto.createHmac("sha256", macKey).update(Buffer.concat([iv, ct])).digest();
+	const mac = crypto
+		.createHmac("sha256", macKey)
+		.update(Buffer.concat([iv, ct]))
+		.digest();
 	return `2.${iv.toString("base64")}|${ct.toString("base64")}|${mac.toString("base64")}`;
 }
 
@@ -55,7 +58,7 @@ const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
 });
 const encryptedPrivateKey = encrypt(privateKey, userKey.subarray(0, 32), userKey.subarray(32, 64));
 
-async function post(path, body) {
+async function post(path: string, body: unknown): Promise<Response> {
 	return await fetch(new URL(path, serverUrl), {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
