@@ -76,8 +76,8 @@ const ipcHandlers: IpcHandledEvents = {
 	async "vault:icon:get"(_, host) {
 		return await mainContainer.get(VaultModule).getIcon(host);
 	},
-	async "vault:generate-password"(_, length) {
-		return await mainContainer.get(VaultModule).generatePassword(length);
+	async "vault:generate-password"(_, options) {
+		return await mainContainer.get(VaultModule).generatePassword(options);
 	},
 	async "autotype:availability"() {
 		return await mainContainer.get(AutoTypeModule).getAvailability();

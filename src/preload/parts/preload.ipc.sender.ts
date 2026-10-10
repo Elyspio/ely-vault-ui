@@ -1,6 +1,6 @@
 import { ipcRendererWrapper } from "./preload.ipc.wrapper";
 import type { AppConfig } from "@shared/config/app.config";
-import type { CopyRef, LoginRequest, SecretRef } from "@shared/types/vault.types";
+import type { CopyRef, LoginRequest, PasswordGeneratorOptions, SecretRef } from "@shared/types/vault.types";
 
 export function getIpcSender() {
 	return {
@@ -33,7 +33,7 @@ export function getIpcSender() {
 			totp: (itemId: string) => ipcRendererWrapper.invoke("vault:totp:get", itemId),
 			verifyReprompt: (password: string) => ipcRendererWrapper.invoke("vault:reprompt:verify", password),
 			icon: (host: string) => ipcRendererWrapper.invoke("vault:icon:get", host),
-			generatePassword: (length: number) => ipcRendererWrapper.invoke("vault:generate-password", length),
+			generatePassword: (options: PasswordGeneratorOptions) => ipcRendererWrapper.invoke("vault:generate-password", options),
 		},
 		autoType: {
 			availability: () => ipcRendererWrapper.invoke("autotype:availability"),

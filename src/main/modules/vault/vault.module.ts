@@ -10,7 +10,8 @@ import { CertificateModule } from "../security/certificate.module";
 import { log } from "@main/utils/logs.utils";
 import { BwError, type BwCollection, type BwFolder, type BwItem, type BwList, type BwMessage, type BwOrganization, type BwStatus, type BwString } from "../bitwarden/bw.types";
 import { getPlainValue, getSecretValue, getTotpPeriod, isSecretRef, sanitizeItem } from "./vault.mapper";
-import type { CopyRef, LoginRequest, LoginResult, SecretRef, SessionState, TotpCode, UnlockResult, VaultSnapshot } from "@shared/types/vault.types";
+import { generateEncodedSecret } from "./password.generator";
+import type { CopyRef, LoginRequest, LoginResult, PasswordGeneratorOptions, SecretRef, SessionState, TotpCode, UnlockResult, VaultSnapshot } from "@shared/types/vault.types";
 
 /** How long a successful master password reprompt unlocks protected items */
 const REPROMPT_GRACE_MS = 5 * 60 * 1000;
@@ -269,9 +270,11 @@ export class VaultModule extends LogModule {
 		return valid;
 	}
 
-	public async generatePassword(length: number) {
+	public async generatePassword({ mode, length, special }: PasswordGeneratorOptions) {
 		const safeLength = Math.min(Math.max(Math.trunc(length) || 20, 8), 128);
-		const { data } = await this.bwServeModule.request<BwString>("GET", `/generate?length=${safeLength}&uppercase&lowercase&number&special`);
+		if (mode === "hex" || mode === "base64") return generateEncodedSecret(mode, safeLength);
+
+		const { data } = await this.bwServeModule.request<BwString>("GET", `/generate?length=${safeLength}&uppercase&lowercase&number${special ? "&special" : ""}`);
 		return data;
 	}
 

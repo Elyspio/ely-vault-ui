@@ -1,7 +1,18 @@
 import type { IpcMainInvokeEvent } from "electron";
 import type { AppConfig } from "@shared/config/app.config";
 import type { TrustedCertificate } from "@shared/types/certificate.types";
-import type { AutoTypeAvailability, CopyRef, LoginRequest, LoginResult, SecretRef, SessionState, TotpCode, UnlockResult, VaultSnapshot } from "@shared/types/vault.types";
+import type {
+	AutoTypeAvailability,
+	CopyRef,
+	LoginRequest,
+	LoginResult,
+	PasswordGeneratorOptions,
+	SecretRef,
+	SessionState,
+	TotpCode,
+	UnlockResult,
+	VaultSnapshot,
+} from "@shared/types/vault.types";
 
 /**
  * Les événements IPC qui sont envoyés par les browserWindow vers le process main.
@@ -54,7 +65,7 @@ export interface IpcHandledEvents {
 	 * Favicon d'un site, en data URL, via le service d'icônes du serveur
 	 */
 	"vault:icon:get": (event: IpcMainInvokeEvent, host: string) => Promise<string | null>;
-	"vault:generate-password": (event: IpcMainInvokeEvent, length: number) => Promise<string>;
+	"vault:generate-password": (event: IpcMainInvokeEvent, options: PasswordGeneratorOptions) => Promise<string>;
 
 	"autotype:availability": (event: IpcMainInvokeEvent) => Promise<AutoTypeAvailability>;
 	/**
