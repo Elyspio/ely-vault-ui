@@ -30,9 +30,16 @@ export type AppConfig = {
 		/** Releases followed: stable only, also the betas (x.y.z-beta.n), or the development builds (x.y.z-dev.n) */
 		channel: UpdateChannel;
 	};
+	layout: PanelLayout;
 	window: {
 		bounds: { x: number; y: number; width: number; height: number } | null;
 	};
+};
+
+/** Widths in pixels of the vault panels, resized by dragging their right edge (the item detail takes the rest) */
+export type PanelLayout = {
+	sidebarWidth: number;
+	listWidth: number;
 };
 
 export type AutoTypeAfter = "minimized" | "restore" | "lock";
@@ -58,10 +65,39 @@ export const defaultAppConfig: AppConfig = {
 		autoCheck: true,
 		channel: "stable",
 	},
+	layout: {
+		sidebarWidth: 264,
+		listWidth: 380,
+	},
 	window: {
 		bounds: null,
 	},
 };
+
+export const panelWidthLimits = {
+	sidebar: { min: 200, max: 440 },
+	list: { min: 280, max: 640 },
+	/** Room always left to the item detail while resizing */
+	detailMin: 360,
+};
+
+/**
+ * Keeps the panel widths within their limits; with the width of the vault screen, also leaves room for the item detail
+ * (the sidebar gives way first when the list is resized, and the other way around)
+ */
+export function clampPanelLayout(layout: PanelLayout, resized: keyof PanelLayout = "listWidth", availableWidth?: number): PanelLayout {
+	const clamp = (value: number, min: number, max: number) => Math.round(Math.min(Math.max(value, min), Math.max(min, max)));
+	const { sidebar, list, detailMin } = panelWidthLimits;
+	const room = (availableWidth ?? Number.POSITIVE_INFINITY) - detailMin;
+
+	if (resized === "sidebarWidth") {
+		const sidebarWidth = clamp(layout.sidebarWidth, sidebar.min, Math.min(sidebar.max, room - list.min));
+		return { sidebarWidth, listWidth: clamp(layout.listWidth, list.min, Math.min(list.max, room - sidebarWidth)) };
+	}
+
+	const listWidth = clamp(layout.listWidth, list.min, Math.min(list.max, room - sidebar.min));
+	return { sidebarWidth: clamp(layout.sidebarWidth, sidebar.min, Math.min(sidebar.max, room - listWidth)), listWidth };
+}
 
 /**
  * Channel of an installed version: a beta (x.y.z-beta.n) or development build (x.y.z-dev.n) follows its own releases

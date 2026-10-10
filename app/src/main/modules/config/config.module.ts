@@ -4,7 +4,7 @@ import { app } from "electron";
 import { inject, injectable } from "inversify";
 import { LogModule } from "../log.module";
 import { MainContextModule } from "../context/main.context.module";
-import { type AppConfig, defaultAppConfig, readUpdateSettings } from "@shared/config/app.config";
+import { type AppConfig, clampPanelLayout, defaultAppConfig, readUpdateSettings } from "@shared/config/app.config";
 
 @injectable()
 export class ConfigModule extends LogModule {
@@ -31,6 +31,7 @@ export class ConfigModule extends LogModule {
 				display: { ...defaultAppConfig.display, ...parsed.display },
 				autoType: { ...defaultAppConfig.autoType, ...parsed.autoType },
 				updates: readUpdateSettings(parsed.updates, app.getVersion()),
+				layout: clampPanelLayout({ ...defaultAppConfig.layout, ...parsed.layout }),
 				window: { ...defaultAppConfig.window, ...parsed.window },
 			};
 		} catch {
