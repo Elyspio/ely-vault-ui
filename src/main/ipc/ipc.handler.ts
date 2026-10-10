@@ -10,6 +10,7 @@ import { LogModule } from "@main/modules/log.module";
 import { CertificateModule } from "@main/modules/security/certificate.module";
 import { BwServeModule } from "@main/modules/bitwarden/bw.serve.module";
 import { AutoTypeModule } from "@main/modules/autotype/autotype.module";
+import { UpdateModule } from "@main/modules/update/update.module";
 
 const ipcHandlers: IpcHandledEvents = {
 	"app:close"(event) {
@@ -34,8 +35,9 @@ const ipcHandlers: IpcHandledEvents = {
 	},
 	async "config:set"(_, config) {
 		// The window bounds are owned by the main process
-		const { window } = await mainContainer.get(ConfigModule).getConfig();
+		const { window, updates } = await mainContainer.get(ConfigModule).getConfig();
 		await mainContainer.get(ConfigModule).writeConfig({ ...config, window });
+		await mainContainer.get(UpdateModule).onSettingsChanged(updates, config.updates);
 	},
 	async "session:state:get"() {
 		return await mainContainer.get(VaultModule).getState();
@@ -100,6 +102,18 @@ const ipcHandlers: IpcHandledEvents = {
 		if (mainContainer.get(VaultModule).isUnlocked) await mainContainer.get(VaultModule).lock();
 		await mainContainer.get(BwServeModule).stop();
 		await mainContainer.get(VaultModule).notifyState();
+	},
+	"update:status:get"() {
+		return mainContainer.get(UpdateModule).getStatus();
+	},
+	async "update:check"() {
+		await mainContainer.get(UpdateModule).check();
+	},
+	async "update:download"() {
+		await mainContainer.get(UpdateModule).download();
+	},
+	async "update:quit-and-install"() {
+		await mainContainer.get(UpdateModule).quitAndInstall();
 	},
 };
 

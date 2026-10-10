@@ -1,5 +1,6 @@
 import { ipcRendererWrapper } from "./preload.ipc.wrapper";
 import type { SessionState } from "@shared/types/vault.types";
+import type { UpdateStatus } from "@shared/types/update.types";
 
 export function getIpcReceiver() {
 	return {
@@ -11,6 +12,9 @@ export function getIpcReceiver() {
 		},
 		clipboard: {
 			cleared: (callback: () => void) => ipcRendererWrapper.on("clipboard:cleared", callback),
+		},
+		update: {
+			status: (callback: (status: UpdateStatus) => void) => ipcRendererWrapper.on("update:status", callback),
 		},
 		app: {
 			screen: {

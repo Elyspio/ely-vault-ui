@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, type Ref, useRef, useState } from "react";
 import { Box, Button, Dialog, DialogContent, DialogTitle, IconButton, MenuItem, Select, Switch, TextField, Typography } from "@mui/material";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
@@ -11,6 +11,8 @@ import { validateAutoTypeSequence } from "@shared/autotype/autotype.sequence";
 import { useAutoTypeAvailability } from "@hooks/useAutoType";
 import { formatDateTime } from "@view/utils/date.utils";
 import { CertificatesSection } from "./CertificatesSection";
+import { UpdatesSection } from "./UpdatesSection";
+import { selectPendingUpdate } from "@modules/update/update.selectors";
 
 const autoLockOptions = [
 	{ value: 1, label: "1 minute" },
@@ -45,6 +47,8 @@ export function SettingsDialog() {
 	const lastSync = useAppSelector((state) => state.vault.snapshot?.lastSync);
 	const [confirmLogout, setConfirmLogout] = useState(false);
 	const autoType = useAutoTypeAvailability();
+	const pendingUpdate = useAppSelector(selectPendingUpdate);
+	const updatesRef = useRef<HTMLDivElement>(null);
 
 	const close = () => {
 		setConfirmLogout(false);
@@ -54,7 +58,14 @@ export function SettingsDialog() {
 	const update = (updater: (config: AppConfig) => AppConfig) => void dispatch(saveConfig(updater(config)));
 
 	return (
-		<Dialog open={open} onClose={close} maxWidth="sm" fullWidth>
+		<Dialog
+			open={open}
+			onClose={close}
+			maxWidth="sm"
+			fullWidth
+			// Opened from the titlebar badge: show the update waiting for the user
+			slotProps={{ transition: { onEntered: () => pendingUpdate && updatesRef.current?.scrollIntoView({ block: "start" }) } }}
+		>
 			<DialogTitle sx={{ display: "flex", alignItems: "center" }}>
 				<Box sx={{ flex: 1 }}>Paramètres</Box>
 				<IconButton size="small" onClick={close}>
@@ -140,6 +151,16 @@ export function SettingsDialog() {
 					</Setting>
 				</Section>
 
+				<Section title="Mises à jour" ref={updatesRef}>
+					<UpdatesSection />
+					<Setting label="Mises à jour automatiques" description="Recherche une nouvelle version au démarrage puis toutes les heures, et la télécharge">
+						<Switch checked={config.updates.autoCheck} onChange={(_, checked) => update((c) => ({ ...c, updates: { ...c.updates, autoCheck: checked } }))} />
+					</Setting>
+					<Setting label="Versions bêta" description="Reçoit les préversions. Les désactiver propose de revenir à la dernière version stable">
+						<Switch checked={config.updates.beta} onChange={(_, checked) => update((c) => ({ ...c, updates: { ...c.updates, beta: checked } }))} />
+					</Setting>
+				</Section>
+
 				<Section title="Certificats approuvés">
 					<CertificatesSection />
 				</Section>
@@ -192,9 +213,9 @@ function SequenceInput({ value, onSave }: Readonly<{ value: string; onSave: (val
 	);
 }
 
-function Section({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
+function Section({ title, children, ref }: Readonly<{ title: string; children: ReactNode; ref?: Ref<HTMLDivElement> }>) {
 	return (
-		<Box sx={{ mb: 2.5 }}>
+		<Box ref={ref} sx={{ mb: 2.5 }}>
 			<Typography variant="overline" component="div" sx={{ color: "var(--text-faint)", mb: 0.5 }}>
 				{title}
 			</Typography>

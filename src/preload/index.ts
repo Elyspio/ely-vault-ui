@@ -10,6 +10,7 @@ const preload = {
 	},
 	config: {
 		appName: mainConfig.names.public,
+		releasesUrl: mainConfig.autoUpdate.releasesUrl,
 		platform: process.platform,
 	},
 };

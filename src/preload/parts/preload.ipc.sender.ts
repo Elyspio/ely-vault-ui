@@ -45,6 +45,12 @@ export function getIpcSender() {
 			list: () => ipcRendererWrapper.invoke("certificate:list"),
 			remove: (fingerprint256: string) => ipcRendererWrapper.invoke("certificate:remove", fingerprint256),
 		},
+		update: {
+			status: () => ipcRendererWrapper.invoke("update:status:get"),
+			check: () => ipcRendererWrapper.invoke("update:check"),
+			download: () => ipcRendererWrapper.invoke("update:download"),
+			quitAndInstall: () => ipcRendererWrapper.invoke("update:quit-and-install"),
+		},
 	};
 }
 

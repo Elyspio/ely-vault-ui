@@ -1,6 +1,7 @@
 import type { IpcMainInvokeEvent } from "electron";
 import type { AppConfig } from "@shared/config/app.config";
 import type { TrustedCertificate } from "@shared/types/certificate.types";
+import type { UpdateStatus } from "@shared/types/update.types";
 import type {
 	AutoTypeAvailability,
 	CopyRef,
@@ -86,4 +87,18 @@ export interface IpcHandledEvents {
 	 * Retire une autorité approuvée ; le coffre est verrouillé pour relancer le CLI sans elle
 	 */
 	"certificate:remove": (event: IpcMainInvokeEvent, fingerprint256: string) => Promise<void>;
+
+	"update:status:get": (event: IpcMainInvokeEvent) => UpdateStatus;
+	/**
+	 * Cherche une nouvelle version sur GitHub ; elle est téléchargée dès qu'elle est trouvée
+	 */
+	"update:check": (event: IpcMainInvokeEvent) => Promise<void>;
+	/**
+	 * Télécharge la version trouvée : utilisé pour revenir d'une bêta à la version stable
+	 */
+	"update:download": (event: IpcMainInvokeEvent) => Promise<void>;
+	/**
+	 * Verrouille le coffre puis redémarre sur la version téléchargée
+	 */
+	"update:quit-and-install": (event: IpcMainInvokeEvent) => Promise<void>;
 }

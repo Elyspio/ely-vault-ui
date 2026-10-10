@@ -1,0 +1,5 @@
+# Update source of the development builds (electron-updater forceDevUpdateConfig)
+provider: github
+owner: Elyspio
+repo: ely-vault-ui
+updaterCacheDirName: vault-desktop-updater

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Divider, IconButton, Tooltip, Typography } from "@mui/material";
+import { Badge, Box, Divider, IconButton, Tooltip, Typography } from "@mui/material";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import SyncRounded from "@mui/icons-material/SyncRounded";
 import LockRounded from "@mui/icons-material/LockRounded";
@@ -16,6 +16,7 @@ import { setGeneratorOpen, setPaletteOpen, setSettingsOpen } from "@modules/ui/u
 import { Kbd } from "@components/shared/Kbd";
 import { Logo } from "@components/shared/Logo";
 import { formatRelative } from "@view/utils/date.utils";
+import { selectPendingUpdate } from "@modules/update/update.selectors";
 
 const noDrag = { WebkitAppRegion: "no-drag" } as const;
 
@@ -26,6 +27,7 @@ export function Titlebar() {
 	const unlocked = useAppSelector((state) => state.session.current?.status === "unlocked");
 	const syncing = useAppSelector((state) => state.vault.syncing);
 	const lastSync = useAppSelector((state) => state.vault.snapshot?.lastSync ?? null);
+	const pendingUpdate = useAppSelector(selectPendingUpdate);
 	const [maximized, setMaximized] = useState(false);
 
 	useEffect(() => {
@@ -110,9 +112,19 @@ export function Titlebar() {
 								<LockRounded sx={{ fontSize: 16 }} />
 							</IconButton>
 						</Tooltip>
-						<Tooltip title="Paramètres (Ctrl ,)">
+						<Tooltip
+							title={
+								pendingUpdate
+									? pendingUpdate.downgrade && pendingUpdate.state === "available"
+										? `Version stable ${pendingUpdate.latestVersion} disponible`
+										: `Version ${pendingUpdate.latestVersion} prête à installer`
+									: "Paramètres (Ctrl ,)"
+							}
+						>
 							<IconButton sx={controlSx} onClick={() => dispatch(setSettingsOpen(true))}>
-								<TuneRounded sx={{ fontSize: 17 }} />
+								<Badge variant="dot" color="primary" invisible={!pendingUpdate}>
+									<TuneRounded sx={{ fontSize: 17 }} />
+								</Badge>
 							</IconButton>
 						</Tooltip>
 						<Divider orientation="vertical" flexItem sx={{ mx: 0.75, my: 1 }} />

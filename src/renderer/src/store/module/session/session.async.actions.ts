@@ -5,6 +5,7 @@ import { createAction } from "@reduxjs/toolkit";
 import type { LoginRequest, SessionState } from "@shared/types/vault.types";
 import { loadVault } from "@modules/vault/vault.async.actions";
 import { initConfig } from "@modules/config/config.async.actions";
+import { initUpdate } from "@modules/update/update.async.actions";
 import { showToast } from "@modules/ui/ui.reducer";
 import { ipcErrorMessage } from "@core/utils/ipc.utils";
 
@@ -98,6 +99,7 @@ export const initApp = createAsyncThunk("init-app", async (_, { dispatch }) => {
 	window.preload.ipc.on.clipboard.cleared(() => dispatch(showToast("Presse-papiers effacé", "info")));
 
 	await dispatch(initConfig());
+	void dispatch(initUpdate());
 	const state = await dispatch(refreshSession()).unwrap();
 	if (state.status === "unlocked") await dispatch(loadVault());
 });

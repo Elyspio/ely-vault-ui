@@ -1,6 +1,6 @@
 {
 	"extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-	"include": ["./config", "./src/main", "./src/preload", "./src/shared", "vite.config.ts"],
+	"include": ["./config", "./src/main", "./src/preload", "./src/shared", "./scripts/release", "vite.config.ts"],
 	"compilerOptions": {
 		"composite": true,
 		"tsBuildInfoFile": "dist/.tsbuild.node.info",

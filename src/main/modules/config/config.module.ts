@@ -29,6 +29,7 @@ export class ConfigModule extends LogModule {
 				security: { ...defaultAppConfig.security, ...parsed.security },
 				display: { ...defaultAppConfig.display, ...parsed.display },
 				autoType: { ...defaultAppConfig.autoType, ...parsed.autoType },
+				updates: { ...defaultAppConfig.updates, ...parsed.updates },
 				window: { ...defaultAppConfig.window, ...parsed.window },
 			};
 		} catch {

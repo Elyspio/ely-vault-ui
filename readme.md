@@ -26,6 +26,7 @@ Toute la cryptographie est déléguée au CLI officiel : l'application n'implém
 
 - [Fonctionnalités](#fonctionnalités)
 - [Installation](#installation)
+- [Mises à jour](#mises-à-jour)
 - [Saisie automatique](#saisie-automatique)
 - [Raccourcis clavier](#raccourcis-clavier)
 - [Architecture](#architecture)
@@ -47,7 +48,7 @@ Toute la cryptographie est déléguée au CLI officiel : l'application n'implém
 
 ## Installation
 
-Les installeurs se génèrent depuis les sources (voir [Développement](#développement)) :
+Les installeurs sont publiés dans les [releases GitHub](https://github.com/Elyspio/ely-vault-ui/releases). Ils se génèrent aussi depuis les sources (voir [Développement](#développement)) :
 
 | Plateforme | Format           | Commande             |
 | ---------- | ---------------- | -------------------- |
@@ -55,6 +56,18 @@ Les installeurs se génèrent depuis les sources (voir [Développement](#dévelo
 | Linux      | AppImage, `.deb` | `pnpm package:linux` |
 
 Au premier lancement, saisir l'adresse du serveur (`https://…`), l'adresse e-mail et le mot de passe maître. La connexion en deux étapes (application d'authentification, e-mail, YubiKey) est prise en charge.
+
+## Mises à jour
+
+L'application se met à jour depuis les releases GitHub (installeur Windows, AppImage et `.deb`) :
+
+- elle cherche une nouvelle version au démarrage puis toutes les heures, et la télécharge dès qu'elle la trouve ;
+- un point sur l'icône **Paramètres** signale une version prête : **Paramètres → Mises à jour → Redémarrer et installer**, sinon elle s'installe à la fermeture ;
+- le coffre est verrouillé, `bw serve` arrêté et le presse-papiers effacé avant l'installation ;
+- **Versions bêta** reçoit les préversions (`x.y.z-beta.n`). Les désactiver propose de revenir à la dernière version stable, installée seulement sur demande ;
+- **Mises à jour automatiques** désactivé, rien n'est vérifié ni téléchargé sans cliquer sur **Vérifier**.
+
+Les fichiers sont téléchargés en HTTPS depuis GitHub et vérifiés par leur empreinte SHA-512 (`latest.yml`). L'installeur Windows n'est pas signé : SmartScreen avertit à la première installation. Sous Linux, la mise à jour du `.deb` demande le mot de passe administrateur (`pkexec`).
 
 ## Saisie automatique
 
@@ -155,6 +168,18 @@ pnpm dev
 | `pnpm test`          | Tests unitaires                       |
 | `pnpm package:win`   | Installeur Windows (electron-builder) |
 | `pnpm package:linux` | AppImage et `.deb`                    |
+| `pnpm release`       | Release GitHub en brouillon           |
+
+En développement, **Vérifier** interroge les releases via `dev-app-update.yml` ; rien n'est installé.
+
+### Publier une version
+
+1. Ouvrir une PR `chore: release vX.Y.Z` qui change `version` dans `package.json` (`X.Y.Z-beta.N` pour une bêta), puis la fusionner.
+2. Sur `main` à jour, sous Windows, avec Docker (ou Podman) démarré et `gh` authentifié : `pnpm release`.
+    - vérifie le dépôt (branche, modifications, tag existant, version supérieure au dernier tag), puis `vp check`, types et tests ;
+    - construit l'installeur Windows en local et les paquets Linux dans un conteneur (`deploy/release/linux.Dockerfile`) ;
+    - pousse le tag `vX.Y.Z` et crée une release **en brouillon** (préversion pour une bêta) avec les notes générées depuis les PR fusionnées.
+3. Relire les notes puis publier la release sur GitHub : les applications ne voient que les releases publiées.
 
 ### Serveur de test local
 

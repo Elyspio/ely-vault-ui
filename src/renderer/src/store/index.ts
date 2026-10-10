@@ -6,12 +6,14 @@ import { sessionReducer } from "@modules/session/session.reducer";
 import { vaultReducer } from "@modules/vault/vault.reducer";
 import { uiReducer } from "@modules/ui/ui.reducer";
 import { configReducer } from "@modules/config/config.reducer";
+import { updateReducer } from "@modules/update/update.reducer";
 
 const reducers = combineReducers({
 	session: sessionReducer,
 	vault: vaultReducer,
 	ui: uiReducer,
 	config: configReducer,
+	update: updateReducer,
 });
 
 export const store = configureStore({

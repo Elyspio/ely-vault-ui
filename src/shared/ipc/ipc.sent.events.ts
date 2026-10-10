@@ -5,6 +5,7 @@
  * *************************************************************************************/
 import type { IpcMainInvokeEvent } from "electron";
 import type { SessionState } from "@shared/types/vault.types";
+import type { UpdateStatus } from "@shared/types/update.types";
 
 export type IpcSentEvents = {
 	/**
@@ -16,4 +17,8 @@ export type IpcSentEvents = {
 	 */
 	"clipboard:cleared": (event: IpcMainInvokeEvent) => void;
 	"app:screen:toggle-full-screen": (event: IpcMainInvokeEvent, isMaximized: boolean) => void;
+	/**
+	 * L'état de la mise à jour automatique a changé
+	 */
+	"update:status": (event: IpcMainInvokeEvent, status: UpdateStatus) => void;
 };

@@ -50,8 +50,8 @@ export function LoginScreen() {
 			<AuthLayout title="Connexion SSO" subtitle={`Ce serveur impose l'authentification de votre organisation pour ${email}`}>
 				<Stack spacing={2}>
 					<Typography variant="body2" sx={{ color: "var(--text-muted)" }}>
-						La page de connexion de votre organisation va s'ouvrir dans le navigateur. Une fois authentifié, revenez ici : le mot de passe maître saisi déchiffrera
-						le coffre sur ce poste.
+						La page de connexion de votre organisation va s'ouvrir dans le navigateur. Une fois authentifié, revenez ici : le mot de passe maître saisi déchiffrera le
+						coffre sur ce poste.
 					</Typography>
 
 					{error && (
@@ -60,24 +60,12 @@ export function LoginScreen() {
 						</Alert>
 					)}
 
-					<Button
-						variant="contained"
-						size="large"
-						disabled={pending}
-						onClick={submit}
-						startIcon={pending ? <CircularProgress size={16} color="inherit" /> : undefined}
-					>
+					<Button variant="contained" size="large" disabled={pending} onClick={submit} startIcon={pending ? <CircularProgress size={16} color="inherit" /> : undefined}>
 						{pending ? "Terminez la connexion dans le navigateur…" : "Continuer avec le SSO"}
 					</Button>
 
 					<Box sx={{ textAlign: "center" }}>
-						<Link
-							component="button"
-							type="button"
-							variant="body2"
-							underline="hover"
-							onClick={() => void dispatch(pending ? cancelLogin() : resetSso())}
-						>
+						<Link component="button" type="button" variant="body2" underline="hover" onClick={() => void dispatch(pending ? cancelLogin() : resetSso())}>
 							{pending ? "Annuler" : "Revenir à la connexion"}
 						</Link>
 					</Box>

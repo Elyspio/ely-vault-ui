@@ -24,6 +24,12 @@ export type AppConfig = {
 		/** What happens to the window once the sequence is typed */
 		afterTyping: AutoTypeAfter;
 	};
+	updates: {
+		/** Checks GitHub for a new release at startup then periodically, and downloads it */
+		autoCheck: boolean;
+		/** Also installs the prereleases (x.y.z-beta.n) */
+		beta: boolean;
+	};
 	window: {
 		bounds: { x: number; y: number; width: number; height: number } | null;
 	};
@@ -45,6 +51,10 @@ export const defaultAppConfig: AppConfig = {
 		defaultSequence: "{USERNAME}{TAB}{PASSWORD}",
 		pressEnter: true,
 		afterTyping: "minimized",
+	},
+	updates: {
+		autoCheck: true,
+		beta: false,
 	},
 	window: {
 		bounds: null,

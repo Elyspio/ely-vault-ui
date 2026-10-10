@@ -6,6 +6,7 @@ import { mainContainer } from "@main/di/container.di";
 import { WindowModule } from "@main/modules/window/window.module";
 import { VaultModule } from "@main/modules/vault/vault.module";
 import { AutoLockModule } from "@main/modules/security/auto-lock.module";
+import { UpdateModule } from "@main/modules/update/update.module";
 import { mainConfig } from "@shared/config/main.config";
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -31,6 +32,7 @@ if (hasSingleInstanceLock) {
 
 		await windowModule.createMainWindow();
 		mainContainer.get(AutoLockModule).start();
+		void mainContainer.get(UpdateModule).start();
 
 		app.on("activate", () => {
 			if (BrowserWindow.getAllWindows().length === 0) void windowModule.createMainWindow();

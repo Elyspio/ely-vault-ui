@@ -8,18 +8,19 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 
 ## Commands
 
-| Task | Command |
-|------|---------|
-| Install deps | `pnpm install` |
-| Dev mode | `pnpm dev` (electron-vite, watch) |
-| Build | `pnpm build` (electron-vite build, output in `out/`) |
-| Preview built app | `pnpm start` |
-| Check (fmt + lint + types, auto-fix) | `pnpm check` (`vp check --fix`) |
-| Typecheck | `pnpm typecheck` (`tsc -b --noEmit`) |
-| Test | `pnpm test` (`vp test`, `src/**/*.test.ts`, node environment) |
-| Package Windows (NSIS) | `pnpm package:win` |
-| Package Linux (AppImage, .deb) | `pnpm package:linux` |
-| Local test vault | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see readme) |
+| Task                                 | Command                                                                                  |
+| ------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Install deps                         | `pnpm install`                                                                           |
+| Dev mode                             | `pnpm dev` (electron-vite, watch)                                                        |
+| Build                                | `pnpm build` (electron-vite build, output in `out/`)                                     |
+| Preview built app                    | `pnpm start`                                                                             |
+| Check (fmt + lint + types, auto-fix) | `pnpm check` (`vp check --fix`)                                                          |
+| Typecheck                            | `pnpm typecheck` (`tsc -b --noEmit`)                                                     |
+| Test                                 | `pnpm test` (`vp test`, `src/**/*.test.ts` and `scripts/**/*.test.ts`, node environment) |
+| Package Windows (NSIS)               | `pnpm package:win`                                                                       |
+| Package Linux (AppImage, .deb)       | `pnpm package:linux`                                                                     |
+| Draft GitHub release (Windows host)  | `pnpm release` (`scripts/release/release.ts`, see readme)                                |
+| Local test vault                     | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see readme)                           |
 
 Package manager: **pnpm 12.5.1**, Node **26+**. Build/dev use electron-vite (`config/electron.vite.config.ts`, also injects the renderer CSP), builder config at `config/electron-builder.yml`. The vite-plus toolchain (fmt/lint/test) is configured in `vite.config.ts`; `vite` is aliased to `@voidzero-dev/vite-plus-core` via the pnpm catalog (`pnpm-workspace.yaml`).
 
@@ -41,6 +42,7 @@ Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1─
 
 - `bitwarden/` — `BwCliModule` runs the CLI with the Electron binary in Node mode (`ELECTRON_RUN_AS_NODE`); `BwServeModule` manages `bw serve` on 127.0.0.1 with a random port. CLI data isolated in `<appFolder>/bitwarden`.
 - `vault/` — `VaultModule` (login, unlock, lock, snapshot, secrets on demand), `vault.mapper.ts` (strips secrets before sending items to the renderer), `password.generator.ts`.
+- `update/` — `UpdateModule`: auto update from the GitHub releases (`electron-updater`): checks at startup then hourly (setting `updates.autoCheck`), downloads newer releases, installs on restart or quit; beta channel (`updates.beta`, prereleases `x.y.z-beta.n`) and user-confirmed downgrade back to stable. Locks the vault and stops `bw serve` before `quitAndInstall`. Dev builds check through `dev-app-update.yml` and never install.
 - `security/` — auto-lock, clipboard (auto-clear, excluded from Windows history/cloud clipboard), certificate review/approval of private CAs.
 - `autotype/` — KeePass-style auto-type: Windows `SendInput` via koffi FFI, Linux X11 via `xdotool`.
 - `config/`, `context/`, `window/`, `ipc.module.ts`, `log.module.ts`.
@@ -68,6 +70,7 @@ App folder: `%LOCALAPPDATA%/vault-desktop` (Linux: Electron `appData`), see `Mai
 - Never log secrets: no parameters or return values of secret-handling functions in logs.
 - Passwords go to the CLI through environment variables, never as command-line arguments.
 - Never add an "ignore TLS errors" option; private CAs go through explicit review/approval (`certificate.module.ts`), passed to the CLI and Chromium.
+- Updates come only from the GitHub releases through `electron-updater` (HTTPS + SHA-512 of `latest*.yml`): never add another update source or skip its verification.
 - Keep Electron hardening intact: `sandbox`, `contextIsolation`, no `nodeIntegration`, strict CSP, blocked navigation/new windows, IPC only from the app page, only `http(s)` links opened externally.
 
 ## Key Conventions
@@ -85,5 +88,8 @@ App folder: `%LOCALAPPDATA%/vault-desktop` (Linux: Electron `appData`), see `Mai
 - Commits follow Conventional Commits (`feat:`, `fix:`, …); PRs are squash-merged.
 
 ## Git & Release Conventions
+
+- Releases: bump `version` in `package.json` through a `chore: release vX.Y.Z` PR, then run `pnpm release` on an up to date `main` (Windows, Docker/Podman, authenticated `gh`). It builds Windows locally and Linux in `deploy/release/linux.Dockerfile`, pushes the tag and creates a **draft** GitHub release with generated notes; publish it by hand. Only `x.y.z` and `x.y.z-beta.n` versions are allowed.
+
 - No `Co-Authored-By` trailer (nor any AI attribution line such as « Generated with Claude Code ») in commit messages, PR descriptions or squash merge messages.
 - Release notes come from the squash merge commit of the PR: keep them free of these attribution lines too (pass an explicit `--body` to `gh pr merge --squash` when the branch commits carry trailers).
