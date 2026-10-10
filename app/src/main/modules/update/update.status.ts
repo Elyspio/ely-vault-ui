@@ -1,5 +1,6 @@
 import semver from "semver";
 import type { UpdateInfo } from "electron-updater";
+import type { UpdateChannel } from "@shared/config/app.config";
 import type { UpdateState, UpdateStatus } from "@shared/types/update.types";
 
 /**
@@ -10,10 +11,20 @@ export function canCheck(state: UpdateState): boolean {
 }
 
 /**
- * A beta build without the beta channel goes back to the latest stable release, even when it is older
+ * electron-updater options of a channel (GitHub provider):
+ * - stable: the latest release, prereleases ignored;
+ * - beta: the newest stable or beta release, the development builds (custom "dev" channel) are skipped;
+ * - dev: the newest development build only.
  */
-export function allowsDowngrade(currentVersion: string, beta: boolean) {
-	return !beta && semver.prerelease(currentVersion) !== null;
+export function updaterChannel(channel: UpdateChannel): { channel: "latest" | "beta" | "dev"; allowPrerelease: boolean } {
+	switch (channel) {
+		case "stable":
+			return { channel: "latest", allowPrerelease: false };
+		case "beta":
+			return { channel: "beta", allowPrerelease: true };
+		case "dev":
+			return { channel: "dev", allowPrerelease: true };
+	}
 }
 
 export function isDowngrade(currentVersion: string, latestVersion: string) {

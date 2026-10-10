@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import { inject, injectable } from "inversify";
 import { LogModule } from "../log.module";
 import { MainContextModule } from "../context/main.context.module";
-import { type AppConfig, defaultAppConfig } from "@shared/config/app.config";
+import { type AppConfig, defaultAppConfig, readUpdateSettings } from "@shared/config/app.config";
 
 @injectable()
 export class ConfigModule extends LogModule {
@@ -29,7 +29,7 @@ export class ConfigModule extends LogModule {
 				security: { ...defaultAppConfig.security, ...parsed.security },
 				display: { ...defaultAppConfig.display, ...parsed.display },
 				autoType: { ...defaultAppConfig.autoType, ...parsed.autoType },
-				updates: { ...defaultAppConfig.updates, ...parsed.updates },
+				updates: readUpdateSettings(parsed.updates),
 				window: { ...defaultAppConfig.window, ...parsed.window },
 			};
 		} catch {

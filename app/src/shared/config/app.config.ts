@@ -27,8 +27,8 @@ export type AppConfig = {
 	updates: {
 		/** Checks GitHub for a new release at startup then periodically, and downloads it */
 		autoCheck: boolean;
-		/** Also installs the prereleases (x.y.z-beta.n) */
-		beta: boolean;
+		/** Releases followed: stable only, also the betas (x.y.z-beta.n), or the development builds (x.y.z-dev.n) */
+		channel: UpdateChannel;
 	};
 	window: {
 		bounds: { x: number; y: number; width: number; height: number } | null;
@@ -36,6 +36,8 @@ export type AppConfig = {
 };
 
 export type AutoTypeAfter = "minimized" | "restore" | "lock";
+
+export type UpdateChannel = "stable" | "beta" | "dev";
 
 export const defaultAppConfig: AppConfig = {
 	version: 1,
@@ -54,9 +56,17 @@ export const defaultAppConfig: AppConfig = {
 	},
 	updates: {
 		autoCheck: true,
-		beta: false,
+		channel: "stable",
 	},
 	window: {
 		bounds: null,
 	},
 };
+
+/**
+ * Update settings of a saved configuration: earlier versions stored a `beta` switch instead of the channel
+ */
+export function readUpdateSettings(saved: (Partial<AppConfig["updates"]> & { beta?: boolean }) | undefined): AppConfig["updates"] {
+	const { beta, ...settings } = saved ?? {};
+	return { ...defaultAppConfig.updates, channel: beta ? "beta" : defaultAppConfig.updates.channel, ...settings };
+}

@@ -116,7 +116,7 @@ export function Titlebar() {
 							title={
 								pendingUpdate
 									? pendingUpdate.downgrade && pendingUpdate.state === "available"
-										? `Stable version ${pendingUpdate.latestVersion} available`
+										? `Older version ${pendingUpdate.latestVersion} available`
 										: `Version ${pendingUpdate.latestVersion} ready to install`
 									: "Settings (Ctrl ,)"
 							}

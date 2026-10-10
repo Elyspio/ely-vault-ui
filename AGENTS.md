@@ -24,6 +24,7 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 | Test                                 | `pnpm test` (`vp test`, `src/**/*.test.ts` and `scripts/**/*.test.ts`, node environment)             |
 | Package Windows (NSIS)               | `pnpm package:win`                                                                                   |
 | Package Linux (AppImage, .deb)       | `pnpm package:linux` (native on Linux, in the root `deploy/release/linux.Dockerfile` container elsewhere) |
+| Development build (any branch)       | `pnpm release:dev` (`X.Y.Z-dev.N` prerelease, see `docs/development/releasing.md`)                       |
 | Draft GitHub release (Windows host)  | `pnpm release` (`scripts/release/release.ts`, see `docs/development/releasing.md`)                                            |
 | Local test vault                     | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see `docs/development/local-test-server.md`)                                       |
 
@@ -47,7 +48,7 @@ Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1─
 
 - `bitwarden/` — `BwCliModule` runs the CLI with the Electron binary in Node mode (`ELECTRON_RUN_AS_NODE`); `BwServeModule` manages `bw serve` on 127.0.0.1 with a random port. CLI data isolated in `<appFolder>/bitwarden`.
 - `vault/` — `VaultModule` (login, unlock, lock, snapshot, secrets on demand), `vault.mapper.ts` (strips secrets before sending items to the renderer), `password.generator.ts`.
-- `update/` — `UpdateModule`: auto update from the GitHub releases (`electron-updater`): checks at startup then hourly (setting `updates.autoCheck`), downloads newer releases, installs on restart or quit; beta channel (`updates.beta`, prereleases `x.y.z-beta.n`) and user-confirmed downgrade back to stable. Locks the vault and stops `bw serve` before `quitAndInstall`. Dev builds check through `dev-app-update.yml` and never install.
+- `update/` — `UpdateModule`: auto update from the GitHub releases (`electron-updater`): checks at startup then hourly (setting `updates.autoCheck`), downloads newer releases, installs on restart or quit; update channel `updates.channel` (`stable` / `beta` / `dev`, mapped to the electron-updater channel; `beta` skips the `-dev` releases) and user-confirmed downgrade when the channel's newest version is older. Locks the vault and stops `bw serve` before `quitAndInstall`. Dev builds check through `dev-app-update.yml` and never install.
 - `security/` — auto-lock, clipboard (auto-clear, excluded from Windows history/cloud clipboard), certificate review/approval of private CAs.
 - `autotype/` — KeePass-style auto-type: Windows `SendInput` via koffi FFI, Linux X11 via `xdotool`.
 - `config/`, `context/`, `window/`, `ipc.module.ts`, `log.module.ts`.
@@ -94,7 +95,7 @@ App folder: `%LOCALAPPDATA%/vault-desktop` (Linux: Electron `appData`), see `Mai
 
 ## Git & Release Conventions
 
-- Releases: bump `version` in `package.json` through a `chore: release vX.Y.Z` PR, then run `pnpm release` on an up to date `main` (Windows, Docker/Podman, authenticated `gh`). It builds Windows locally and Linux in `deploy/release/linux.Dockerfile`, pushes the tag and creates a **draft** GitHub release with generated notes; publish it by hand. Only `x.y.z` and `x.y.z-beta.n` versions are allowed.
+- Releases: bump `version` in `package.json` through a `chore: release vX.Y.Z` PR, then run `pnpm release` on an up to date `main` (Windows, Docker/Podman, authenticated `gh`). It builds Windows locally and Linux in `deploy/release/linux.Dockerfile`, pushes the tag and creates a **draft** GitHub release with generated notes; publish it by hand. Only `x.y.z` and `x.y.z-beta.n` versions are allowed. Development builds: `pnpm release:dev` from any clean, pushed branch publishes `X.Y.Z-dev.N` as a prerelease (version injected at build time, 5 newest kept).
 
 - No `Co-Authored-By` trailer (nor any AI attribution line such as "Generated with Claude Code") in commit messages, PR descriptions or squash merge messages.
 - Release notes come from the squash merge commit of the PR: keep them free of these attribution lines too (pass an explicit `--body` to `gh pr merge --squash` when the branch commits carry trailers).

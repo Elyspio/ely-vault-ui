@@ -11,7 +11,7 @@ export type UpdateStatus = {
 	releaseDate: string | null;
 	/** Release notes of GitHub (HTML) */
 	releaseNotes: string | null;
-	/** The release found is older than the installed beta: only installed on the user's request */
+	/** The release found is older than the installed version (channel change): only installed on the user's request */
 	downgrade: boolean;
 	/** Download progress in percent, while downloading */
 	progress: number | null;

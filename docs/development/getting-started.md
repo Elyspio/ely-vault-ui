@@ -20,6 +20,7 @@ pnpm dev
 | `pnpm package:win`   | Windows installer (electron-builder)            |
 | `pnpm package:linux` | AppImage and `.deb` (Docker container on Windows) |
 | `pnpm release`       | Draft GitHub release                            |
+| `pnpm release:dev`   | Development build (prerelease), from any branch |
 
 In development, **Check** (Settings → Updates) queries the releases through `dev-app-update.yml`; nothing is installed.
 

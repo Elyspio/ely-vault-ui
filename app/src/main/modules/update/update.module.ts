@@ -10,13 +10,14 @@ import { log } from "../../utils/logs.utils";
 import { mainConfig } from "@shared/config/main.config";
 import type { AppConfig } from "@shared/config/app.config";
 import type { UpdateStatus } from "@shared/types/update.types";
-import { allowsDowngrade, canCheck, fromUpdateInfo, isDowngrade } from "./update.status";
+import { canCheck, fromUpdateInfo, isDowngrade, updaterChannel } from "./update.status";
 
 /**
  * Updates the application from the GitHub releases (electron-updater).
  *
- * A newer release is downloaded as soon as it is found and installed on restart or when the application quits.
- * Going back from a beta to an older stable release is only downloaded and installed on the user's request.
+ * A newer release of the selected channel (stable, beta or dev) is downloaded as soon as it is found and installed
+ * on restart or when the application quits. An older one (after a channel change) is only downloaded and installed
+ * on the user's request.
  */
 @injectable()
 export class UpdateModule extends LogModule {
@@ -101,7 +102,7 @@ export class UpdateModule extends LogModule {
 	public async onSettingsChanged(previous: AppConfig["updates"], next: AppConfig["updates"]) {
 		this.applySettings(next);
 
-		if (previous.beta !== next.beta) {
+		if (previous.channel !== next.channel) {
 			this.dropPendingUpdate();
 			if (next.autoCheck) await this.check();
 			else this.schedule();
@@ -169,8 +170,11 @@ export class UpdateModule extends LogModule {
 
 	private applySettings(settings: AppConfig["updates"]) {
 		this.settings = settings;
-		this.autoUpdater.allowPrerelease = settings.beta;
-		this.autoUpdater.allowDowngrade = allowsDowngrade(this.status.currentVersion, settings.beta);
+		const { channel, allowPrerelease } = updaterChannel(settings.channel);
+		this.autoUpdater.channel = channel;
+		this.autoUpdater.allowPrerelease = allowPrerelease;
+		// An older release of the channel is offered, never downloaded nor installed without the user's request
+		this.autoUpdater.allowDowngrade = true;
 	}
 
 	/**

@@ -1,23 +1,27 @@
 /**
- * Publishes the version of package.json as a draft GitHub release, read by the auto update of the application.
+ * Publishes GitHub releases, read by the auto update of the application.
  *
- * Run `pnpm release` on Windows, from an up to date `main`, with Docker or Podman and an authenticated `gh`:
- * checks the repository, builds the Windows installer locally and the Linux packages in a container,
- * pushes the tag then creates the draft release (notes generated from the merged PRs) with the artifacts.
+ * `pnpm release`: publishes the version of package.json as a draft release. Run it on Windows, from an up to date `main`,
+ * with Docker or Podman and an authenticated `gh`: checks the repository, builds the Windows installer locally and the
+ * Linux packages in a container, pushes the tag then creates the draft release (notes generated from the merged PRs).
  * The release is only seen by the applications once published from GitHub.
+ *
+ * `pnpm release:dev` (`release.ts dev`): publishes a development build `X.Y.Z-dev.N` from any branch, as a published
+ * prerelease followed by the "Dev" update channel. The version is injected at build time (package.json is unchanged),
+ * the notes list the commits since the previous development build, and only the latest development builds are kept.
  *
  * `pnpm package:linux` (`release.ts package-linux`) only builds the Linux packages: electron-builder cannot build
  * the AppImage from Windows, so it runs in the container there, natively on Linux.
  */
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, readFileSync, rmSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import semver from "semver";
 
 export type ReleaseVersion = {
 	version: string;
 	tag: string;
-	/** Beta versions (x.y.z-beta.n) are published as GitHub prereleases */
+	/** Beta and development versions are published as GitHub prereleases */
 	prerelease: boolean;
 };
 
@@ -29,8 +33,23 @@ export type RepositoryState = {
 	tags: string[];
 };
 
+export type DevRepositoryState = {
+	/** "HEAD" when detached */
+	branch: string;
+	dirty: boolean;
+	/** Remote branch tracked by the current branch, null without one */
+	upstream: string | null;
+	/** HEAD is the commit of the upstream branch */
+	pushed: boolean;
+};
+
+/** Development builds kept on GitHub */
+export const devReleasesKept = 5;
+
+const devTagPattern = /^v(\d+\.\d+\.\d+)-dev\.(\d+)$/;
+
 /**
- * Validates the version of package.json: stable (1.2.0) or beta (1.2.0-beta.1), the only channels the application follows
+ * Validates the version of package.json: stable (1.2.0) or beta (1.2.0-beta.1); development builds use `pnpm release:dev`
  */
 export function parseReleaseVersion(version: string): ReleaseVersion {
 	const parsed = semver.parse(version);
@@ -45,29 +64,98 @@ export function parseReleaseVersion(version: string): ReleaseVersion {
 }
 
 /**
+ * Stable and beta versions of the tags, newest first: the development builds are ignored
+ */
+export function releasedVersions(tags: string[]): string[] {
+	return tags
+		.filter((tag) => !devTagPattern.test(tag))
+		.map((tag) => semver.valid(semver.clean(tag)))
+		.filter((version): version is string => version !== null)
+		.sort(semver.rcompare);
+}
+
+/**
  * Reasons the release cannot be made from the current repository, empty when it can
  */
 export function releaseProblems(release: ReleaseVersion, repository: RepositoryState): string[] {
 	const problems: string[] = [];
-	if (repository.branch !== "main") problems.push(`Releases are made from main (current branch: ${repository.branch})`);
+	if (repository.branch !== "main") problems.push(`Releases are made from main (current branch: ${repository.branch}): use pnpm release:dev for a development build`);
 	if (repository.dirty) problems.push("The working tree has uncommitted changes");
 	if (!repository.upToDate) problems.push("HEAD is not origin/main: pull or push first");
 	if (repository.tags.includes(release.tag)) problems.push(`Tag ${release.tag} already exists: bump the version in package.json`);
 
-	const latest = repository.tags
-		.map((tag) => semver.valid(semver.clean(tag)))
-		.filter((version): version is string => version !== null)
-		.sort(semver.rcompare)[0];
+	// A beta of the next version sorts before its development builds (beta < dev): only the releases count
+	const latest = releasedVersions(repository.tags)[0];
 	if (latest && !semver.gt(release.version, latest)) problems.push(`Version ${release.version} must be greater than the latest tag v${latest}`);
 
 	return problems;
 }
 
 /**
+ * Reasons the development build cannot be made from the current repository, empty when it can
+ */
+export function devReleaseProblems(repository: DevRepositoryState): string[] {
+	const problems: string[] = [];
+	if (repository.branch === "HEAD") problems.push("HEAD is detached: check out a branch");
+	if (repository.dirty) problems.push("The working tree has uncommitted changes");
+	if (!repository.upstream) problems.push(`Branch ${repository.branch} has no remote branch: push it first (git push -u origin ${repository.branch})`);
+	else if (!repository.pushed) problems.push(`HEAD is not ${repository.upstream}: push or pull first`);
+	return problems;
+}
+
+/**
+ * Version of the next development build: `X.Y.Z-dev.N`.
+ *
+ * X.Y.Z is the version of package.json (without prerelease) until it is released, then the patch after the latest release;
+ * N follows the development builds of X.Y.Z already tagged.
+ */
+export function nextDevVersion(packageVersion: string, tags: string[]): ReleaseVersion {
+	const parsed = semver.parse(packageVersion);
+	if (!parsed) throw new Error(`Invalid version "${packageVersion}" in package.json`);
+
+	const latestRelease = releasedVersions(tags).find((version) => semver.prerelease(version) === null);
+	let base = `${parsed.major}.${parsed.minor}.${parsed.patch}`;
+	if (latestRelease && !semver.gt(base, latestRelease)) base = semver.inc(latestRelease, "patch")!;
+
+	const builds = tags.map((tag) => devTagPattern.exec(tag)).filter((match) => match?.[1] === base);
+	const number = Math.max(0, ...builds.map((match) => Number(match![2]))) + 1;
+
+	const version = `${base}-dev.${number}`;
+	return { version, tag: `v${version}`, prerelease: true };
+}
+
+/**
+ * Development build tags, newest first
+ */
+export function devTags(tags: string[]): string[] {
+	return tags.filter((tag) => devTagPattern.test(tag)).sort((a, b) => semver.rcompare(a.slice(1), b.slice(1)));
+}
+
+/**
+ * Development builds to delete once a new one is published: all but the {@link devReleasesKept} newest
+ */
+export function devReleasesToDelete(tags: string[], kept = devReleasesKept): string[] {
+	return devTags(tags).slice(kept);
+}
+
+/**
+ * Notes of a development build: where it comes from, then the commits since the previous development build
+ */
+export function devReleaseNotes(branch: string, commit: string, previousTag: string | null, commits: string[]): string {
+	const lines = [`Development build from \`${branch}\` @ ${commit}.`, ""];
+	if (commits.length === 0) {
+		lines.push(previousTag ? `No new commit since ${previousTag}.` : "First development build.");
+	} else {
+		lines.push(previousTag ? `Commits since ${previousTag}:` : "Commits:", "", ...commits.map((line) => `- ${line}`));
+	}
+	return `${lines.join("\n")}\n`;
+}
+
+/**
  * Files uploaded to the release: installers, their blockmap and the update files of electron-updater.
  *
- * The GitHub publisher ignores the version channel: betas also ship latest*.yml, which electron-updater
- * reads when a prerelease has no beta*.yml.
+ * The GitHub publisher ignores the version channel: betas and development builds also ship latest*.yml,
+ * which electron-updater reads when a prerelease has no beta*.yml or dev*.yml.
  */
 export function releaseAssets(name: string, release: ReleaseVersion): string[] {
 	const { version } = release;
@@ -88,11 +176,15 @@ const repositoryDir = path.resolve(rootDir, "..");
 const distDir = path.join(rootDir, "dist");
 const linuxImage = "vault-desktop-release-linux";
 
+/** pnpm is a .cmd shim on Windows; git, gh, docker and podman are executables, run without a shell (arguments kept intact) */
+function needsShell(command: string) {
+	return process.platform === "win32" && command === "pnpm";
+}
+
 function run(command: string, args: string[]) {
 	console.log(`\n> ${command} ${args.join(" ")}`);
 	return new Promise<void>((resolve, reject) => {
-		// pnpm and gh are .cmd shims on Windows
-		const child = spawn(command, args, { cwd: rootDir, stdio: "inherit", shell: process.platform === "win32" });
+		const child = spawn(command, args, { cwd: rootDir, stdio: "inherit", shell: needsShell(command) });
 		child.on("error", reject);
 		child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`${command} ${args[0] ?? ""} failed with exit code ${code}`))));
 	});
@@ -104,7 +196,7 @@ function output(command: string, args: string[]) {
 
 function succeeds(command: string, args: string[]) {
 	try {
-		execFileSync(command, args, { cwd: rootDir, stdio: "ignore", shell: process.platform === "win32" });
+		execFileSync(command, args, { cwd: rootDir, stdio: "ignore", shell: needsShell(command) });
 		return true;
 	} catch {
 		return false;
@@ -121,70 +213,166 @@ function readRepository(): RepositoryState {
 	};
 }
 
+function readDevRepository(): DevRepositoryState {
+	output("git", ["fetch", "--tags", "origin"]);
+	const upstream = succeeds("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
+		? output("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
+		: null;
+	return {
+		branch: output("git", ["rev-parse", "--abbrev-ref", "HEAD"]),
+		dirty: output("git", ["status", "--porcelain"]) !== "",
+		upstream,
+		pushed: upstream !== null && output("git", ["rev-parse", "HEAD"]) === output("git", ["rev-parse", "@{u}"]),
+	};
+}
+
+/**
+ * Tags on GitHub: local tags may be stale (development builds are deleted on the remote)
+ */
+function remoteTags() {
+	return output("git", ["ls-remote", "--tags", "--refs", "origin", "v*"])
+		.split("\n")
+		.map((line) => line.split("refs/tags/")[1])
+		.filter((tag): tag is string => Boolean(tag));
+}
+
 function containerRuntime() {
 	const runtime = ["docker", "podman"].find((command) => succeeds(command, ["info"]));
 	if (!runtime) throw new Error("Docker or Podman must be running to build the Linux packages");
 	return runtime;
 }
 
+/** electron-builder arguments setting the version of the packages without changing package.json */
+function versionArgs(version?: string) {
+	return version ? [`-c.extraMetadata.version=${version}`] : [];
+}
+
 /**
  * Builds the AppImage and the deb into dist/: natively on Linux, in deploy/release/linux.Dockerfile elsewhere
  */
-async function packageLinux(runtime = process.platform === "linux" ? null : containerRuntime()) {
+async function packageLinux(runtime = process.platform === "linux" ? null : containerRuntime(), version?: string) {
 	mkdirSync(distDir, { recursive: true });
 
 	if (!runtime) {
 		await run("pnpm", ["build"]);
-		await run("pnpm", ["exec", "electron-builder", "--config", "config/electron-builder.yml", "--linux", "AppImage", "deb", "--publish", "never"]);
+		await run("pnpm", ["exec", "electron-builder", "--config", "config/electron-builder.yml", "--linux", "AppImage", "deb", "--publish", "never", ...versionArgs(version)]);
 		return;
 	}
 
 	await run(runtime, ["build", "-f", path.join(repositoryDir, "deploy/release/linux.Dockerfile"), "-t", linuxImage, repositoryDir]);
-	await run(runtime, ["run", "--rm", "--volume", `${distDir.replaceAll("\\", "/")}:/project/dist`, "--volume", `${linuxImage}-cache:/root/.cache`, linuxImage]);
+	await run(runtime, [
+		"run",
+		"--rm",
+		"--volume",
+		`${distDir.replaceAll("\\", "/")}:/project/dist`,
+		"--volume",
+		`${linuxImage}-cache:/root/.cache`,
+		...(version ? ["--env", `RELEASE_VERSION=${version}`] : []),
+		linuxImage,
+	]);
 }
 
-async function main() {
-	const packageJson = JSON.parse(readFileSync(path.join(rootDir, "package.json"), "utf-8")) as { name: string; version: string };
-	const release = parseReleaseVersion(packageJson.version);
-	console.log(`Release ${release.tag}${release.prerelease ? " (beta)" : ""}`);
-
-	if (process.platform !== "win32") throw new Error("Releases are built from Windows: the NSIS installer is built locally");
-
-	const problems = releaseProblems(release, readRepository());
-	if (problems.length > 0) throw new Error(`Cannot release:\n- ${problems.join("\n- ")}`);
-	if (!succeeds("gh", ["auth", "status"])) throw new Error("gh must be authenticated: gh auth login");
-	const runtime = containerRuntime();
-
+async function checkCode() {
 	await run("pnpm", ["exec", "vp", "check"]);
 	await run("pnpm", ["typecheck"]);
 	await run("pnpm", ["test"]);
+}
 
+/**
+ * Builds both platforms into a clean dist/ and returns the release assets
+ */
+async function buildAssets(name: string, release: ReleaseVersion, runtime: string, version?: string) {
 	rmSync(path.join(rootDir, "out"), { recursive: true, force: true });
 	rmSync(distDir, { recursive: true, force: true });
 	mkdirSync(distDir);
 
-	await packageLinux(runtime);
+	await packageLinux(runtime, version);
 
 	await run("pnpm", ["build"]);
-	await run("pnpm", ["exec", "electron-builder", "--config", "config/electron-builder.yml", "--win", "nsis", "--publish", "never"]);
+	await run("pnpm", ["exec", "electron-builder", "--config", "config/electron-builder.yml", "--win", "nsis", "--publish", "never", ...versionArgs(version)]);
 
-	const assets = releaseAssets(packageJson.name, release).map((file) => path.join(distDir, file));
+	const assets = releaseAssets(name, release).map((file) => path.join(distDir, file));
 	const missing = assets.filter((file) => !existsSync(file));
 	if (missing.length > 0) throw new Error(`Missing release artifacts:\n- ${missing.join("\n- ")}`);
+	return assets;
+}
+
+function readPackageJson() {
+	return JSON.parse(readFileSync(path.join(rootDir, "package.json"), "utf-8")) as { name: string; version: string };
+}
+
+function checkTools() {
+	if (!succeeds("gh", ["auth", "status"])) throw new Error("gh must be authenticated: gh auth login");
+	return containerRuntime();
+}
+
+async function main() {
+	const packageJson = readPackageJson();
+	const release = parseReleaseVersion(packageJson.version);
+	console.log(`Release ${release.tag}${release.prerelease ? " (beta)" : ""}`);
+
+	if (process.platform !== "win32") throw new Error("Releases are built from Windows: the NSIS installer is built locally");
+	const repository = readRepository();
+	const problems = releaseProblems(release, repository);
+	if (problems.length > 0) throw new Error(`Cannot release:\n- ${problems.join("\n- ")}`);
+	const runtime = checkTools();
+
+	await checkCode();
+	const assets = await buildAssets(packageJson.name, release, runtime);
 
 	await run("git", ["tag", "--annotate", release.tag, "--message", release.tag]);
 	await run("git", ["push", "origin", release.tag]);
 
+	// Notes from the previous stable or beta release: the development builds in between are not releases
+	const previous = releasedVersions(repository.tags)[0];
+	const notesStart = previous ? ["--notes-start-tag", `v${previous}`] : [];
 	const releaseFlags = release.prerelease ? ["--prerelease", "--latest=false"] : [];
-	await run("gh", ["release", "create", release.tag, "--draft", "--verify-tag", "--title", release.tag, "--generate-notes", ...releaseFlags, ...assets]);
+	await run("gh", ["release", "create", release.tag, "--draft", "--verify-tag", "--title", release.tag, "--generate-notes", ...notesStart, ...releaseFlags, ...assets]);
 
 	console.log(`\nDraft release created: ${output("gh", ["release", "view", release.tag, "--json", "url", "--jq", ".url"])}`);
 	console.log("Review the notes, then publish it on GitHub: the applications only see published releases.");
 }
 
+async function mainDev() {
+	const packageJson = readPackageJson();
+	if (process.platform !== "win32") throw new Error("Releases are built from Windows: the NSIS installer is built locally");
+
+	const repository = readDevRepository();
+	const problems = devReleaseProblems(repository);
+	if (problems.length > 0) throw new Error(`Cannot release a development build:\n- ${problems.join("\n- ")}`);
+	const runtime = checkTools();
+
+	const tags = remoteTags();
+	const release = nextDevVersion(packageJson.version, tags);
+	const previousTag = devTags(tags)[0] ?? null;
+	console.log(`Development build ${release.tag} from ${repository.branch}`);
+
+	await checkCode();
+	const assets = await buildAssets(packageJson.name, release, runtime, release.version);
+
+	const commit = output("git", ["rev-parse", "--short", "HEAD"]);
+	const range = previousTag && succeeds("git", ["rev-parse", "--verify", "--quiet", `${previousTag}^{commit}`]) ? `${previousTag}..HEAD` : "HEAD";
+	const commits = output("git", ["log", "--format=%h %s", "--max-count=50", range]).split("\n").filter(Boolean);
+	const notesFile = path.join(distDir, "release-notes.md");
+	writeFileSync(notesFile, devReleaseNotes(repository.branch, commit, previousTag, commits));
+
+	await run("git", ["tag", "--annotate", release.tag, "--message", `${release.tag} (${repository.branch})`]);
+	await run("git", ["push", "origin", release.tag]);
+	await run("gh", ["release", "create", release.tag, "--prerelease", "--latest=false", "--verify-tag", "--title", release.tag, "--notes-file", notesFile, ...assets]);
+
+	for (const tag of devReleasesToDelete([...tags, release.tag])) {
+		// Deletes the release and its tag; a tag left without release is deleted on its own
+		if (!succeeds("gh", ["release", "delete", tag, "--yes", "--cleanup-tag"])) await run("git", ["push", "origin", "--delete", tag]);
+		succeeds("git", ["tag", "--delete", tag]);
+	}
+
+	console.log(`\nDevelopment build published: ${output("gh", ["release", "view", release.tag, "--json", "url", "--jq", ".url"])}`);
+}
+
 if (import.meta.main) {
 	try {
 		if (process.argv[2] === "package-linux") await packageLinux();
+		else if (process.argv[2] === "dev") await mainDev();
 		else await main();
 	} catch (error) {
 		console.error(`\n${(error as Error).message}`);

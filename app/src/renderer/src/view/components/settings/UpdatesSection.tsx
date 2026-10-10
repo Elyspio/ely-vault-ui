@@ -106,7 +106,7 @@ function title(status: UpdateStatus) {
 		case "up-to-date":
 			return "Vault is up to date";
 		case "available":
-			return status.downgrade ? `Stable version ${status.latestVersion} available` : `Version ${status.latestVersion} found`;
+			return status.downgrade ? `Older version ${status.latestVersion} available` : `Version ${status.latestVersion} found`;
 		case "downloading":
 			return `Downloading version ${status.latestVersion}`;
 		case "downloaded":
@@ -121,7 +121,7 @@ function title(status: UpdateStatus) {
 function description(status: UpdateStatus) {
 	switch (status.state) {
 		case "available":
-			if (status.downgrade) return `Older than the installed beta (${status.currentVersion}): only installed on your request`;
+			if (status.downgrade) return `Older than the installed version (${status.currentVersion}): only installed on your request`;
 			return status.isPackaged ? "The download is starting" : "Development build: manual download";
 		case "downloaded":
 			return status.downgrade ? "Installed when Vault restarts" : "Installed when Vault restarts or quits";

@@ -19,6 +19,7 @@
 		"package:win": "pnpm build && electron-builder --config config/electron-builder.yml --win",
 		"package:linux": "node scripts/release/release.ts package-linux",
 		"release": "node scripts/release/release.ts",
+		"release:dev": "node scripts/release/release.ts dev",
 		"dev:vault:register": "node --env-file=scripts/dev/dev-vault.env scripts/dev/register-test-account.mjs",
 		"dev:vault:seed": "node --env-file=scripts/dev/dev-vault.env scripts/dev/seed-test-vault.mjs"
 	},

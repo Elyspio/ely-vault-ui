@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from "@store";
 import { setSettingsOpen } from "@modules/ui/ui.reducer";
 import { saveConfig } from "@modules/config/config.async.actions";
 import { logout } from "@modules/session/session.async.actions";
-import type { AppConfig, AutoTypeAfter } from "@shared/config/app.config";
+import type { AppConfig, AutoTypeAfter, UpdateChannel } from "@shared/config/app.config";
 import { validateAutoTypeSequence } from "@shared/autotype/autotype.sequence";
 import { useAutoTypeAvailability } from "@hooks/useAutoType";
 import { formatDateTime } from "@view/utils/date.utils";
@@ -31,6 +31,12 @@ const clipboardOptions = [
 	{ value: 60, label: "1 minute" },
 	{ value: 120, label: "2 minutes" },
 	{ value: 0, label: "Never" },
+];
+
+const channelOptions: { value: UpdateChannel; label: string }[] = [
+	{ value: "stable", label: "Stable" },
+	{ value: "beta", label: "Beta" },
+	{ value: "dev", label: "Dev" },
 ];
 
 const afterTypingOptions: { value: AutoTypeAfter; label: string }[] = [
@@ -153,8 +159,22 @@ export function SettingsDialog() {
 					<Setting label="Automatic updates" description="Checks for a new version at startup then every hour, and downloads it">
 						<Switch checked={config.updates.autoCheck} onChange={(_, checked) => update((c) => ({ ...c, updates: { ...c.updates, autoCheck: checked } }))} />
 					</Setting>
-					<Setting label="Beta versions" description="Receives the prereleases. Turning them off offers to go back to the latest stable version">
-						<Switch checked={config.updates.beta} onChange={(_, checked) => update((c) => ({ ...c, updates: { ...c.updates, beta: checked } }))} />
+					<Setting
+						label="Channel"
+						description="Stable releases, also the betas, or the development builds. An older version of the new channel is only installed on request"
+					>
+						<Select
+							size="small"
+							value={config.updates.channel}
+							onChange={(event) => update((c) => ({ ...c, updates: { ...c.updates, channel: event.target.value } }))}
+							sx={{ minWidth: 150 }}
+						>
+							{channelOptions.map((o) => (
+								<MenuItem key={o.value} value={o.value}>
+									{o.label}
+								</MenuItem>
+							))}
+						</Select>
 					</Setting>
 				</Section>
 

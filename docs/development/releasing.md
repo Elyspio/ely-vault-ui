@@ -8,3 +8,14 @@
     - builds the Windows installer locally and the Linux packages in a container (`deploy/release/linux.Dockerfile`, at the repository root);
     - pushes the `vX.Y.Z` tag and creates a **draft** release (prerelease for a beta) with notes generated from the merged PRs.
 3. Review the notes, then publish the release on GitHub: the applications only see published releases.
+
+## Development builds
+
+`pnpm release:dev` (from `app/`, same tools) publishes a development build from any branch, `main` included:
+
+- requires a clean working tree and HEAD pushed to its remote branch, then runs `vp check`, the type check and the tests;
+- version `X.Y.Z-dev.N`: X.Y.Z is the version of `app/package.json` (without prerelease) until it is released, then the patch after the latest release; N follows the development builds of X.Y.Z already tagged. `package.json` is not changed: the version is injected at build time (`extraMetadata.version`, `RELEASE_VERSION` in the Linux container);
+- pushes the `vX.Y.Z-dev.N` tag and publishes a **prerelease** right away (not marked latest), with the branch, the commit and the commits since the previous development build as notes;
+- keeps the 5 newest development builds: the older releases and their tags are deleted.
+
+Only the applications on the **Dev** update channel install them (see [Updates](../usage/updates.md)). Stable and beta releases ignore the development tags (`1.2.0-beta.1` sorts before `1.2.0-dev.3`), and their notes start from the previous stable or beta release.

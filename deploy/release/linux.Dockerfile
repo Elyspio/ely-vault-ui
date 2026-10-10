@@ -18,4 +18,5 @@ RUN pnpm install --frozen-lockfile
 
 COPY app/ .
 
-CMD ["sh", "-c", "pnpm build && pnpm exec electron-builder --config config/electron-builder.yml --linux AppImage deb --publish never"]
+# RELEASE_VERSION (development builds) sets the version of the packages without changing package.json
+CMD ["sh", "-c", "pnpm build && pnpm exec electron-builder --config config/electron-builder.yml --linux AppImage deb --publish never ${RELEASE_VERSION:+-c.extraMetadata.version=$RELEASE_VERSION}"]

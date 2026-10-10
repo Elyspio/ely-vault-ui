@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { allowsDowngrade, canCheck, fromUpdateInfo, isDowngrade } from "./update.status";
+import { canCheck, fromUpdateInfo, isDowngrade, updaterChannel } from "./update.status";
 
 describe("canCheck", () => {
 	it("allows a check when nothing is pending", () => {
@@ -11,12 +11,11 @@ describe("canCheck", () => {
 	});
 });
 
-describe("allowsDowngrade", () => {
-	it("only for a beta build without the beta channel", () => {
-		expect(allowsDowngrade("1.3.0-beta.1", false)).toBe(true);
-		expect(allowsDowngrade("1.3.0-beta.1", true)).toBe(false);
-		expect(allowsDowngrade("1.3.0", false)).toBe(false);
-		expect(allowsDowngrade("1.3.0", true)).toBe(false);
+describe("updaterChannel", () => {
+	it("maps each channel to the electron-updater options", () => {
+		expect(updaterChannel("stable")).toEqual({ channel: "latest", allowPrerelease: false });
+		expect(updaterChannel("beta")).toEqual({ channel: "beta", allowPrerelease: true });
+		expect(updaterChannel("dev")).toEqual({ channel: "dev", allowPrerelease: true });
 	});
 });
 
@@ -24,6 +23,7 @@ describe("isDowngrade", () => {
 	it("compares the versions with semver", () => {
 		expect(isDowngrade("1.3.0-beta.1", "1.2.0")).toBe(true);
 		expect(isDowngrade("1.3.0-beta.1", "1.3.0")).toBe(false);
+		expect(isDowngrade("1.3.0-dev.2", "1.3.0-beta.4")).toBe(true);
 		expect(isDowngrade("1.2.0", "1.10.0")).toBe(false);
 	});
 });
