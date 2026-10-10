@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="resources/icon.png" alt="Vault" width="96" height="96" />
+<img src="app/resources/icon.png" alt="Vault" width="96" height="96" />
 
 # Ely Vault UI
 
@@ -131,11 +131,17 @@ Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1─
 | Outillage | TypeScript 7, vite-plus (format, lint, tests), pnpm        |
 
 ```text
-src/
-├── main/       # Process principal : CLI Bitwarden, coffre, sécurité, saisie automatique, IPC
-├── preload/    # Pont IPC typé exposé au renderer
-├── renderer/   # Interface React
-└── shared/     # Types, configuration et contrats IPC partagés
+app/                # Projet de l'application (pnpm, electron-vite, electron-builder)
+├── src/
+│   ├── main/       # Process principal : CLI Bitwarden, coffre, sécurité, saisie automatique, IPC
+│   ├── preload/    # Pont IPC typé exposé au renderer
+│   ├── renderer/   # Interface React
+│   └── shared/     # Types, configuration et contrats IPC partagés
+├── config/         # electron-vite, electron-builder
+├── resources/      # Icône embarquée
+├── build/          # Ressources de packaging (icônes)
+└── scripts/        # Serveur de test local, publication
+deploy/             # Conteneur de build Linux
 ```
 
 ## Modèle de sécurité
@@ -152,9 +158,10 @@ src/
 
 ## Développement
 
-**Prérequis** : Node 26+, pnpm 12.5.1.
+**Prérequis** : Node 26+, pnpm 12.5.1. Les commandes se lancent depuis `app/`.
 
 ```bash
+cd app
 pnpm install
 pnpm dev
 ```
@@ -177,7 +184,7 @@ En développement, **Vérifier** interroge les releases via `dev-app-update.yml`
 1. Ouvrir une PR `chore: release vX.Y.Z` qui change `version` dans `package.json` (`X.Y.Z-beta.N` pour une bêta), puis la fusionner.
 2. Sur `main` à jour, sous Windows, avec Docker (ou Podman) démarré et `gh` authentifié : `pnpm release`.
     - vérifie le dépôt (branche, modifications, tag existant, version supérieure au dernier tag), puis `vp check`, types et tests ;
-    - construit l'installeur Windows en local et les paquets Linux dans un conteneur (`deploy/release/linux.Dockerfile`) ;
+    - construit l'installeur Windows en local et les paquets Linux dans un conteneur (`deploy/release/linux.Dockerfile`, à la racine du dépôt) ;
     - pousse le tag `vX.Y.Z` et crée une release **en brouillon** (préversion pour une bêta) avec les notes générées depuis les PR fusionnées.
 3. Relire les notes puis publier la release sur GitHub : les applications ne voient que les releases publiées.
 

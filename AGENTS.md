@@ -6,6 +6,11 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 
 **Ely Vault UI** (`vault-desktop`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all cryptography is delegated to the CLI, the app implements none. Version 1 is read-only (no item creation/edit). UI strings and the readme are in French.
 
+## Repository Layout
+
+- `app/` — the application project: `package.json`, pnpm files, `src/`, `config/`, `resources/`, `build/`, `scripts/`, tsconfigs, `vite.config.ts`. **Run every command from `app/`**; paths in this file are relative to `app/` unless stated otherwise.
+- Repository root — `AGENTS.md`, `CLAUDE.md`, `readme.md`, `LICENSE`, `.gitignore`, `.dockerignore` and `deploy/` (`deploy/release/linux.Dockerfile`, built with the repository root as context).
+
 ## Commands
 
 | Task                                 | Command                                                                                              |
@@ -18,7 +23,7 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 | Typecheck                            | `pnpm typecheck` (`tsc -b --noEmit`)                                                                 |
 | Test                                 | `pnpm test` (`vp test`, `src/**/*.test.ts` and `scripts/**/*.test.ts`, node environment)             |
 | Package Windows (NSIS)               | `pnpm package:win`                                                                                   |
-| Package Linux (AppImage, .deb)       | `pnpm package:linux` (native on Linux, in the `deploy/release/linux.Dockerfile` container elsewhere) |
+| Package Linux (AppImage, .deb)       | `pnpm package:linux` (native on Linux, in the root `deploy/release/linux.Dockerfile` container elsewhere) |
 | Draft GitHub release (Windows host)  | `pnpm release` (`scripts/release/release.ts`, see readme)                                            |
 | Local test vault                     | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see readme)                                       |
 

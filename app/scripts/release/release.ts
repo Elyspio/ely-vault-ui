@@ -81,7 +81,10 @@ export function releaseAssets(name: string, release: ReleaseVersion): string[] {
 	];
 }
 
+/** The application project (app/), where pnpm and electron-builder run */
 const rootDir = path.resolve(import.meta.dirname, "../..");
+/** The repository root: build context of the Linux container */
+const repositoryDir = path.resolve(rootDir, "..");
 const distDir = path.join(rootDir, "dist");
 const linuxImage = "vault-desktop-release-linux";
 
@@ -136,7 +139,7 @@ async function packageLinux(runtime = process.platform === "linux" ? null : cont
 		return;
 	}
 
-	await run(runtime, ["build", "-f", "deploy/release/linux.Dockerfile", "-t", linuxImage, "."]);
+	await run(runtime, ["build", "-f", path.join(repositoryDir, "deploy/release/linux.Dockerfile"), "-t", linuxImage, repositoryDir]);
 	await run(runtime, ["run", "--rm", "--volume", `${distDir.replaceAll("\\", "/")}:/project/dist`, "--volume", `${linuxImage}-cache:/root/.cache`, linuxImage]);
 }
 

@@ -6,4 +6,4 @@ out
 *.log*
 .idea
 # Local development vault certificates
-scripts/dev/ssl
+app/scripts/dev/ssl

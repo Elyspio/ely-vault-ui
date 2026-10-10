@@ -1,4 +1,4 @@
-# Builds the Linux packages (AppImage, deb) from Windows: scripts/release/release.ts mounts dist/ and runs this image
+# Builds the Linux packages (AppImage, deb) from Windows: app/scripts/release/release.ts builds it from the repository root, mounts app/dist and runs it
 FROM node:26-bookworm
 
 ARG PNPM_VERSION=12.5.1
@@ -12,10 +12,10 @@ RUN apt-get update \
 # Node 25+ images ship without corepack
 RUN npm install -g pnpm@${PNPM_VERSION}
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY app/package.json app/pnpm-lock.yaml app/pnpm-workspace.yaml ./
 
 RUN pnpm install --frozen-lockfile
 
-COPY . .
+COPY app/ .
 
 CMD ["sh", "-c", "pnpm build && pnpm exec electron-builder --config config/electron-builder.yml --linux AppImage deb --publish never"]
