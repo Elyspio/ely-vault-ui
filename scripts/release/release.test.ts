@@ -5,11 +5,11 @@ const cleanMain: RepositoryState = { branch: "main", dirty: false, upToDate: tru
 
 describe("parseReleaseVersion", () => {
 	it("accepts a stable version", () => {
-		expect(parseReleaseVersion("1.2.0")).toEqual({ version: "1.2.0", tag: "v1.2.0", prerelease: false, channel: "latest" });
+		expect(parseReleaseVersion("1.2.0")).toEqual({ version: "1.2.0", tag: "v1.2.0", prerelease: false });
 	});
 
 	it("accepts a beta version as a prerelease", () => {
-		expect(parseReleaseVersion("1.2.0-beta.3")).toEqual({ version: "1.2.0-beta.3", tag: "v1.2.0-beta.3", prerelease: true, channel: "beta" });
+		expect(parseReleaseVersion("1.2.0-beta.3")).toEqual({ version: "1.2.0-beta.3", tag: "v1.2.0-beta.3", prerelease: true });
 	});
 
 	it("refuses invalid versions and other channels", () => {
@@ -42,7 +42,7 @@ describe("releaseProblems", () => {
 });
 
 describe("releaseAssets", () => {
-	it("lists the installers and the update files of the channel", () => {
+	it("lists the installers and the update files", () => {
 		expect(releaseAssets("vault-desktop", parseReleaseVersion("1.2.0"))).toEqual([
 			"vault-desktop-1.2.0-setup.exe",
 			"vault-desktop-1.2.0-setup.exe.blockmap",
@@ -51,6 +51,7 @@ describe("releaseAssets", () => {
 			"vault-desktop_1.2.0_amd64.deb",
 			"latest-linux.yml",
 		]);
-		expect(releaseAssets("vault-desktop", parseReleaseVersion("1.2.0-beta.1"))).toContain("beta-linux.yml");
+		// The GitHub publisher writes latest*.yml for the betas too
+		expect(releaseAssets("vault-desktop", parseReleaseVersion("1.2.0-beta.1"))).toContain("latest-linux.yml");
 	});
 });

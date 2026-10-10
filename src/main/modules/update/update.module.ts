@@ -24,6 +24,8 @@ export class UpdateModule extends LogModule {
 	private settings: AppConfig["updates"] | null = null;
 	private checkTimeout: NodeJS.Timeout | undefined;
 	private downloadCancellation: CancellationToken | null = null;
+	/** The vault was shut down for the installer: an install error must give it back to the renderer */
+	private installing = false;
 	private status: UpdateStatus = {
 		state: "idle",
 		currentVersion: app.getVersion(),
@@ -58,7 +60,8 @@ export class UpdateModule extends LogModule {
 		this.autoUpdater.on("update-available", (info) => {
 			const downgrade = isDowngrade(this.status.currentVersion, info.version);
 			this.setStatus({ state: "available", downgrade, ...fromUpdateInfo(info) });
-			if (!downgrade) void this.download();
+			// Development builds are not installable (no AppImage, no installer): downloads stay manual
+			if (!downgrade && app.isPackaged) void this.download();
 		});
 		this.autoUpdater.on("update-not-available", (info) => this.setStatus({ state: "up-to-date", downgrade: false, ...fromUpdateInfo(info) }));
 		this.autoUpdater.on("download-progress", (progress) => this.setStatus({ state: "downloading", progress: progress.percent }));
@@ -70,6 +73,11 @@ export class UpdateModule extends LogModule {
 		this.autoUpdater.on("error", (error) => {
 			this.logger.error("Update failed", error);
 			this.setStatus({ state: "error", progress: null, error: error.message });
+			if (this.installing) {
+				// The installer could not start: the renderer shows the locked vault
+				this.installing = false;
+				void this.vaultModule.notifyState();
+			}
 		});
 	}
 
@@ -87,7 +95,7 @@ export class UpdateModule extends LogModule {
 	}
 
 	/**
-	 * Called when the user saves the settings: a channel change drops the pending update and checks again
+	 * Called when the user saves the settings: a channel change drops the pending update and checks again when automatic checks are on
 	 */
 	@log()
 	public async onSettingsChanged(previous: AppConfig["updates"], next: AppConfig["updates"]) {
@@ -95,7 +103,8 @@ export class UpdateModule extends LogModule {
 
 		if (previous.beta !== next.beta) {
 			this.dropPendingUpdate();
-			await this.check();
+			if (next.autoCheck) await this.check();
+			else this.schedule();
 			return;
 		}
 
@@ -123,7 +132,7 @@ export class UpdateModule extends LogModule {
 	}
 
 	/**
-	 * Downloads the release found: automatic for a newer release, on the user's request for a downgrade
+	 * Downloads the release found: automatic for a newer release, on the user's request for a downgrade (and in development)
 	 */
 	@log("info")
 	public async download() {
@@ -151,11 +160,11 @@ export class UpdateModule extends LogModule {
 	public async quitAndInstall() {
 		if (this.status.state !== "downloaded" || !app.isPackaged) return;
 
+		this.installing = true;
 		this.autoLockModule.stop();
 		await this.vaultModule.shutdown();
+		// Quits once the installer started, otherwise emits "error"
 		this.autoUpdater.quitAndInstall(true, true);
-		// Only reached when the installer could not start: the renderer shows the locked vault
-		await this.vaultModule.notifyState();
 	}
 
 	private applySettings(settings: AppConfig["updates"]) {

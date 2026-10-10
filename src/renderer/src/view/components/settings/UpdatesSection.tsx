@@ -69,11 +69,19 @@ export function UpdatesSection() {
 function Action({ status, onCheck, onDownload, onInstall }: Readonly<{ status: UpdateStatus; onCheck: () => void; onDownload: () => void; onInstall: () => void }>) {
 	switch (status.state) {
 		case "available":
-			return status.downgrade ? (
-				<Button size="small" variant="contained" onClick={onDownload}>
-					Revenir à la {status.latestVersion}
+			if (status.downgrade) {
+				return (
+					<Button size="small" variant="contained" onClick={onDownload}>
+						Revenir à la {status.latestVersion}
+					</Button>
+				);
+			}
+			// Development builds do not download automatically
+			return status.isPackaged ? null : (
+				<Button size="small" variant="outlined" onClick={onDownload}>
+					Télécharger
 				</Button>
-			) : null;
+			);
 		case "downloading":
 			return null;
 		case "downloaded":
@@ -113,7 +121,8 @@ function title(status: UpdateStatus) {
 function description(status: UpdateStatus) {
 	switch (status.state) {
 		case "available":
-			return status.downgrade ? `Plus ancienne que la bêta installée (${status.currentVersion}) : installée seulement à votre demande` : "Le téléchargement va commencer";
+			if (status.downgrade) return `Plus ancienne que la bêta installée (${status.currentVersion}) : installée seulement à votre demande`;
+			return status.isPackaged ? "Le téléchargement va commencer" : "Version de développement : téléchargement manuel";
 		case "downloaded":
 			return status.downgrade ? "Installée au redémarrage de Vault" : "Installée au redémarrage ou à la fermeture de Vault";
 		case "error":

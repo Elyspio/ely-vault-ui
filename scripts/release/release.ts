@@ -16,8 +16,6 @@ export type ReleaseVersion = {
 	tag: string;
 	/** Beta versions (x.y.z-beta.n) are published as GitHub prereleases */
 	prerelease: boolean;
-	/** Update channel of electron-updater: latest.yml or beta.yml */
-	channel: "latest" | "beta";
 };
 
 export type RepositoryState = {
@@ -40,7 +38,7 @@ export function parseReleaseVersion(version: string): ReleaseVersion {
 		throw new Error(`Invalid prerelease "${version}": only x.y.z-beta.n is supported by the application`);
 	}
 
-	return { version: parsed.version, tag: `v${parsed.version}`, prerelease: prerelease.length > 0, channel: prerelease.length > 0 ? "beta" : "latest" };
+	return { version: parsed.version, tag: `v${parsed.version}`, prerelease: prerelease.length > 0 };
 }
 
 /**
@@ -63,17 +61,20 @@ export function releaseProblems(release: ReleaseVersion, repository: RepositoryS
 }
 
 /**
- * Files uploaded to the release: installers, their blockmap and the update files of electron-updater
+ * Files uploaded to the release: installers, their blockmap and the update files of electron-updater.
+ *
+ * The GitHub publisher ignores the version channel: betas also ship latest*.yml, which electron-updater
+ * reads when a prerelease has no beta*.yml.
  */
 export function releaseAssets(name: string, release: ReleaseVersion): string[] {
-	const { version, channel } = release;
+	const { version } = release;
 	return [
 		`${name}-${version}-setup.exe`,
 		`${name}-${version}-setup.exe.blockmap`,
-		`${channel}.yml`,
+		"latest.yml",
 		`${name}-${version}.AppImage`,
 		`${name}_${version}_amd64.deb`,
-		`${channel}-linux.yml`,
+		"latest-linux.yml",
 	];
 }
 
