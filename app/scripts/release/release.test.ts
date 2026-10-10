@@ -90,6 +90,19 @@ describe("nextDevVersion", () => {
 		expect(nextDevVersion("0.2.0-beta.1", ["v0.1.0", "v0.2.0-beta.1"]).version).toBe("0.2.0-dev.1");
 	});
 
+	it("never goes below the latest development build", () => {
+		// A branch still at 0.1.0 continues the numbering of 0.2.0: the new build stays the newest, kept by the cleanup
+		const tags = ["v0.1.0", ...[1, 2, 3, 4, 5].map((n) => `v0.2.0-dev.${n}`)];
+		const next = nextDevVersion("0.1.0", tags);
+		expect(next.version).toBe("0.2.0-dev.6");
+		expect(devReleasesToDelete([...tags, next.tag])).toEqual(["v0.2.0-dev.1"]);
+	});
+
+	it("never reuses a pruned number", () => {
+		// dev.1 to dev.5 were deleted: the kept dev.10 carries the numbering on
+		expect(nextDevVersion("0.2.0", ["v0.1.0", "v0.2.0-dev.6", "v0.2.0-dev.10"]).version).toBe("0.2.0-dev.11");
+	});
+
 	it("moves to the next patch once the version is released", () => {
 		expect(nextDevVersion("0.2.0", ["v0.2.0", "v0.2.0-dev.4"]).version).toBe("0.2.1-dev.1");
 		expect(nextDevVersion("0.2.0", ["v0.3.0", "v0.3.1-dev.2"]).version).toBe("0.3.1-dev.3");

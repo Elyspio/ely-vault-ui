@@ -106,8 +106,10 @@ export function devReleaseProblems(repository: DevRepositoryState): string[] {
 /**
  * Version of the next development build: `X.Y.Z-dev.N`.
  *
- * X.Y.Z is the version of package.json (without prerelease) until it is released, then the patch after the latest release;
- * N follows the development builds of X.Y.Z already tagged.
+ * X.Y.Z is the version of package.json (without prerelease) until it is released, then the patch after the latest release,
+ * and never lower than the latest development build: a branch behind another one continues its numbering. The versions
+ * then follow the publication order, so the build just published is the newest one kept by the cleanup, and the highest
+ * number of each X.Y.Z is never deleted (no version is reused). N follows the development builds of X.Y.Z already tagged.
  */
 export function nextDevVersion(packageVersion: string, tags: string[]): ReleaseVersion {
 	const parsed = semver.parse(packageVersion);
@@ -116,6 +118,9 @@ export function nextDevVersion(packageVersion: string, tags: string[]): ReleaseV
 	const latestRelease = releasedVersions(tags).find((version) => semver.prerelease(version) === null);
 	let base = `${parsed.major}.${parsed.minor}.${parsed.patch}`;
 	if (latestRelease && !semver.gt(base, latestRelease)) base = semver.inc(latestRelease, "patch")!;
+
+	const latestDevBase = devTags(tags).map((tag) => devTagPattern.exec(tag)![1])[0];
+	if (latestDevBase && semver.gt(latestDevBase, base)) base = latestDevBase;
 
 	const builds = tags.map((tag) => devTagPattern.exec(tag)).filter((match) => match?.[1] === base);
 	const number = Math.max(0, ...builds.map((match) => Number(match![2]))) + 1;

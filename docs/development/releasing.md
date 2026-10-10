@@ -14,7 +14,7 @@
 `pnpm release:dev` (from `app/`, same tools) publishes a development build from any branch, `main` included:
 
 - requires a clean working tree and HEAD pushed to its remote branch, then runs `vp check`, the type check and the tests;
-- version `X.Y.Z-dev.N`: X.Y.Z is the version of `app/package.json` (without prerelease) until it is released, then the patch after the latest release; N follows the development builds of X.Y.Z already tagged. `package.json` is not changed: the version is injected at build time (`extraMetadata.version`, `RELEASE_VERSION` in the Linux container);
+- version `X.Y.Z-dev.N`: X.Y.Z is the version of `app/package.json` (without prerelease) until it is released, then the patch after the latest release, and never lower than the latest development build (a branch behind another one continues its numbering, so versions follow the publication order and are never reused); N follows the development builds of X.Y.Z already tagged. `package.json` is not changed: the version is injected at build time (`extraMetadata.version`, `RELEASE_VERSION` in the Linux container);
 - pushes the `vX.Y.Z-dev.N` tag and publishes a **prerelease** right away (not marked latest), with the branch, the commit and the commits since the previous development build as notes;
 - keeps the 5 newest development builds: the older releases and their tags are deleted.
 
