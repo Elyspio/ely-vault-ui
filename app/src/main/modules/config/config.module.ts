@@ -1,5 +1,6 @@
 import path from "node:path";
 import * as fs from "node:fs";
+import { app } from "electron";
 import { inject, injectable } from "inversify";
 import { LogModule } from "../log.module";
 import { MainContextModule } from "../context/main.context.module";
@@ -29,11 +30,11 @@ export class ConfigModule extends LogModule {
 				security: { ...defaultAppConfig.security, ...parsed.security },
 				display: { ...defaultAppConfig.display, ...parsed.display },
 				autoType: { ...defaultAppConfig.autoType, ...parsed.autoType },
-				updates: readUpdateSettings(parsed.updates),
+				updates: readUpdateSettings(parsed.updates, app.getVersion()),
 				window: { ...defaultAppConfig.window, ...parsed.window },
 			};
 		} catch {
-			this.configCache = structuredClone(defaultAppConfig);
+			this.configCache = { ...structuredClone(defaultAppConfig), updates: readUpdateSettings(undefined, app.getVersion()) };
 		}
 
 		return this.configCache;

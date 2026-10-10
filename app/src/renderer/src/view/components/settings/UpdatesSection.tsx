@@ -6,7 +6,7 @@ import type { UpdateStatus } from "@shared/types/update.types";
 import { formatRelative } from "@view/utils/date.utils";
 import { ReleaseNotes } from "./ReleaseNotes";
 
-const rowSx = { display: "flex", alignItems: "center", gap: 2, px: 2, py: 1.5, borderBottom: "1px solid var(--border-subtle)" };
+const rowSx = { display: "flex", alignItems: "center", gap: 2, px: 2, py: 1.5, "&:not(:last-child)": { borderBottom: "1px solid var(--border-subtle)" } };
 
 /**
  * Installed version, state of the automatic update and the action it waits for
@@ -105,6 +105,8 @@ function title(status: UpdateStatus) {
 			return "Checking for updates…";
 		case "up-to-date":
 			return "Vault is up to date";
+		case "no-release":
+			return "No release on this channel yet";
 		case "available":
 			return status.downgrade ? `Older version ${status.latestVersion} available` : `Version ${status.latestVersion} found`;
 		case "downloading":

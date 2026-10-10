@@ -10,7 +10,7 @@ import { log } from "../../utils/logs.utils";
 import { mainConfig } from "@shared/config/main.config";
 import type { AppConfig } from "@shared/config/app.config";
 import type { UpdateStatus } from "@shared/types/update.types";
-import { canCheck, fromUpdateInfo, isDowngrade, updaterChannel } from "./update.status";
+import { canCheck, fromUpdateInfo, isDowngrade, isNoReleaseError, shortErrorMessage, updaterChannel } from "./update.status";
 
 /**
  * Updates the application from the GitHub releases (electron-updater).
@@ -73,7 +73,7 @@ export class UpdateModule extends LogModule {
 		});
 		this.autoUpdater.on("error", (error) => {
 			this.logger.error("Update failed", error);
-			this.setStatus({ state: "error", progress: null, error: error.message });
+			this.fail(error);
 			if (this.installing) {
 				// The installer could not start: the renderer shows the locked vault
 				this.installing = false;
@@ -125,7 +125,7 @@ export class UpdateModule extends LogModule {
 			// Development builds without dev-app-update.yml resolve without any event
 			if (!result && this.status.state === "checking") this.setStatus({ state: "idle" });
 		} catch (error) {
-			this.setStatus({ state: "error", progress: null, error: (error as Error).message });
+			this.fail(error as Error);
 		} finally {
 			this.setStatus({ lastCheckAt: new Date().toISOString() });
 			this.schedule();
@@ -166,6 +166,14 @@ export class UpdateModule extends LogModule {
 		await this.vaultModule.shutdown();
 		// Quits once the installer started, otherwise emits "error"
 		this.autoUpdater.quitAndInstall(true, true);
+	}
+
+	/**
+	 * A channel without any release is not an error; other errors are shortened for the renderer (logged in full)
+	 */
+	private fail(error: Error & { code?: string }) {
+		if (isNoReleaseError(error)) this.setStatus({ state: "no-release", progress: null, error: null, latestVersion: null, releaseNotes: null, downgrade: false });
+		else this.setStatus({ state: "error", progress: null, error: shortErrorMessage(error.message) });
 	}
 
 	private applySettings(settings: AppConfig["updates"]) {

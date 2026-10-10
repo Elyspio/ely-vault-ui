@@ -9,6 +9,7 @@ The application updates itself from the GitHub releases (Windows installer, AppI
 - the vault is locked, `bw serve` stopped and the clipboard cleared before installing;
 - **Channel** selects the releases followed: **Stable**, **Beta** (also the prereleases `x.y.z-beta.n`) or **Dev** (the development builds `x.y.z-dev.n`, see [Releasing](../development/releasing.md#development-builds)). When the newest version of the channel is older than the installed one (after a channel change), Settings offers to go back to it: it is only downloaded and installed on request;
 - with **Automatic updates** off, nothing is checked or downloaded without clicking **Check**.
+- a beta or development build starts on its own channel (Beta, Dev) until another one is chosen; a channel without any release yet shows "No release on this channel yet".
 
 To publish a version: [Releasing](../development/releasing.md).
 

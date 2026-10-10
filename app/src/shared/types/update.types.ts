@@ -1,4 +1,5 @@
-export type UpdateState = "idle" | "checking" | "up-to-date" | "available" | "downloading" | "downloaded" | "error";
+/** "no-release": nothing is published on the selected channel yet (no stable release, no development build...) */
+export type UpdateState = "idle" | "checking" | "up-to-date" | "no-release" | "available" | "downloading" | "downloaded" | "error";
 
 /**
  * Auto update state of the application, pushed by the main process on every change

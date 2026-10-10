@@ -64,9 +64,19 @@ export const defaultAppConfig: AppConfig = {
 };
 
 /**
- * Update settings of a saved configuration: earlier versions stored a `beta` switch instead of the channel
+ * Channel of an installed version: a beta (x.y.z-beta.n) or development build (x.y.z-dev.n) follows its own releases
  */
-export function readUpdateSettings(saved: (Partial<AppConfig["updates"]> & { beta?: boolean }) | undefined): AppConfig["updates"] {
+export function channelOfVersion(version: string): UpdateChannel {
+	const prerelease = /^\d+\.\d+\.\d+-(beta|dev)\./.exec(version)?.[1];
+	return prerelease === "beta" || prerelease === "dev" ? prerelease : "stable";
+}
+
+/**
+ * Update settings of a saved configuration. Earlier versions stored a `beta` switch instead of the channel;
+ * without any, the channel of the installed version is used (a development build starts on the Dev channel).
+ */
+export function readUpdateSettings(saved: (Partial<AppConfig["updates"]> & { beta?: boolean }) | undefined, currentVersion: string): AppConfig["updates"] {
 	const { beta, ...settings } = saved ?? {};
-	return { ...defaultAppConfig.updates, channel: beta ? "beta" : defaultAppConfig.updates.channel, ...settings };
+	const channel = beta === undefined ? channelOfVersion(currentVersion) : beta ? "beta" : "stable";
+	return { ...defaultAppConfig.updates, channel, ...settings };
 }
