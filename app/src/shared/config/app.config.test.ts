@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { channelOfVersion, readUpdateSettings } from "./app.config";
+import { channelOfVersion, clampPanelLayout, readUpdateSettings } from "./app.config";
 
 describe("channelOfVersion", () => {
 	it("follows the prerelease of the installed version", () => {
@@ -25,5 +25,21 @@ describe("readUpdateSettings", () => {
 	it("keeps a saved channel", () => {
 		expect(readUpdateSettings({ autoCheck: true, channel: "dev" }, "1.2.0")).toEqual({ autoCheck: true, channel: "dev" });
 		expect(readUpdateSettings({ channel: "stable", beta: true }, "1.2.0-dev.2")).toEqual({ autoCheck: true, channel: "stable" });
+	});
+});
+
+describe("clampPanelLayout", () => {
+	it("keeps the widths within their limits", () => {
+		expect(clampPanelLayout({ sidebarWidth: 50, listWidth: 2000 })).toEqual({ sidebarWidth: 200, listWidth: 640 });
+		expect(clampPanelLayout({ sidebarWidth: 300.4, listWidth: 400.6 })).toEqual({ sidebarWidth: 300, listWidth: 401 });
+	});
+
+	it("leaves room for the item detail, the other panel giving way first", () => {
+		expect(clampPanelLayout({ sidebarWidth: 400, listWidth: 600 }, "listWidth", 1200)).toEqual({ sidebarWidth: 240, listWidth: 600 });
+		expect(clampPanelLayout({ sidebarWidth: 400, listWidth: 600 }, "sidebarWidth", 1200)).toEqual({ sidebarWidth: 400, listWidth: 440 });
+	});
+
+	it("keeps the minimum widths when the screen is too narrow", () => {
+		expect(clampPanelLayout({ sidebarWidth: 300, listWidth: 400 }, "listWidth", 700)).toEqual({ sidebarWidth: 200, listWidth: 280 });
 	});
 });
