@@ -1,0 +1,27 @@
+{
+	"extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+	"include": ["./src/renderer", "./src/preload", "./src/shared"],
+	"compilerOptions": {
+		"composite": true,
+		"jsx": "react-jsx",
+		"tsBuildInfoFile": "dist/.tsbuild.web.info",
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"useDefineForClassFields": false,
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"target": "ESNext",
+		"paths": {
+			"@/*": ["./src/renderer/src/*"],
+			"@components/*": ["./src/renderer/src/view/components/*"],
+			"@core/*": ["./src/renderer/src/core/*"],
+			"@hooks/*": ["./src/renderer/src/view/hooks/*"],
+			"@modules/*": ["./src/renderer/src/store/module/*"],
+			"@preload/*": ["./src/preload/*"],
+			"@services/*": ["./src/renderer/src/core/services/*"],
+			"@shared/*": ["./src/shared/*"],
+			"@store": ["./src/renderer/src/store/index.ts"],
+			"@store/*": ["./src/renderer/src/store/*"],
+			"@view/*": ["./src/renderer/src/view/*"]
+		}
+	}
+}

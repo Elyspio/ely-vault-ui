@@ -1,0 +1,292 @@
+import { Box, Button, Chip, IconButton, Tooltip, Typography } from "@mui/material";
+import OpenInNewRounded from "@mui/icons-material/OpenInNewRounded";
+import StarRounded from "@mui/icons-material/StarRounded";
+import FolderRounded from "@mui/icons-material/FolderRounded";
+import BusinessRounded from "@mui/icons-material/BusinessRounded";
+import LockPersonRounded from "@mui/icons-material/LockPersonRounded";
+import KeyboardRounded from "@mui/icons-material/KeyboardRounded";
+import { useAppSelector } from "@store";
+import { selectSelectedItem } from "@modules/vault/vault.selectors";
+import { CipherType, FieldType, type IdentityKey, type VaultItem } from "@shared/types/vault.types";
+import { useVaultActions } from "@hooks/useVaultActions";
+import { canAutoType, useAutoTypeAvailability } from "@hooks/useAutoType";
+import { ItemIcon } from "./ItemIcon";
+import { FieldCard, FieldRow } from "./fields/FieldRow";
+import { SecretRow } from "./fields/SecretRow";
+import { TotpRow } from "./fields/TotpRow";
+import { Kbd } from "@components/shared/Kbd";
+import { Logo } from "@components/shared/Logo";
+import { formatDateTime } from "@view/utils/date.utils";
+
+export function ItemDetail() {
+	const item = useAppSelector(selectSelectedItem);
+
+	if (!item) return <EmptyDetail />;
+
+	// Keyed by item: revealed secrets never leak from one item to the next
+	return <Detail key={item.id} item={item} />;
+}
+
+function Detail({ item }: Readonly<{ item: VaultItem }>) {
+	const actions = useVaultActions();
+	const snapshot = useAppSelector((state) => state.vault.snapshot);
+	const folder = snapshot?.folders.find((f) => f.id === item.folderId);
+	const organization = snapshot?.organizations.find((o) => o.id === item.organizationId);
+	const firstUri = item.login?.uris.find((u) => u.host);
+	const autoType = useAutoTypeAvailability();
+
+	const copyText = (value: string, label: string) => () => void actions.copy(null, { kind: "text", value }, label);
+
+	return (
+		<Box sx={{ height: "100%", overflow: "auto", bgcolor: "var(--surface-0)" }}>
+			<Box sx={{ maxWidth: 720, mx: "auto", px: 4, py: 3.5, animation: "fadeIn 150ms ease" }}>
+				<Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3.5 }}>
+					<ItemIcon item={item} size={52} />
+					<Box sx={{ flex: 1, minWidth: 0 }}>
+						<Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+							<Typography variant="h5" noWrap>
+								{item.name}
+							</Typography>
+							{item.favorite && <StarRounded sx={{ fontSize: 18, color: "warning.main" }} />}
+						</Box>
+						<Box sx={{ display: "flex", gap: 0.75, mt: 0.75, flexWrap: "wrap" }}>
+							{folder && <Chip size="small" icon={<FolderRounded />} label={folder.name} variant="outlined" sx={{ borderColor: "var(--border-subtle)" }} />}
+							{organization && (
+								<Chip size="small" icon={<BusinessRounded />} label={organization.name} variant="outlined" sx={{ borderColor: "var(--border-subtle)" }} />
+							)}
+							{item.reprompt && <Chip size="small" icon={<LockPersonRounded />} label="Protégé par mot de passe maître" variant="outlined" color="warning" />}
+						</Box>
+					</Box>
+					{canAutoType(item) && (
+						<Tooltip title={autoType?.available === false ? autoType.reason : "Tape l'identifiant et le mot de passe dans la fenêtre précédente (Ctrl+V)"}>
+							<span>
+								<Button
+									variant="outlined"
+									size="small"
+									startIcon={<KeyboardRounded />}
+									disabled={!autoType?.available}
+									onClick={() => void actions.autoType(item.id)}
+								>
+									Saisie auto
+								</Button>
+							</span>
+						</Tooltip>
+					)}
+					{firstUri && (
+						<Button variant="outlined" size="small" endIcon={<OpenInNewRounded />} onClick={() => void actions.open(firstUri.uri)}>
+							Ouvrir
+						</Button>
+					)}
+				</Box>
+
+				{item.type === CipherType.Login && item.login && (
+					<>
+						<FieldCard>
+							{item.login.username && (
+								<FieldRow label="Identifiant" onCopy={() => void actions.copy(item.id, { kind: "username" }, "Identifiant")}>
+									{item.login.username}
+								</FieldRow>
+							)}
+							{item.login.hasPassword && <SecretRow label="Mot de passe" itemId={item.id} secret={{ kind: "password" }} />}
+							{item.login.hasTotp && <TotpRow itemId={item.id} reprompt={item.reprompt} />}
+						</FieldCard>
+						{item.login.uris.length > 0 && (
+							<FieldCard title={item.login.uris.length > 1 ? "Sites web" : "Site web"}>
+								{item.login.uris.map((uri, index) => (
+									<FieldRow
+										key={index}
+										label={uri.host ?? "Adresse"}
+										onCopy={() => void actions.copy(item.id, { kind: "uri", index }, "Adresse")}
+										actions={
+											uri.host && (
+												<Tooltip title="Ouvrir dans le navigateur">
+													<IconButton size="small" onClick={() => void actions.open(uri.uri)}>
+														<OpenInNewRounded sx={{ fontSize: 16 }} />
+													</IconButton>
+												</Tooltip>
+											)
+										}
+									>
+										<Box component="span" sx={{ color: "var(--text-muted)" }}>
+											{uri.uri}
+										</Box>
+									</FieldRow>
+								))}
+							</FieldCard>
+						)}
+					</>
+				)}
+
+				{item.type === CipherType.Card && item.card && (
+					<FieldCard>
+						{item.card.cardholderName && (
+							<FieldRow label="Titulaire" onCopy={copyText(item.card.cardholderName, "Titulaire")}>
+								{item.card.cardholderName}
+							</FieldRow>
+						)}
+						{item.card.hasNumber && (
+							<SecretRow
+								label="Numéro"
+								itemId={item.id}
+								secret={{ kind: "cardNumber" }}
+								maskedHint={item.card.numberLast4 ? `•••• •••• •••• ${item.card.numberLast4}` : undefined}
+								colored={false}
+							/>
+						)}
+						{(item.card.expMonth || item.card.expYear) && (
+							<FieldRow label="Expiration" mono onCopy={copyText(`${item.card.expMonth ?? ""}/${item.card.expYear ?? ""}`, "Expiration")}>
+								{item.card.expMonth?.padStart(2, "0") ?? "--"} / {item.card.expYear ?? "----"}
+							</FieldRow>
+						)}
+						{item.card.hasCode && <SecretRow label="Code de sécurité" itemId={item.id} secret={{ kind: "cardCode" }} colored={false} />}
+						{item.card.brand && <FieldRow label="Réseau">{item.card.brand}</FieldRow>}
+					</FieldCard>
+				)}
+
+				{item.type === CipherType.Identity && item.identity && <IdentityFields identity={item.identity} copyText={copyText} />}
+
+				{item.type === CipherType.SshKey && item.sshKey && (
+					<FieldCard>
+						{item.sshKey.publicKey && (
+							<FieldRow label="Clé publique" mono onCopy={copyText(item.sshKey.publicKey, "Clé publique")}>
+								{item.sshKey.publicKey}
+							</FieldRow>
+						)}
+						{item.sshKey.keyFingerprint && (
+							<FieldRow label="Empreinte" mono onCopy={copyText(item.sshKey.keyFingerprint, "Empreinte")}>
+								{item.sshKey.keyFingerprint}
+							</FieldRow>
+						)}
+						{item.sshKey.hasPrivateKey && <SecretRow label="Clé privée" itemId={item.id} secret={{ kind: "sshPrivateKey" }} multiline />}
+					</FieldCard>
+				)}
+
+				{item.notes && (
+					<FieldCard title="Notes">
+						<FieldRow label="" multiline onCopy={() => void actions.copy(item.id, { kind: "notes" }, "Note")}>
+							{item.notes}
+						</FieldRow>
+					</FieldCard>
+				)}
+
+				{item.fields.length > 0 && (
+					<FieldCard title="Champs personnalisés">
+						{item.fields.map((field, index) => {
+							const label = field.name || `Champ ${index + 1}`;
+							if (field.type === FieldType.Hidden) return <SecretRow key={index} label={label} itemId={item.id} secret={{ kind: "field", index }} />;
+							if (field.type === FieldType.Boolean)
+								return (
+									<FieldRow key={index} label={label}>
+										{field.value === "true" ? "Oui" : "Non"}
+									</FieldRow>
+								);
+							if (field.type === FieldType.Linked)
+								return (
+									<FieldRow key={index} label={label}>
+										<Box component="span" sx={{ color: "var(--text-muted)" }}>
+											Champ lié
+										</Box>
+									</FieldRow>
+								);
+							return (
+								<FieldRow key={index} label={label} onCopy={field.value ? copyText(field.value, label) : undefined}>
+									{field.value || (
+										<Box component="span" sx={{ color: "var(--text-faint)" }}>
+											—
+										</Box>
+									)}
+								</FieldRow>
+							);
+						})}
+					</FieldCard>
+				)}
+
+				<Box sx={{ mt: 3, px: 0.5, display: "flex", flexDirection: "column", gap: 0.25 }}>
+					<Meta label="Modifié" value={formatDateTime(item.revisionDate)} />
+					{item.creationDate && <Meta label="Créé" value={formatDateTime(item.creationDate)} />}
+					{item.login?.passwordRevisionDate && <Meta label="Mot de passe changé" value={formatDateTime(item.login.passwordRevisionDate)} />}
+					{item.passwordHistoryCount > 0 && (
+						<Meta
+							label="Historique"
+							value={`${item.passwordHistoryCount} ancien${item.passwordHistoryCount > 1 ? "s" : ""} mot${item.passwordHistoryCount > 1 ? "s" : ""} de passe`}
+						/>
+					)}
+				</Box>
+			</Box>
+		</Box>
+	);
+}
+
+const identityRows: { label: string; keys: IdentityKey[]; separator?: string }[] = [
+	{ label: "Nom", keys: ["title", "firstName", "middleName", "lastName"], separator: " " },
+	{ label: "Nom d'utilisateur", keys: ["username"] },
+	{ label: "Société", keys: ["company"] },
+	{ label: "E-mail", keys: ["email"] },
+	{ label: "Téléphone", keys: ["phone"] },
+	{ label: "Adresse", keys: ["address1", "address2", "address3"], separator: "\n" },
+	{ label: "Ville", keys: ["postalCode", "city"], separator: " " },
+	{ label: "Région / Pays", keys: ["state", "country"], separator: ", " },
+	{ label: "N° de sécurité sociale", keys: ["ssn"] },
+	{ label: "N° de passeport", keys: ["passportNumber"] },
+	{ label: "N° de permis", keys: ["licenseNumber"] },
+];
+
+function IdentityFields({ identity, copyText }: Readonly<{ identity: Record<IdentityKey, string | null>; copyText: (value: string, label: string) => () => void }>) {
+	return (
+		<FieldCard>
+			{identityRows.map(({ label, keys, separator = "" }) => {
+				const value = keys
+					.map((key) => identity[key])
+					.filter(Boolean)
+					.join(separator);
+				if (!value) return null;
+				return (
+					<FieldRow key={label} label={label} multiline={separator === "\n"} onCopy={copyText(value, label)}>
+						{value}
+					</FieldRow>
+				);
+			})}
+		</FieldCard>
+	);
+}
+
+function Meta({ label, value }: Readonly<{ label: string; value: string }>) {
+	return (
+		<Typography sx={{ fontSize: "0.72rem", color: "var(--text-faint)" }}>
+			{label} : <span style={{ color: "var(--text-muted)" }}>{value}</span>
+		</Typography>
+	);
+}
+
+const shortcuts: [string[], string][] = [
+	[["Ctrl", "K"], "Rechercher et copier partout"],
+	[["Ctrl", "F"], "Filtrer la liste"],
+	[["↑", "↓"], "Parcourir les éléments"],
+	[["Entrée"], "Copier le mot de passe"],
+	[["Ctrl", "Maj", "U"], "Copier l'identifiant"],
+	[["Ctrl", "Maj", "O"], "Copier le code TOTP"],
+	[["Ctrl", "L"], "Verrouiller"],
+];
+
+function EmptyDetail() {
+	return (
+		<Box sx={{ height: "100%", display: "grid", placeItems: "center", bgcolor: "var(--surface-0)" }}>
+			<Box sx={{ textAlign: "center" }}>
+				<Logo size={64} sx={{ mx: "auto", mb: 1.5, opacity: 0.25, filter: "grayscale(0.6)" }} />
+				<Typography sx={{ color: "var(--text-muted)", mb: 3 }}>Sélectionnez un élément</Typography>
+				<Box sx={{ display: "grid", gridTemplateColumns: "auto auto", columnGap: 2, rowGap: 1, alignItems: "center", textAlign: "left" }}>
+					{shortcuts.map(([keys, label]) => (
+						<Box key={label} sx={{ display: "contents" }}>
+							<Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+								{keys.map((key) => (
+									<Kbd key={key}>{key}</Kbd>
+								))}
+							</Box>
+							<Typography sx={{ fontSize: "0.78rem", color: "var(--text-faint)" }}>{label}</Typography>
+						</Box>
+					))}
+				</Box>
+			</Box>
+		</Box>
+	);
+}
