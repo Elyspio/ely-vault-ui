@@ -2,4 +2,4 @@
 provider: github
 owner: Elyspio
 repo: ely-vault-ui
-updaterCacheDirName: vault-desktop-updater
+updaterCacheDirName: elyvault-updater

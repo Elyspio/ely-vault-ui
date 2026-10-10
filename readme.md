@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="app/resources/icon.png" alt="Vault" width="96" height="96" />
+<img src="app/resources/icon.png" alt="ElyVault" width="96" height="96" />
 
-# Ely Vault UI
+# ElyVault
 
 **Fast, clean, keyboard-first desktop client for Vaultwarden / Bitwarden.**
 
@@ -16,7 +16,7 @@
 
 ---
 
-Ely Vault UI is a desktop interface on top of the **official Bitwarden CLI** (`@bitwarden/cli`). It connects to any **Vaultwarden** or **Bitwarden** server and lets you find, view and use your secrets without leaving the keyboard.
+ElyVault is a desktop interface on top of the **official Bitwarden CLI** (`@bitwarden/cli`). It connects to any **Vaultwarden** or **Bitwarden** server and lets you find, view and use your secrets without leaving the keyboard.
 
 All cryptography is delegated to the official CLI: the application implements no encryption algorithm.
 

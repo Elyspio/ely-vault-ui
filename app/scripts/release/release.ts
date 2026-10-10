@@ -182,7 +182,7 @@ const rootDir = path.resolve(import.meta.dirname, "../..");
 /** The repository root: build context of the Linux container */
 const repositoryDir = path.resolve(rootDir, "..");
 const distDir = path.join(rootDir, "dist");
-const linuxImage = "vault-desktop-release-linux";
+const linuxImage = "elyvault-release-linux";
 
 /** pnpm is a .cmd shim on Windows; git, gh, docker and podman are executables, run without a shell (arguments kept intact) */
 function needsShell(command: string) {

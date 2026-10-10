@@ -1,5 +1,5 @@
-appId: fr.elyspio.vault.app
-productName: Vault
+appId: fr.elyspio.elyvault.app
+productName: ElyVault
 directories:
     buildResources: build
     output: dist
@@ -8,7 +8,7 @@ files:
     - "resources/**/*"
     - "package.json"
 win:
-    executableName: Vault
+    executableName: ElyVault
 nsis:
     artifactName: ${name}-${version}-setup.${ext}
     shortcutName: ${productName}

@@ -133,16 +133,16 @@ describe("devReleaseNotes", () => {
 
 describe("releaseAssets", () => {
 	it("lists the installers and the update files", () => {
-		expect(releaseAssets("vault-desktop", parseReleaseVersion("1.2.0"))).toEqual([
-			"vault-desktop-1.2.0-setup.exe",
-			"vault-desktop-1.2.0-setup.exe.blockmap",
+		expect(releaseAssets("elyvault", parseReleaseVersion("1.2.0"))).toEqual([
+			"elyvault-1.2.0-setup.exe",
+			"elyvault-1.2.0-setup.exe.blockmap",
 			"latest.yml",
-			"vault-desktop-1.2.0.AppImage",
-			"vault-desktop_1.2.0_amd64.deb",
+			"elyvault-1.2.0.AppImage",
+			"elyvault_1.2.0_amd64.deb",
 			"latest-linux.yml",
 		]);
 		// The GitHub publisher writes latest*.yml for the betas too
-		expect(releaseAssets("vault-desktop", parseReleaseVersion("1.2.0-beta.1"))).toContain("latest-linux.yml");
-		expect(releaseAssets("vault-desktop", nextDevVersion("1.2.0", []))).toContain("vault-desktop_1.2.0-dev.1_amd64.deb");
+		expect(releaseAssets("elyvault", parseReleaseVersion("1.2.0-beta.1"))).toContain("latest-linux.yml");
+		expect(releaseAssets("elyvault", nextDevVersion("1.2.0", []))).toContain("elyvault_1.2.0-dev.1_amd64.deb");
 	});
 });

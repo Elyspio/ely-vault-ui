@@ -1,7 +1,7 @@
 export const names = {
-	public: "Vault",
-	folder: "vault-desktop",
-	appId: "fr.elyspio.vault.app",
+	public: "ElyVault",
+	folder: "elyvault",
+	appId: "fr.elyspio.elyvault.app",
 };
 
 export const autoUpdate = {

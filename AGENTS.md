@@ -4,7 +4,7 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 
 ## Project Overview
 
-**Ely Vault UI** (`vault-desktop`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all cryptography is delegated to the CLI, the app implements none. Version 1 is read-only (no item creation/edit). UI strings, the readme and `docs/` are in English.
+**ElyVault** (package `elyvault`, appId `fr.elyspio.elyvault.app`; repository `ely-vault-ui`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all cryptography is delegated to the CLI, the app implements none. Version 1 is read-only (no item creation/edit). UI strings, the readme and `docs/` are in English.
 
 ## Repository Layout
 
@@ -64,7 +64,7 @@ Main-process logic lives in modules extending `LogModule`. Use constructor DI (I
 
 ### Config
 
-App folder: `%LOCALAPPDATA%/vault-desktop` (Linux: Electron `appData`), see `MainContextModule`. Defaults in `src/shared/config/app.config.ts`, names/appId in `main.config.ts`. `VAULT_DEBUG=1` or `--debug` / `--devtools` enables debug in packaged builds.
+App folder: `%LOCALAPPDATA%/elyvault` (Linux: Electron `appData`), see `MainContextModule`. Defaults in `src/shared/config/app.config.ts`, names/appId in `main.config.ts`. `VAULT_DEBUG=1` or `--debug` / `--devtools` enables debug in packaged builds.
 
 ### TypeScript Path Aliases
 

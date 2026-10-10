@@ -1,6 +1,6 @@
 # Documentation
 
-[← Ely Vault UI](../readme.md)
+[← ElyVault](../readme.md)
 
 ## Usage
 
