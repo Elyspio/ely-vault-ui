@@ -22,18 +22,6 @@ Toute la cryptographie est déléguée au CLI officiel : l'application n'implém
 
 > **Statut** : version 1, en lecture seule. La création et la modification d'éléments se font depuis le coffre web.
 
-## Sommaire
-
-- [Fonctionnalités](#fonctionnalités)
-- [Installation](#installation)
-- [Mises à jour](#mises-à-jour)
-- [Saisie automatique](#saisie-automatique)
-- [Raccourcis clavier](#raccourcis-clavier)
-- [Architecture](#architecture)
-- [Modèle de sécurité](#modèle-de-sécurité)
-- [Développement](#développement)
-- [Licence](#licence)
-
 ## Fonctionnalités
 
 - **Recherche instantanée** dans tout le coffre, filtres par type, dossier, organisation et collection.
@@ -48,165 +36,16 @@ Toute la cryptographie est déléguée au CLI officiel : l'application n'implém
 
 ## Installation
 
-Les installeurs sont publiés dans les [releases GitHub](https://github.com/Elyspio/ely-vault-ui/releases). Ils se génèrent aussi depuis les sources (voir [Développement](#développement)) :
+Les installeurs Windows (NSIS) et Linux (AppImage, `.deb`) sont publiés dans les [releases GitHub](https://github.com/Elyspio/ely-vault-ui/releases) ; l'application se met ensuite à jour seule. Détails : [Installation](docs/utilisation/installation.md), [Mises à jour](docs/utilisation/mises-a-jour.md).
 
-| Plateforme | Format           | Commande             |
-| ---------- | ---------------- | -------------------- |
-| Windows    | Installeur NSIS  | `pnpm package:win`   |
-| Linux      | AppImage, `.deb` | `pnpm package:linux` |
+## Documentation
 
-Au premier lancement, saisir l'adresse du serveur (`https://…`), l'adresse e-mail et le mot de passe maître. La connexion en deux étapes (application d'authentification, e-mail, YubiKey) est prise en charge.
-
-## Mises à jour
-
-L'application se met à jour depuis les releases GitHub (installeur Windows, AppImage et `.deb`) :
-
-- elle cherche une nouvelle version au démarrage puis toutes les heures, et la télécharge dès qu'elle la trouve ;
-- un point sur l'icône **Paramètres** signale une version prête : **Paramètres → Mises à jour → Redémarrer et installer**, sinon elle s'installe à la fermeture ;
-- le coffre est verrouillé, `bw serve` arrêté et le presse-papiers effacé avant l'installation ;
-- **Versions bêta** reçoit les préversions (`x.y.z-beta.n`). Les désactiver propose de revenir à la dernière version stable, installée seulement sur demande ;
-- **Mises à jour automatiques** désactivé, rien n'est vérifié ni téléchargé sans cliquer sur **Vérifier**.
-
-Les fichiers sont téléchargés en HTTPS depuis GitHub et vérifiés par leur empreinte SHA-512 (`latest.yml`). L'installeur Windows n'est pas signé : SmartScreen avertit à la première installation. Sous Linux, la mise à jour du `.deb` demande le mot de passe administrateur (`pkexec`).
-
-## Saisie automatique
-
-Sélectionner un identifiant et appuyer sur `Ctrl V` (ou cliquer sur **Saisie auto**, ou `Ctrl Maj V` dans la palette) : la fenêtre se réduit et la séquence est tapée dans l'application qui reprend le focus.
-
-| Réglage (Paramètres → Saisie automatique) | Défaut                      |
-| ----------------------------------------- | --------------------------- |
-| Séquence par défaut                       | `{USERNAME}{TAB}{PASSWORD}` |
-| Valider avec Entrée                       | Activé (ajoute `{ENTER}`)   |
-| Après la saisie                           | Rester réduite              |
-
-**Codes disponibles** : `{USERNAME}` `{PASSWORD}` `{TOTP}` `{TAB}` `{ENTER}` `{DELAY n}` (en ms). `{{}` et `{}}` tapent une accolade ; le reste est tapé tel quel.
-
-**Séquence par élément** : un champ personnalisé nommé `autotype` (texte ou masqué) remplace la séquence par défaut. Il est tapé tel quel, sans Entrée ajoutée.
-
-**Garde-fous** :
-
-- les secrets ne quittent jamais le process principal ;
-- la saisie est annulée s'il n'y a pas de fenêtre cible (bureau, barre des tâches) ;
-- elle s'arrête net si la fenêtre active change ou si le coffre se verrouille en cours de frappe ;
-- une séquence invalide est refusée avant que la fenêtre ne se réduise.
-
-**Plateformes** :
-
-| Système       | Mécanisme                                                                               |
-| ------------- | --------------------------------------------------------------------------------------- |
-| Windows       | `SendInput` en Unicode : indépendant de la disposition du clavier                       |
-| Linux X11     | [`xdotool`](https://github.com/jordansissel/xdotool) (dépendance recommandée du `.deb`) |
-| Linux Wayland | Non disponible : le protocole bloque l'injection de touches                             |
-
-## Raccourcis clavier
-
-| Raccourci                | Action                                                                                                                      |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `Ctrl K`                 | Palette : rechercher dans tout le coffre et copier (`↵` mot de passe, `Maj ↵` identifiant, `Ctrl ↵` TOTP, `Alt ↵` afficher) |
-| `Ctrl F`                 | Filtrer la liste                                                                                                            |
-| `↑` `↓` / `Entrée`       | Parcourir / copier la valeur principale                                                                                     |
-| `Ctrl V`                 | Saisie automatique de l'élément sélectionné dans la fenêtre précédente                                                      |
-| `Ctrl Maj C` / `U` / `O` | Copier mot de passe / identifiant / code TOTP de l'élément sélectionné                                                      |
-| `Ctrl G`                 | Générateur de mot de passe                                                                                                  |
-| `F5`                     | Synchroniser                                                                                                                |
-| `Ctrl L`                 | Verrouiller                                                                                                                 |
-| `Ctrl ,`                 | Paramètres                                                                                                                  |
-
-## Architecture
-
-```text
-Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1──▶  bw serve  ──HTTPS──▶  serveur Vaultwarden
-   sans aucun secret            secrets en mémoire                   (@bitwarden/cli)
-```
-
-- Le CLI Bitwarden est lancé avec le binaire Electron en mode Node (`ELECTRON_RUN_AS_NODE`) : aucune installation de `bw` requise.
-- Ses données (coffre chiffré, jetons) sont isolées dans `%LOCALAPPDATA%/vault-desktop/bitwarden`, séparées d'une éventuelle installation globale.
-- Connexion : `bw login` (mot de passe transmis par variable d'environnement, jamais en argument), puis `bw serve` sur `127.0.0.1` avec un port aléatoire, déverrouillé via `POST /unlock`.
-
-| Couche    | Technologies                                               |
-| --------- | ---------------------------------------------------------- |
-| Interface | React 19, MUI 9, Redux Toolkit                             |
-| Bureau    | Electron 44, electron-vite, electron-builder               |
-| Main      | Inversify (injection de dépendances), winston, koffi (FFI) |
-| Outillage | TypeScript 7, vite-plus (format, lint, tests), pnpm        |
-
-```text
-app/                # Projet de l'application (pnpm, electron-vite, electron-builder)
-├── src/
-│   ├── main/       # Process principal : CLI Bitwarden, coffre, sécurité, saisie automatique, IPC
-│   ├── preload/    # Pont IPC typé exposé au renderer
-│   ├── renderer/   # Interface React
-│   └── shared/     # Types, configuration et contrats IPC partagés
-├── config/         # electron-vite, electron-builder
-├── resources/      # Icône embarquée
-├── build/          # Ressources de packaging (icônes)
-└── scripts/        # Serveur de test local, publication
-deploy/             # Conteneur de build Linux
-```
-
-## Modèle de sécurité
-
-- **Le renderer ne reçoit jamais de secret en masse** : les éléments sont nettoyés par le process principal (`vault.mapper.ts`). Chaque secret est demandé à la demande (afficher, copier, saisir), par identifiant.
-- **Copie par le process principal** : le presse-papiers est effacé après le délai configuré s'il contient encore la valeur. Sous Windows, les valeurs copiées sont exclues de l'historique et du presse-papiers cloud.
-- **Re-saisie du mot de passe maître** pour les éléments « reprompt », vérifiée hors ligne (hash scrypt en mémoire), valable 5 minutes.
-- **Verrouillage** : manuel (`Ctrl L`), après inactivité, au verrouillage de session, à la mise en veille et à la fermeture (`bw serve` est arrêté).
-- **Durcissement Electron** : `sandbox`, `contextIsolation`, pas de `nodeIntegration`, CSP stricte, navigation et nouvelles fenêtres bloquées, permissions web refusées, IPC accepté uniquement depuis la page de l'application, seuls les liens `http(s)` sont ouverts, fuses Electron restreints.
-- **Certificats** : aucune option « ignorer les erreurs TLS ». Quand le système refuse le certificat du serveur, l'application complète la chaîne via les URL AIA (chaque certificat téléchargé doit avoir signé le précédent), affiche l'autorité racine et son empreinte SHA-256, et ne l'approuve qu'après confirmation. Un certificat d'autorité peut aussi être importé (`.crt`, `.cer`, `.pem`). Les autorités approuvées sont transmises au CLI (`NODE_EXTRA_CA_CERTS`) et à Chromium, et se retirent dans **Paramètres → Certificats approuvés**.
-- **Aucun secret dans les journaux** : le décorateur de log n'enregistre ni paramètres ni valeurs de retour.
-
-> **Limite connue** : `bw serve` n'a pas d'authentification. Tant que le coffre est déverrouillé, un processus local qui trouve le port peut le lire (les requêtes de navigateur sont refusées par le CLI grâce au contrôle de l'en-tête `Origin`). C'est le même modèle que `bw serve` utilisé seul.
-
-## Développement
-
-**Prérequis** : Node 26+, pnpm 12.5.1. Les commandes se lancent depuis `app/`.
-
-```bash
-cd app
-pnpm install
-pnpm dev
-```
-
-| Commande             | Rôle                                               |
-| -------------------- | -------------------------------------------------- |
-| `pnpm dev`           | Electron en mode développement                     |
-| `pnpm build`         | Build electron-vite (`out/`)                       |
-| `pnpm check`         | Format, lint et types (vite-plus)                  |
-| `pnpm typecheck`     | Vérification TypeScript                            |
-| `pnpm test`          | Tests unitaires                                    |
-| `pnpm package:win`   | Installeur Windows (electron-builder)              |
-| `pnpm package:linux` | AppImage et `.deb` (conteneur Docker sous Windows) |
-| `pnpm release`       | Release GitHub en brouillon                        |
-
-En développement, **Vérifier** interroge les releases via `dev-app-update.yml` ; rien n'est installé.
-
-### Publier une version
-
-1. Ouvrir une PR `chore: release vX.Y.Z` qui change `version` dans `package.json` (`X.Y.Z-beta.N` pour une bêta), puis la fusionner.
-2. Sur `main` à jour, sous Windows, avec Docker (ou Podman) démarré et `gh` authentifié : `pnpm release`.
-    - vérifie le dépôt (branche, modifications, tag existant, version supérieure au dernier tag), puis `vp check`, types et tests ;
-    - construit l'installeur Windows en local et les paquets Linux dans un conteneur (`deploy/release/linux.Dockerfile`, à la racine du dépôt) ;
-    - pousse le tag `vX.Y.Z` et crée une release **en brouillon** (préversion pour une bêta) avec les notes générées depuis les PR fusionnées.
-3. Relire les notes puis publier la release sur GitHub : les applications ne voient que les releases publiées.
-
-### Serveur de test local
-
-Le CLI Bitwarden exige HTTPS. Pour un Vaultwarden jetable en local :
-
-1. Générer une autorité de certification et un certificat `localhost` dans `scripts/dev/ssl` (ignoré par git) : `ca.pem`, `cert.pem`, `key.pem`.
-2. Lancer le serveur :
-
-    ```bash
-    docker run -d --name vw-test -e SIGNUPS_ALLOWED=true -e I_REALLY_WANT_VOLATILE_STORAGE=true -e DOMAIN=https://localhost:8099 -e ROCKET_TLS='{certs="/ssl/cert.pem",key="/ssl/key.pem"}' -v "$PWD/scripts/dev/ssl:/ssl:ro" -p 127.0.0.1:8099:80 vaultwarden/server:latest
-    ```
-
-3. Créer le compte de test (`scripts/dev/dev-vault.env`, valeurs de test uniquement) et le remplir avec des éléments d'exemple :
-
-    ```bash
-    NODE_EXTRA_CA_CERTS=scripts/dev/ssl/ca.pem pnpm dev:vault:register
-    NODE_EXTRA_CA_CERTS=scripts/dev/ssl/ca.pem pnpm dev:vault:seed
-    ```
-
-4. Lancer l'application avec `NODE_EXTRA_CA_CERTS=scripts/dev/ssl/ca.pem pnpm dev` (la variable est transmise au CLI).
+| Utilisation                                                       | Technique                                          | Développement                                                        |
+| ----------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------- |
+| [Installation](docs/utilisation/installation.md)                  | [Architecture](docs/technique/architecture.md)     | [Démarrage](docs/developpement/demarrage.md)                         |
+| [Mises à jour](docs/utilisation/mises-a-jour.md)                  | [Modèle de sécurité](docs/technique/securite.md)   | [Publier une version](docs/developpement/publier-une-version.md)     |
+| [Saisie automatique](docs/utilisation/saisie-automatique.md)      |                                                    | [Serveur de test local](docs/developpement/serveur-de-test-local.md) |
+| [Raccourcis clavier](docs/utilisation/raccourcis-clavier.md)      |                                                    |                                                                      |
 
 ## Licence
 

@@ -4,12 +4,12 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 
 ## Project Overview
 
-**Ely Vault UI** (`vault-desktop`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all cryptography is delegated to the CLI, the app implements none. Version 1 is read-only (no item creation/edit). UI strings and the readme are in French.
+**Ely Vault UI** (`vault-desktop`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all cryptography is delegated to the CLI, the app implements none. Version 1 is read-only (no item creation/edit). UI strings, the readme and `docs/` are in French.
 
 ## Repository Layout
 
 - `app/` — the application project: `package.json`, pnpm files, `src/`, `config/`, `resources/`, `build/`, `scripts/`, tsconfigs, `vite.config.ts`. **Run every command from `app/`**; paths in this file are relative to `app/` unless stated otherwise.
-- Repository root — `AGENTS.md`, `CLAUDE.md`, `readme.md`, `LICENSE`, `.gitignore`, `.dockerignore` and `deploy/` (`deploy/release/linux.Dockerfile`, built with the repository root as context).
+- Repository root — `AGENTS.md`, `CLAUDE.md`, `readme.md` (overview + documentation index), `docs/` (`utilisation/`, `technique/`, `developpement/`), `LICENSE`, `.gitignore`, `.dockerignore` and `deploy/` (`deploy/release/linux.Dockerfile`, built with the repository root as context).
 
 ## Commands
 
@@ -24,8 +24,8 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 | Test                                 | `pnpm test` (`vp test`, `src/**/*.test.ts` and `scripts/**/*.test.ts`, node environment)             |
 | Package Windows (NSIS)               | `pnpm package:win`                                                                                   |
 | Package Linux (AppImage, .deb)       | `pnpm package:linux` (native on Linux, in the root `deploy/release/linux.Dockerfile` container elsewhere) |
-| Draft GitHub release (Windows host)  | `pnpm release` (`scripts/release/release.ts`, see readme)                                            |
-| Local test vault                     | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see readme)                                       |
+| Draft GitHub release (Windows host)  | `pnpm release` (`scripts/release/release.ts`, see `docs/developpement/publier-une-version.md`)                                            |
+| Local test vault                     | `pnpm dev:vault:register` / `pnpm dev:vault:seed` (see `docs/developpement/serveur-de-test-local.md`)                                       |
 
 Package manager: **pnpm 12.5.1**, Node **26+**. Build/dev use electron-vite (`config/electron.vite.config.ts`, also injects the renderer CSP), builder config at `config/electron-builder.yml`. The vite-plus toolchain (fmt/lint/test) is configured in `vite.config.ts`; `vite` is aliased to `@voidzero-dev/vite-plus-core` via the pnpm catalog (`pnpm-workspace.yaml`).
 
@@ -89,7 +89,7 @@ App folder: `%LOCALAPPDATA%/vault-desktop` (Linux: Electron `appData`), see `Mai
 ## Development Workflow
 
 - Make sure to run `pnpm check` and `pnpm test` before committing.
-- The CLI requires HTTPS: for a local Vaultwarden test server, follow the readme (« Serveur de test local ») and run with `NODE_EXTRA_CA_CERTS=scripts/dev/ssl/ca.pem`.
+- The CLI requires HTTPS: for a local Vaultwarden test server, follow `docs/developpement/serveur-de-test-local.md` and run with `NODE_EXTRA_CA_CERTS=scripts/dev/ssl/ca.pem`.
 - Commits follow Conventional Commits (`feat:`, `fix:`, …); PRs are squash-merged.
 
 ## Git & Release Conventions
