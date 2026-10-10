@@ -43,6 +43,9 @@ const ipcHandlers: IpcHandledEvents = {
 	async "session:login"(_, request) {
 		return await mainContainer.get(VaultModule).login(request);
 	},
+	async "session:login:cancel"() {
+		mainContainer.get(VaultModule).cancelLogin();
+	},
 	async "session:unlock"(_, password) {
 		return await mainContainer.get(VaultModule).unlock(password);
 	},

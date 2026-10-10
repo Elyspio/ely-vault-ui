@@ -8,6 +8,8 @@ import { log } from "@main/utils/logs.utils";
 import { BwError, type BwMessage, type BwResponse, type BwStatus } from "./bw.types";
 import type { TwoFactorMethod } from "@shared/types/vault.types";
 
+const SSO_TIMEOUT_MS = 5 * 60 * 1000;
+
 /**
  * Runs the official Bitwarden CLI (`@bitwarden/cli`) with the Electron binary in Node mode.
  *
@@ -17,6 +19,8 @@ import type { TwoFactorMethod } from "@shared/types/vault.types";
 @injectable()
 export class BwCliModule extends LogModule {
 	#bwPath: string | undefined;
+	/** Pending SSO login, waiting for the browser */
+	#ssoAbort: AbortController | null = null;
 
 	public constructor(
 		@inject(MainContextModule) private readonly mainContextModule: MainContextModule,
@@ -33,11 +37,8 @@ export class BwCliModule extends LogModule {
 	 * Environment of every CLI process: dedicated data folder, no prompt, Node mode for the Electron binary
 	 */
 	public getEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
-		const extraCaCerts = this.certificateModule.extraCaCertsPath;
 		return {
 			...process.env,
-			// Authorities approved in the application (private PKI, self-signed server)
-			...(extraCaCerts ? { NODE_EXTRA_CA_CERTS: extraCaCerts } : {}),
 			ELECTRON_RUN_AS_NODE: "1",
 			BITWARDENCLI_APPDATA_DIR: this.mainContextModule.bitwardenDataFolder,
 			BW_NOINTERACTION: "true",
@@ -48,19 +49,26 @@ export class BwCliModule extends LogModule {
 	/**
 	 * Spawns a long-running CLI process (used for `bw serve`)
 	 */
-	public spawn(args: string[], extraEnv: Record<string, string> = {}): ChildProcess {
-		return spawn(process.execPath, [this.bwPath, ...args], {
-			env: this.getEnv(extraEnv),
+	public spawn(args: string[], extraEnv: Record<string, string> = {}, signal?: AbortSignal): ChildProcess {
+		// Authorities approved in the application (private PKI, self-signed server)
+		const trust = this.certificateModule.cliTrust();
+		return spawn(process.execPath, [...trust.args, this.bwPath, ...args], {
+			env: this.getEnv({ ...trust.env, ...extraEnv }),
 			stdio: ["ignore", "pipe", "pipe"],
 			windowsHide: true,
+			signal,
 		});
 	}
 
 	/**
 	 * Runs a CLI command with `--response` and returns its parsed data
+	 *
+	 * @param options.interactive lets the CLI open the browser (SSO), it still has no terminal to prompt in
 	 */
-	public async run<T>(args: string[], extraEnv: Record<string, string> = {}): Promise<T> {
-		const child = this.spawn([...args, "--response", "--nointeraction"], extraEnv);
+	public async run<T>(args: string[], extraEnv: Record<string, string> = {}, options: { interactive?: boolean; signal?: AbortSignal } = {}): Promise<T> {
+		const child = options.interactive
+			? this.spawn([...args, "--response"], { ...extraEnv, BW_NOINTERACTION: "false" }, options.signal)
+			: this.spawn([...args, "--response", "--nointeraction"], extraEnv, options.signal);
 
 		let stdout = "";
 		let stderr = "";
@@ -109,6 +117,30 @@ export class BwCliModule extends LogModule {
 			if (twoFactor.code) args.push("--code", twoFactor.code);
 		}
 		await this.run<BwMessage>(args, { BW_LOGIN_PASSWORD: password });
+	}
+
+	/**
+	 * Single sign-on: the CLI opens the web vault in the browser and waits for the authorization code on localhost (PKCE).
+	 * The vault is still decrypted with the master password afterwards.
+	 */
+	@log("info")
+	public async loginSso() {
+		const abort = new AbortController();
+		this.#ssoAbort = abort;
+		const timeout = setTimeout(() => abort.abort(), SSO_TIMEOUT_MS);
+		try {
+			await this.run<BwMessage>(["login", "--sso"], {}, { interactive: true, signal: abort.signal });
+		} finally {
+			clearTimeout(timeout);
+			this.#ssoAbort = null;
+		}
+	}
+
+	/**
+	 * Stops a pending SSO login (the user gave up in the browser)
+	 */
+	public cancelSso() {
+		this.#ssoAbort?.abort();
 	}
 
 	@log("info")

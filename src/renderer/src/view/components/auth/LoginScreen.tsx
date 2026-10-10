@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Alert, Box, Button, CircularProgress, Link, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "@store";
-import { login } from "@modules/session/session.async.actions";
-import { resetTwoFactor } from "@modules/session/session.reducer";
+import { cancelLogin, login } from "@modules/session/session.async.actions";
+import { resetSso, resetTwoFactor } from "@modules/session/session.reducer";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "@components/shared/PasswordField";
 import { CertificateReview } from "./CertificateReview";
@@ -16,7 +16,7 @@ const twoFactorMethods = [
 
 export function LoginScreen() {
 	const dispatch = useAppDispatch();
-	const { pending, error, twoFactorRequired, untrustedCertificate } = useAppSelector((state) => state.session);
+	const { pending, error, twoFactorRequired, ssoRequired, untrustedCertificate } = useAppSelector((state) => state.session);
 	const previousServer = useAppSelector((state) => state.session.current?.serverUrl);
 
 	const [serverUrl, setServerUrl] = useState(previousServer ?? "https://");
@@ -32,6 +32,7 @@ export function LoginScreen() {
 				email,
 				password,
 				twoFactor: twoFactorRequired ? { method, code: code.replaceAll(/\s/g, "") } : undefined,
+				sso: ssoRequired || undefined,
 			})
 		);
 	};
@@ -40,6 +41,47 @@ export function LoginScreen() {
 		return (
 			<AuthLayout title="Certificat non reconnu" subtitle="Ce poste ne fait pas confiance au certificat présenté par le serveur">
 				<CertificateReview certificate={untrustedCertificate} request={{ serverUrl, email, password }} />
+			</AuthLayout>
+		);
+	}
+
+	if (ssoRequired) {
+		return (
+			<AuthLayout title="Connexion SSO" subtitle={`Ce serveur impose l'authentification de votre organisation pour ${email}`}>
+				<Stack spacing={2}>
+					<Typography variant="body2" sx={{ color: "var(--text-muted)" }}>
+						La page de connexion de votre organisation va s'ouvrir dans le navigateur. Une fois authentifié, revenez ici : le mot de passe maître saisi déchiffrera
+						le coffre sur ce poste.
+					</Typography>
+
+					{error && (
+						<Alert severity="error" variant="outlined">
+							{error}
+						</Alert>
+					)}
+
+					<Button
+						variant="contained"
+						size="large"
+						disabled={pending}
+						onClick={submit}
+						startIcon={pending ? <CircularProgress size={16} color="inherit" /> : undefined}
+					>
+						{pending ? "Terminez la connexion dans le navigateur…" : "Continuer avec le SSO"}
+					</Button>
+
+					<Box sx={{ textAlign: "center" }}>
+						<Link
+							component="button"
+							type="button"
+							variant="body2"
+							underline="hover"
+							onClick={() => void dispatch(pending ? cancelLogin() : resetSso())}
+						>
+							{pending ? "Annuler" : "Revenir à la connexion"}
+						</Link>
+					</Box>
+				</Stack>
 			</AuthLayout>
 		);
 	}

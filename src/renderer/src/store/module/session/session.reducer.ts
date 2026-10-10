@@ -10,6 +10,8 @@ export type SessionSliceState = {
 	pending: boolean;
 	error: string | null;
 	twoFactorRequired: boolean;
+	/** The server only accepts single sign-on for this account */
+	ssoRequired: boolean;
 	/** Certificate refused by the system, to review before approving it */
 	untrustedCertificate: CertificateInfo | null;
 };
@@ -20,6 +22,7 @@ const initialState: SessionSliceState = {
 	pending: false,
 	error: null,
 	twoFactorRequired: false,
+	ssoRequired: false,
 	untrustedCertificate: null,
 };
 
@@ -29,6 +32,10 @@ const slice = createSlice({
 	reducers: {
 		resetTwoFactor(state) {
 			state.twoFactorRequired = false;
+			state.error = null;
+		},
+		resetSso(state) {
+			state.ssoRequired = false;
 			state.error = null;
 		},
 		dismissCertificate(state) {
@@ -55,11 +62,14 @@ const slice = createSlice({
 			builder.addCase(thunk.rejected, (state, action) => {
 				state.pending = false;
 				state.error = (action.payload as string | undefined) ?? action.error.message ?? "Erreur inconnue";
+				// The certificate is checked before the CLI login: a failed login is past the review, show its error on the login form
+				if (thunk === login) state.untrustedCertificate = null;
 			});
 		}
 		builder.addCase(login.fulfilled, (state, action) => {
 			state.pending = false;
 			state.twoFactorRequired = action.payload.status === "two-factor-required";
+			state.ssoRequired = action.payload.status === "sso-required";
 			state.untrustedCertificate = action.payload.status === "untrusted-certificate" ? action.payload.certificate : null;
 		});
 		for (const thunk of [trustCertificate, importAuthority]) {
@@ -75,10 +85,11 @@ const slice = createSlice({
 		});
 		builder.addCase(logout.fulfilled, (state) => {
 			state.twoFactorRequired = false;
+			state.ssoRequired = false;
 			state.error = null;
 		});
 	},
 });
 
-export const { resetTwoFactor, dismissCertificate } = slice.actions;
+export const { resetTwoFactor, resetSso, dismissCertificate } = slice.actions;
 export const sessionReducer = slice.reducer;

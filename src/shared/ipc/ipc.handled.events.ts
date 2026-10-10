@@ -26,6 +26,8 @@ export interface IpcHandledEvents {
 	 */
 	"session:state:get": (event: IpcMainInvokeEvent) => Promise<SessionState>;
 	"session:login": (event: IpcMainInvokeEvent, request: LoginRequest) => Promise<LoginResult>;
+	/** Stops a login waiting for the browser (SSO) */
+	"session:login:cancel": (event: IpcMainInvokeEvent) => Promise<void>;
 	"session:unlock": (event: IpcMainInvokeEvent, password: string) => Promise<UnlockResult>;
 	"session:lock": (event: IpcMainInvokeEvent) => Promise<void>;
 	"session:logout": (event: IpcMainInvokeEvent) => Promise<void>;

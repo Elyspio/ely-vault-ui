@@ -20,6 +20,7 @@ export function getIpcSender() {
 		session: {
 			state: () => ipcRendererWrapper.invoke("session:state:get"),
 			login: (request: LoginRequest) => ipcRendererWrapper.invoke("session:login", request),
+			cancelLogin: () => ipcRendererWrapper.invoke("session:login:cancel"),
 			unlock: (password: string) => ipcRendererWrapper.invoke("session:unlock", password),
 			lock: () => ipcRendererWrapper.invoke("session:lock"),
 			logout: () => ipcRendererWrapper.invoke("session:logout"),

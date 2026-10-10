@@ -156,6 +156,8 @@ export type LoginRequest = {
 		method: TwoFactorMethod;
 		code: string;
 	};
+	/** Single sign-on in the browser instead of the e-mail and password; the password still decrypts the vault */
+	sso?: boolean;
 };
 
 /** Bitwarden two-step login providers usable from the CLI */
@@ -168,6 +170,8 @@ export enum TwoFactorMethod {
 export type LoginResult =
 	| { status: "success" }
 	| { status: "two-factor-required" }
+	/** The server only accepts single sign-on for this account */
+	| { status: "sso-required" }
 	| { status: "untrusted-certificate"; certificate: CertificateInfo }
 	| { status: "error"; message: string };
 
