@@ -164,7 +164,17 @@ export class VaultModule extends LogModule {
 		const salt = crypto.randomBytes(16);
 		this.repromptVerifier = { salt, hash: crypto.scryptSync(password, salt, 32) };
 
-		await this.loadSnapshot();
+		const generation = this.generation;
+		await this.enqueue(async () => {
+			this.ensureGeneration(generation);
+			try {
+				await this.bwServeModule.request<BwMessage>("POST", "/sync");
+			} catch (error) {
+				// Unlock still works offline with the CLI's encrypted cache.
+				this.logger.warn("Sync after unlock failed", errorMessage(error));
+			}
+			await this.loadSnapshot(generation);
+		});
 		return { status: "success" };
 	}
 
