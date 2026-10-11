@@ -17,6 +17,7 @@ import { GeneratorDialog } from "./GeneratorDialog";
 import { NewItemDialog } from "./NewItemDialog";
 import { MoveToFolderDialog } from "./MoveToFolderDialog";
 import { SettingsDialog } from "@components/settings/SettingsDialog";
+import { HelloOfferDialog } from "@components/auth/HelloOfferDialog";
 import { PanelResizeHandle } from "./PanelResizeHandle";
 import { saveConfig } from "@modules/config/config.async.actions";
 import { clampPanelLayout, defaultAppConfig, type PanelLayout } from "@shared/config/app.config";
@@ -194,6 +195,7 @@ export function VaultScreen() {
 			<MoveToFolderDialog />
 			<GeneratorDialog />
 			<SettingsDialog />
+			<HelloOfferDialog />
 		</Box>
 	);
 }

@@ -56,9 +56,15 @@ export interface IpcHandledEvents {
 	 */
 	"session:hello:status": (event: IpcMainInvokeEvent) => Promise<HelloUnlockStatus>;
 	/**
-	 * Enables Windows Hello unlock for the unlocked account; the master password is confirmed then stored encrypted in the main process
+	 * Enables Windows Hello unlock for the unlocked account; the master password is confirmed then stored encrypted in the main process.
+	 * Without password (null), the one of the unlock that offered Windows Hello is used.
 	 */
-	"session:hello:enable": (event: IpcMainInvokeEvent, password: string) => Promise<HelloUnlockResult>;
+	"session:hello:enable": (event: IpcMainInvokeEvent, password: string | null) => Promise<HelloUnlockResult>;
+	/**
+	 * Whether to offer Windows Hello now: right after a master password unlock, never enabled nor declined for this account
+	 */
+	"session:hello:offer": (event: IpcMainInvokeEvent) => Promise<boolean>;
+	"session:hello:decline": (event: IpcMainInvokeEvent) => Promise<void>;
 	"session:hello:disable": (event: IpcMainInvokeEvent) => Promise<void>;
 	"session:hello:unlock": (event: IpcMainInvokeEvent) => Promise<HelloUnlockResult>;
 

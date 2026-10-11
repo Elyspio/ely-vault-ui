@@ -47,19 +47,23 @@ const ipcHandlers: IpcHandledEvents = {
 		return await mainContainer.get(VaultModule).getState();
 	},
 	async "session:login"(_, request) {
-		return await mainContainer.get(VaultModule).login(request);
+		const result = await mainContainer.get(VaultModule).login(request);
+		if (result.status === "success") await mainContainer.get(HelloUnlockModule).rememberOffer(request.password);
+		return result;
 	},
 	async "session:login:cancel"() {
 		mainContainer.get(VaultModule).cancelLogin();
 	},
 	async "session:unlock"(_, password) {
-		return await mainContainer.get(VaultModule).unlock(password);
+		const result = await mainContainer.get(VaultModule).unlock(password);
+		if (result.status === "success") await mainContainer.get(HelloUnlockModule).rememberOffer(password);
+		return result;
 	},
 	async "session:lock"() {
 		await mainContainer.get(VaultModule).lock();
 	},
 	async "session:logout"() {
-		await mainContainer.get(HelloUnlockModule).disable();
+		await mainContainer.get(HelloUnlockModule).forget();
 		await mainContainer.get(VaultModule).logout();
 	},
 	async "session:hello:status"() {
@@ -67,6 +71,12 @@ const ipcHandlers: IpcHandledEvents = {
 	},
 	async "session:hello:enable"(_, password) {
 		return await mainContainer.get(HelloUnlockModule).enable(password);
+	},
+	async "session:hello:offer"() {
+		return mainContainer.get(HelloUnlockModule).hasOffer();
+	},
+	async "session:hello:decline"() {
+		await mainContainer.get(HelloUnlockModule).declineOffer();
 	},
 	async "session:hello:disable"() {
 		await mainContainer.get(HelloUnlockModule).disable();
