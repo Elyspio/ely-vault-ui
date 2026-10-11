@@ -9,6 +9,7 @@ import { WindowModule } from "@main/modules/window/window.module";
 import { LogModule } from "@main/modules/log.module";
 import { CertificateModule } from "@main/modules/security/certificate.module";
 import { SshKeyModule } from "@main/modules/vault/ssh.key.module";
+import { TotpQrModule } from "@main/modules/vault/totp.qr.module";
 import { BwServeModule } from "@main/modules/bitwarden/bw.serve.module";
 import { AutoTypeModule } from "@main/modules/autotype/autotype.module";
 import { UpdateModule } from "@main/modules/update/update.module";
@@ -72,6 +73,9 @@ const ipcHandlers: IpcHandledEvents = {
 	},
 	async "vault:totp:get"(_, itemId) {
 		return await mainContainer.get(VaultModule).getTotp(itemId);
+	},
+	async "vault:totp:read-qr"() {
+		return await mainContainer.get(TotpQrModule).readFromClipboard();
 	},
 	async "vault:reprompt:verify"(_, password) {
 		return mainContainer.get(VaultModule).verifyReprompt(password);

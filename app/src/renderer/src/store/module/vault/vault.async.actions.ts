@@ -17,7 +17,7 @@ export const syncVault = createAsyncThunk("sync", async (_, { extra, dispatch, r
 		dispatch(showToast("Vault synced"));
 		return snapshot;
 	} catch (error) {
-		dispatch(showToast(`Synchronisation impossible : ${ipcErrorMessage(error)}`, "error"));
+		dispatch(showToast(`Sync failed: ${ipcErrorMessage(error)}`, "error"));
 		return rejectWithValue(ipcErrorMessage(error));
 	}
 });

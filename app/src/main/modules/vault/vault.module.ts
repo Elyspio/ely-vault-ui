@@ -273,7 +273,7 @@ export class VaultModule extends LogModule {
 		const item = this.getItem(itemId);
 		this.ensureRepromptSatisfied(item);
 		const value = getSecretValue(item, ref);
-		if (value === null) throw new BwError("Valeur introuvable");
+		if (value === null) throw new BwError("Value not found");
 		return value;
 	}
 
@@ -294,7 +294,7 @@ export class VaultModule extends LogModule {
 			value = getPlainValue(item, ref);
 		}
 
-		if (value === null) throw new BwError("Valeur introuvable");
+		if (value === null) throw new BwError("Value not found");
 		await this.clipboardModule.copy(value);
 	}
 

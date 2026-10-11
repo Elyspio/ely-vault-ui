@@ -31,6 +31,7 @@ export function getIpcSender() {
 			secret: (itemId: string, ref: SecretRef) => ipcRendererWrapper.invoke("vault:secret:get", itemId, ref),
 			copy: (itemId: string | null, ref: CopyRef) => ipcRendererWrapper.invoke("vault:copy", itemId, ref),
 			totp: (itemId: string) => ipcRendererWrapper.invoke("vault:totp:get", itemId),
+			readTotpQr: () => ipcRendererWrapper.invoke("vault:totp:read-qr"),
 			verifyReprompt: (password: string) => ipcRendererWrapper.invoke("vault:reprompt:verify", password),
 			icon: (host: string) => ipcRendererWrapper.invoke("vault:icon:get", host),
 			generatePassword: (options: PasswordGeneratorOptions) => ipcRendererWrapper.invoke("vault:generate-password", options),

@@ -4,7 +4,7 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 
 ## Project Overview
 
-**ElyVault** (package `elyvault`, appId `fr.elyspio.elyvault.app`; repository `ely-vault-ui`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all cryptography is delegated to the CLI, the app implements none. Version 1 is read-only (no item creation/edit). UI strings, the readme and `docs/` are in English.
+**ElyVault** (package `elyvault`, appId `fr.elyspio.elyvault.app`; repository `ely-vault-ui`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all vault cryptography is delegated to the CLI, the app implements none (only SSH key generation and format conversion use `sshpk`). Items (create, edit, soft delete, restore, permanent delete, favorite, folder move), folders (create, rename cascade, delete) and SSH keys are written through the CLI; attachments, organization moves, collections and archive stay in the web vault. UI strings, the readme and `docs/` are in English.
 
 ## Repository Layout
 
@@ -49,7 +49,11 @@ Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1─
 ### Main Modules (`src/main/modules/`)
 
 - `bitwarden/` — `BwCliModule` runs the CLI with the Electron binary in Node mode (`ELECTRON_RUN_AS_NODE`); `BwServeModule` manages `bw serve` on 127.0.0.1 with a random port. CLI data isolated in `<appFolder>/bitwarden`.
-- `vault/` — `VaultModule` (login, unlock, lock, snapshot, secrets on demand), `vault.mapper.ts` (strips secrets before sending items to the renderer), `password.generator.ts`.
+- `vault/` — `VaultModule` (login, unlock, lock, snapshot, secrets on demand, writes), `vault.mapper.ts` (strips secrets before sending items to the renderer), `password.generator.ts`.
+  - `vault.writer.ts`: draft merge onto the raw CLI item (only the changed fields, secrets only when given), folder rename planning and folder delete checks.
+  - `ssh.keys.ts` / `ssh.key.module.ts`: Ed25519 generation and OpenSSH import with sshpk; the key material stays in the main process behind a one-time token (cleared on lock, expires).
+  - `totp.qr.ts` / `totp.qr.module.ts`: TOTP secret read from a screenshot in the clipboard (jsQR); only a valid TOTP value is returned.
+  - `VaultModule` runs writes and syncs one after the other (promise queue) and discards a result when the session generation changed (lock, logout).
 - `update/` — `UpdateModule`: auto update from the GitHub releases (`electron-updater`): checks at startup then hourly (setting `updates.autoCheck`), downloads newer releases, installs on restart or quit; update channel `updates.channel` (`stable` / `beta` / `dev`, mapped to the electron-updater channel; `beta` skips the `-dev` releases) and user-confirmed downgrade when the channel's newest version is older. Locks the vault and stops `bw serve` before `quitAndInstall`. Dev builds check through `dev-app-update.yml` and never install.
 - `security/` — auto-lock, clipboard (auto-clear, excluded from Windows history/cloud clipboard), certificate review/approval of private CAs.
 - `autotype/` — KeePass-style auto-type: Windows `SendInput` via koffi FFI, Linux X11 via `xdotool`.
@@ -77,6 +81,9 @@ App folder: `%LOCALAPPDATA%/elyvault` (Linux: Electron `appData`), see `MainCont
 - The renderer never receives secrets in bulk: items go through `vault.mapper.ts`; secrets are requested on demand by item id (show/copy/type) and copy/auto-type happen in the main process.
 - Never log secrets: no parameters or return values of secret-handling functions in logs.
 - Passwords go to the CLI through environment variables, never as command-line arguments.
+- Secrets in edits are write-only (`SecretChange`): the renderer sends one only when the user typed or cleared it; otherwise the stored value is kept by the main process. Secrets never enter the Redux store.
+- Private SSH keys never go to the renderer: main keeps them behind a one-time token (`vault:ssh:*` answers `{ token, publicKey, keyFingerprint }`).
+- Edits always send the full raw item from `GET /object/item/:id` with the changes applied: the CLI replaces nested objects (login, card, fields) instead of merging them.
 - Never add an "ignore TLS errors" option; private CAs go through explicit review/approval (`certificate.module.ts`), passed to the CLI and Chromium.
 - Updates come only from the GitHub releases through `electron-updater` (HTTPS + SHA-512 of `latest*.yml`): never add another update source or skip its verification.
 - Keep Electron hardening intact: `sandbox`, `contextIsolation`, no `nodeIntegration`, strict CSP, blocked navigation/new windows, IPC only from the app page, only `http(s)` links opened externally.
