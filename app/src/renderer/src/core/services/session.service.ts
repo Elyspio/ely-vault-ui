@@ -31,8 +31,17 @@ export class SessionService {
 		return window.preload.ipc.send.session.hello.status();
 	}
 
-	public enableHello(password: string) {
+	/** Without password, the one of the unlock that offered Windows Hello is used */
+	public enableHello(password: string | null) {
 		return window.preload.ipc.send.session.hello.enable(password);
+	}
+
+	public helloOffer() {
+		return window.preload.ipc.send.session.hello.offer();
+	}
+
+	public declineHello() {
+		return window.preload.ipc.send.session.hello.decline();
 	}
 
 	public disableHello() {

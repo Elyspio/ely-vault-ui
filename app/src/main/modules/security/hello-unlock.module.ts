@@ -9,12 +9,18 @@ import { WindowModule } from "../window/window.module";
 import { type HelloVerification, isHelloAvailable, requestHelloVerification } from "./windows.hello";
 import type { AccountInfo, HelloUnlockResult, HelloUnlockStatus, UnlockResult } from "@shared/types/vault.types";
 
-/** Master password encrypted with the Windows user's key (DPAPI, Electron safeStorage), for one account */
+/**
+ * Windows Hello choice of one account: the master password encrypted with the Windows user's key (DPAPI, Electron
+ * safeStorage) when enabled, no password when the user declined it (it is not offered again)
+ */
 type StoredUnlock = {
 	serverUrl: string | null;
 	email: string | null;
-	password: string;
+	password?: string;
 };
+
+/** How long after a master password unlock Windows Hello can be enabled without typing the password again */
+const OFFER_MS = 5 * 60_000;
 
 const verificationErrors: Record<Exclude<HelloVerification, "verified" | "canceled">, string> = {
 	unavailable: "Windows Hello is not available",
@@ -26,11 +32,14 @@ const verificationErrors: Record<Exclude<HelloVerification, "verified" | "cancel
  * Unlocks the vault with Windows Hello (face, fingerprint or PIN).
  *
  * The master password is stored encrypted for the Windows user (DPAPI) and only decrypted after a Windows Hello
- * verification. It is removed on logout, and when it no longer unlocks the vault (master password changed).
+ * verification. It is offered after the first master password unlock of an account. The choice is forgotten on logout,
+ * and when the stored password no longer unlocks the vault (master password changed): Windows Hello is offered again.
  */
 @injectable()
 export class HelloUnlockModule extends LogModule {
 	private verifying = false;
+	/** Master password of the last unlock (encrypted), to enable Windows Hello when the user accepts the offer */
+	private offer: { password: Buffer; expiresAt: number } | null = null;
 
 	public constructor(
 		@inject(MainContextModule) private readonly mainContextModule: MainContextModule,
@@ -46,14 +55,44 @@ export class HelloUnlockModule extends LogModule {
 
 	public async getStatus(): Promise<HelloUnlockStatus> {
 		const available = await this.isAvailable();
-		return { available, enabled: available && this.read(await this.vaultModule.getState()) !== null };
+		return { available, enabled: available && this.read(await this.vaultModule.getState())?.password !== undefined };
 	}
 
 	/**
-	 * Enables Windows Hello for the unlocked account, once the master password is confirmed and Windows Hello verified
+	 * Keeps the master password of a successful unlock for a few minutes, when Windows Hello can be offered for this account
 	 */
-	public async enable(password: string): Promise<HelloUnlockResult> {
+	public async rememberOffer(password: string) {
+		this.offer = null;
+		if (this.read(await this.vaultModule.getState()) || !(await this.isAvailable())) return;
+		this.offer = { password: safeStorage.encryptString(password), expiresAt: Date.now() + OFFER_MS };
+	}
+
+	/**
+	 * Whether to offer Windows Hello now: available, never enabled nor declined for this account, right after a master password unlock
+	 */
+	public hasOffer() {
+		if (this.offer && (this.offer.expiresAt < Date.now() || !this.vaultModule.isUnlocked)) this.offer = null;
+		return this.offer !== null;
+	}
+
+	/**
+	 * The user declined Windows Hello: it is no longer offered for this account (still available in the settings)
+	 */
+	public async declineOffer() {
+		this.offer = null;
+		await this.disable();
+	}
+
+	/**
+	 * Enables Windows Hello for the unlocked account, once the master password is confirmed and Windows Hello verified.
+	 * Without password, the one of the unlock offering Windows Hello is used.
+	 */
+	public async enable(password: string | null): Promise<HelloUnlockResult> {
 		if (!this.vaultModule.isUnlocked) return { status: "error", message: "Unlock the vault first" };
+		if (password === null) {
+			if (!this.hasOffer()) return { status: "error", message: "Enable Windows Hello from the settings" };
+			password = safeStorage.decryptString(this.offer!.password);
+		}
 		if (!this.vaultModule.checkMasterPassword(password)) return { status: "error", message: "Incorrect master password" };
 		if (!(await this.isAvailable())) return { status: "error", message: verificationErrors.unavailable };
 
@@ -63,17 +102,31 @@ export class HelloUnlockModule extends LogModule {
 		const { serverUrl, email } = await this.vaultModule.getState();
 		const stored: StoredUnlock = { serverUrl, email, password: safeStorage.encryptString(password).toString("base64") };
 		await fs.promises.writeFile(this.storePath, JSON.stringify(stored), { mode: 0o600 });
+		this.offer = null;
 		this.logger.info("Windows Hello unlock enabled");
 		return { status: "success" };
 	}
 
+	/**
+	 * Turns Windows Hello off for the current account: the password is removed, and Windows Hello is not offered again
+	 */
 	public async disable() {
+		const { serverUrl, email } = await this.vaultModule.getState();
+		const declined: StoredUnlock = { serverUrl, email };
+		await fs.promises.writeFile(this.storePath, JSON.stringify(declined), { mode: 0o600 });
+	}
+
+	/**
+	 * Forgets the account's choice, on logout
+	 */
+	public async forget() {
+		this.offer = null;
 		await fs.promises.rm(this.storePath, { force: true });
 	}
 
 	public async unlock(): Promise<HelloUnlockResult> {
 		const stored = this.read(await this.vaultModule.getState());
-		if (!stored) return { status: "error", message: "Windows Hello unlock is not enabled for this account" };
+		if (!stored?.password) return { status: "error", message: "Windows Hello unlock is not enabled for this account" };
 
 		const verification = await this.verify("Unlock ElyVault");
 		if (verification.status !== "success") return verification;
@@ -82,15 +135,15 @@ export class HelloUnlockModule extends LogModule {
 		try {
 			password = safeStorage.decryptString(Buffer.from(stored.password, "base64"));
 		} catch {
-			await this.disable();
+			await this.forget();
 			return { status: "error", message: "Windows Hello unlock is no longer valid, unlock with the master password" };
 		}
 
 		const result: UnlockResult = await this.vaultModule.unlock(password);
 		if (result.status === "error" && /master password/i.test(result.message)) {
 			this.logger.warn("The stored master password no longer unlocks the vault: Windows Hello unlock disabled");
-			await this.disable();
-			return { status: "error", message: "The master password changed, unlock with it then enable Windows Hello again" };
+			await this.forget();
+			return { status: "error", message: "The master password changed, unlock with it to enable Windows Hello again" };
 		}
 		return result;
 	}

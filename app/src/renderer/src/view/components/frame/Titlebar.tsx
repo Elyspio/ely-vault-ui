@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Badge, Box, Divider, IconButton, Tooltip, Typography } from "@mui/material";
+import { Badge, Box, Button, Divider, IconButton, Tooltip, Typography } from "@mui/material";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import SyncRounded from "@mui/icons-material/SyncRounded";
 import LockRounded from "@mui/icons-material/LockRounded";
@@ -9,6 +9,7 @@ import RemoveRounded from "@mui/icons-material/RemoveRounded";
 import CropSquareRounded from "@mui/icons-material/CropSquareRounded";
 import FilterNoneRounded from "@mui/icons-material/FilterNoneRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
+import RestartAltRounded from "@mui/icons-material/RestartAltRounded";
 import { store, useAppDispatch, useAppSelector } from "@store";
 import { lock } from "@modules/session/session.async.actions";
 import { syncVault } from "@modules/vault/vault.async.actions";
@@ -18,6 +19,7 @@ import { Kbd } from "@components/shared/Kbd";
 import { Logo } from "@components/shared/Logo";
 import { formatRelative } from "@view/utils/date.utils";
 import { selectPendingUpdate } from "@modules/update/update.selectors";
+import { downloadUpdate, installUpdate } from "@modules/update/update.async.actions";
 
 const noDrag = { WebkitAppRegion: "no-drag" } as const;
 
@@ -133,6 +135,32 @@ export function Titlebar() {
 									<TuneRounded sx={{ fontSize: 17 }} />
 								</Badge>
 							</IconButton>
+						</Tooltip>
+						<Divider orientation="vertical" flexItem sx={{ mx: 0.75, my: 1 }} />
+					</>
+				)}
+				{/* Locked or logged out: the settings are out of reach, the update waiting for the user is offered here */}
+				{!unlocked && pendingUpdate && (
+					<>
+						<Tooltip
+							title={
+								pendingUpdate.downgrade && pendingUpdate.state === "available"
+									? `Older than the installed version (${pendingUpdate.currentVersion})`
+									: "Restarts the application"
+							}
+						>
+							<Box component="span" sx={noDrag}>
+								<Button
+									size="small"
+									variant="outlined"
+									startIcon={<RestartAltRounded sx={{ fontSize: 16 }} />}
+									disabled={pendingUpdate.state === "downloaded" && !pendingUpdate.isPackaged}
+									onClick={() => dispatch(pendingUpdate.state === "downloaded" ? installUpdate() : downloadUpdate())}
+									sx={{ height: 26, fontSize: "0.75rem", py: 0 }}
+								>
+									{pendingUpdate.state === "downloaded" ? `Update to ${pendingUpdate.latestVersion}` : `Go back to ${pendingUpdate.latestVersion}`}
+								</Button>
+							</Box>
 						</Tooltip>
 						<Divider orientation="vertical" flexItem sx={{ mx: 0.75, my: 1 }} />
 					</>
