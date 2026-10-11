@@ -15,9 +15,10 @@ function item(name: string, overrides: Partial<VaultItem> = {}): VaultItem {
 		collectionIds: [],
 		revisionDate: "2026-10-10T12:00:00.000Z",
 		creationDate: null,
+		deletedDate: null,
 		fields: [],
 		passwordHistoryCount: 0,
-		login: { username: null, uris: [], hasPassword: true, hasTotp: false, passwordRevisionDate: null },
+		login: { username: null, uris: [], hasPassword: true, hasTotp: false, passwordRevisionDate: null, passkeyCount: 0 },
 		...overrides,
 	};
 }
@@ -26,10 +27,11 @@ const items = [
 	item("Slack", {
 		login: {
 			username: "jean@company.com",
-			uris: [{ uri: "https://company.slack.com", host: "company.slack.com" }],
+			uris: [{ uri: "https://company.slack.com", host: "company.slack.com", match: null }],
 			hasPassword: true,
 			hasTotp: false,
 			passwordRevisionDate: null,
+			passkeyCount: 0,
 		},
 	}),
 	item("GitHub", { favorite: true, folderId: "work" }),

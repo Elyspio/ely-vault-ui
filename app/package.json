@@ -12,6 +12,7 @@
 		"postinstall": "install-electron",
 		"check": "vp check --fix",
 		"test": "vp test",
+		"test:live": "vp test --mode live",
 		"typecheck": "tsc -b --noEmit",
 		"dev": "electron-vite -c config/electron.vite.config.ts dev -w",
 		"start": "electron-vite -c config/electron.vite.config.ts preview",

@@ -1,0 +1,27 @@
+{
+	"object": "item",
+	"id": "c4a3b2d1-0000-4000-8000-000000000003",
+	"organizationId": null,
+	"folderId": null,
+	"type": 3,
+	"reprompt": 0,
+	"name": "Visa Gold",
+	"notes": null,
+	"favorite": false,
+	"fields": [],
+	"card": {
+		"cardholderName": "JEAN DUPONT",
+		"brand": "Visa",
+		"number": "4111111111111111",
+		"expMonth": "08",
+		"expYear": "2029",
+		"code": "123"
+	},
+	"collectionIds": [],
+	"revisionDate": "2026-10-03T08:00:00.000Z",
+	"creationDate": "2025-03-01T08:00:00.000Z",
+	"deletedDate": null,
+	"archivedDate": null,
+	"passwordHistory": null,
+	"key": null
+}

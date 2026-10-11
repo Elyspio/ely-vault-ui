@@ -1,0 +1,32 @@
+{
+	"object": "item",
+	"id": "0b9d8c7e-5f4a-4b3c-9d2e-778899aabbcc",
+	"organizationId": "5c6d7e8f-0000-4000-8000-0000000000aa",
+	"folderId": null,
+	"type": 1,
+	"reprompt": 0,
+	"name": "Router admin",
+	"notes": null,
+	"favorite": false,
+	"fields": [
+		{ "name": "PIN", "value": null, "type": 1, "linkedId": null },
+		{ "name": "Owner", "value": "IT", "type": 0, "linkedId": null },
+		{ "name": "PIN", "value": null, "type": 1, "linkedId": null },
+		{ "name": "Token", "value": null, "type": 1, "linkedId": null }
+	],
+	"login": {
+		"uris": [{ "match": null, "uri": "https://192.168.1.1" }],
+		"username": "admin",
+		"password": null,
+		"totp": null,
+		"passwordRevisionDate": null,
+		"fido2Credentials": []
+	},
+	"collectionIds": ["7d8e9f00-0000-4000-8000-0000000000bb"],
+	"revisionDate": "2026-10-02T08:00:00.000Z",
+	"creationDate": "2025-02-01T08:00:00.000Z",
+	"deletedDate": null,
+	"archivedDate": null,
+	"passwordHistory": [],
+	"key": null
+}

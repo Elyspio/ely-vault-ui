@@ -10,9 +10,11 @@ import type {
 	PasswordGeneratorOptions,
 	SecretRef,
 	SessionState,
+	ItemDraft,
 	TotpCode,
 	UnlockResult,
 	VaultSnapshot,
+	WriteResult,
 } from "@shared/types/vault.types";
 
 /**
@@ -67,6 +69,30 @@ export interface IpcHandledEvents {
 	 */
 	"vault:icon:get": (event: IpcMainInvokeEvent, host: string) => Promise<string | null>;
 	"vault:generate-password": (event: IpcMainInvokeEvent, options: PasswordGeneratorOptions) => Promise<string>;
+
+	/**
+	 * Creates an item in the personal vault
+	 */
+	"vault:item:create": (event: IpcMainInvokeEvent, draft: ItemDraft) => Promise<WriteResult>;
+	/**
+	 * Edits an item; `expectedRevision` is the revision the editor started from (conflict when it changed)
+	 */
+	"vault:item:update": (event: IpcMainInvokeEvent, itemId: string, expectedRevision: string, draft: ItemDraft) => Promise<WriteResult>;
+	/** Moves an item to the trash */
+	"vault:item:delete": (event: IpcMainInvokeEvent, itemId: string) => Promise<WriteResult>;
+	/** Restores an item from the trash */
+	"vault:item:restore": (event: IpcMainInvokeEvent, itemId: string) => Promise<WriteResult>;
+	/** Permanently deletes items of the trash (only items in the trash are accepted) */
+	"vault:item:purge": (event: IpcMainInvokeEvent, itemIds: string[]) => Promise<WriteResult>;
+	"vault:item:favorite": (event: IpcMainInvokeEvent, itemId: string, favorite: boolean) => Promise<WriteResult>;
+	"vault:item:move": (event: IpcMainInvokeEvent, itemId: string, folderId: string | null) => Promise<WriteResult>;
+	"vault:folder:create": (event: IpcMainInvokeEvent, name: string) => Promise<WriteResult>;
+	/**
+	 * Renames a folder path ("Work/Projects") and every folder under it, virtual parents included
+	 */
+	"vault:folder:rename": (event: IpcMainInvokeEvent, path: string, newPath: string) => Promise<WriteResult>;
+	/** Deletes an empty folder (no active item, no sub folder) */
+	"vault:folder:delete": (event: IpcMainInvokeEvent, folderId: string) => Promise<WriteResult>;
 
 	"autotype:availability": (event: IpcMainInvokeEvent) => Promise<AutoTypeAvailability>;
 	/**

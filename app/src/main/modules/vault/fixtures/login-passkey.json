@@ -1,0 +1,50 @@
+{
+	"object": "item",
+	"id": "6f1c2a0e-1b2c-4d3e-8f90-112233445566",
+	"organizationId": null,
+	"folderId": "3a4b5c6d-0000-4000-8000-000000000001",
+	"type": 1,
+	"reprompt": 1,
+	"name": "GitHub",
+	"notes": "Recovery codes are in the safe",
+	"favorite": true,
+	"fields": [
+		{ "name": "Recovery code", "value": "a1b2-c3d4", "type": 1, "linkedId": null },
+		{ "name": "Account", "value": "octocat", "type": 0, "linkedId": null },
+		{ "name": "Username", "value": null, "type": 3, "linkedId": 100 }
+	],
+	"login": {
+		"uris": [
+			{ "match": null, "uri": "https://github.com/login" },
+			{ "match": 3, "uri": "https://gist.github.com/" }
+		],
+		"username": "octocat",
+		"password": "hunter2-password",
+		"totp": "JBSWY3DPEHPK3PXP",
+		"passwordRevisionDate": "2026-09-01T10:00:00.000Z",
+		"fido2Credentials": [
+			{
+				"credentialId": "cred-1",
+				"keyType": "public-key",
+				"keyAlgorithm": "ECDSA",
+				"keyCurve": "P-256",
+				"keyValue": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg",
+				"rpId": "github.com",
+				"rpName": "GitHub",
+				"userHandle": "MTIz",
+				"userName": "octocat",
+				"userDisplayName": "octocat",
+				"counter": "0",
+				"discoverable": "true",
+				"creationDate": "2026-08-01T10:00:00.000Z"
+			}
+		]
+	},
+	"collectionIds": [],
+	"revisionDate": "2026-10-01T08:00:00.000Z",
+	"creationDate": "2025-01-10T08:00:00.000Z",
+	"deletedDate": null,
+	"archivedDate": null,
+	"passwordHistory": [{ "lastUsedDate": "2026-08-30T08:00:00.000Z", "password": "old-password" }],
+	"key": "2.abcdef==|ghijkl==|mnopqr=="
+}

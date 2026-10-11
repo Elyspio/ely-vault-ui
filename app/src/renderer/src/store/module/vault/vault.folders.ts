@@ -1,3 +1,4 @@
+import { folderSegments } from "@shared/vault/folder.path";
 import type { VaultFolder } from "@shared/types/vault.types";
 
 /**
@@ -32,10 +33,7 @@ export function buildFolderTree(folders: VaultFolder[]): FolderNode[] {
 	};
 
 	for (const folder of folders) {
-		const segments = folder.name
-			.split("/")
-			.map((segment) => segment.trim())
-			.filter(Boolean);
+		const segments = folderSegments(folder.name);
 		if (segments.length === 0) continue;
 
 		const node = getNode(segments);

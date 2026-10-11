@@ -81,6 +81,36 @@ const ipcHandlers: IpcHandledEvents = {
 	async "vault:generate-password"(_, options) {
 		return await mainContainer.get(VaultModule).generatePassword(options);
 	},
+	async "vault:item:create"(_, draft) {
+		return await mainContainer.get(VaultModule).createItem(draft);
+	},
+	async "vault:item:update"(_, itemId, expectedRevision, draft) {
+		return await mainContainer.get(VaultModule).updateItem(itemId, expectedRevision, draft);
+	},
+	async "vault:item:delete"(_, itemId) {
+		return await mainContainer.get(VaultModule).deleteItem(itemId);
+	},
+	async "vault:item:restore"(_, itemId) {
+		return await mainContainer.get(VaultModule).restoreItem(itemId);
+	},
+	async "vault:item:purge"(_, itemIds) {
+		return await mainContainer.get(VaultModule).purgeItems(itemIds);
+	},
+	async "vault:item:favorite"(_, itemId, favorite) {
+		return await mainContainer.get(VaultModule).setFavorite(itemId, favorite);
+	},
+	async "vault:item:move"(_, itemId, folderId) {
+		return await mainContainer.get(VaultModule).moveItem(itemId, folderId);
+	},
+	async "vault:folder:create"(_, name) {
+		return await mainContainer.get(VaultModule).createFolder(name);
+	},
+	async "vault:folder:rename"(_, path, newPath) {
+		return await mainContainer.get(VaultModule).renameFolder(path, newPath);
+	},
+	async "vault:folder:delete"(_, folderId) {
+		return await mainContainer.get(VaultModule).deleteFolder(folderId);
+	},
 	async "autotype:availability"() {
 		return await mainContainer.get(AutoTypeModule).getAvailability();
 	},

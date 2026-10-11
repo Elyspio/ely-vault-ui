@@ -1,5 +1,5 @@
 import { injectable } from "inversify";
-import type { CopyRef, PasswordGeneratorOptions, SecretRef } from "@shared/types/vault.types";
+import type { CopyRef, ItemDraft, PasswordGeneratorOptions, SecretRef } from "@shared/types/vault.types";
 
 @injectable()
 export class VaultService {
@@ -23,6 +23,46 @@ export class VaultService {
 
 	public totp(itemId: string) {
 		return window.preload.ipc.send.vault.totp(itemId);
+	}
+
+	public createItem(draft: ItemDraft) {
+		return window.preload.ipc.send.vault.createItem(draft);
+	}
+
+	public updateItem(itemId: string, expectedRevision: string, draft: ItemDraft) {
+		return window.preload.ipc.send.vault.updateItem(itemId, expectedRevision, draft);
+	}
+
+	public deleteItem(itemId: string) {
+		return window.preload.ipc.send.vault.deleteItem(itemId);
+	}
+
+	public restoreItem(itemId: string) {
+		return window.preload.ipc.send.vault.restoreItem(itemId);
+	}
+
+	public purgeItems(itemIds: string[]) {
+		return window.preload.ipc.send.vault.purgeItems(itemIds);
+	}
+
+	public setFavorite(itemId: string, favorite: boolean) {
+		return window.preload.ipc.send.vault.setFavorite(itemId, favorite);
+	}
+
+	public moveItem(itemId: string, folderId: string | null) {
+		return window.preload.ipc.send.vault.moveItem(itemId, folderId);
+	}
+
+	public createFolder(name: string) {
+		return window.preload.ipc.send.vault.createFolder(name);
+	}
+
+	public renameFolder(path: string, newPath: string) {
+		return window.preload.ipc.send.vault.renameFolder(path, newPath);
+	}
+
+	public deleteFolder(folderId: string) {
+		return window.preload.ipc.send.vault.deleteFolder(folderId);
 	}
 
 	public autoTypeAvailability() {

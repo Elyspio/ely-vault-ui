@@ -43,6 +43,8 @@ const slice = createSlice({
 		});
 		builder.addCase(syncVault.fulfilled, (state, action) => {
 			state.syncing = false;
+			// The vault may have been locked while the sync was running: its result must not reopen it
+			if (state.snapshot === null) return;
 			state.snapshot = action.payload;
 			if (state.selectedId && !action.payload.items.some((item) => item.id === state.selectedId)) state.selectedId = null;
 		});

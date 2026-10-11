@@ -11,10 +11,32 @@ import { log } from "@main/utils/logs.utils";
 import { BwError, type BwCollection, type BwFolder, type BwItem, type BwList, type BwMessage, type BwOrganization, type BwStatus, type BwString } from "../bitwarden/bw.types";
 import { getPlainValue, getSecretValue, getTotpPeriod, isSecretRef, sanitizeItem } from "./vault.mapper";
 import { generateEncodedSecret } from "./password.generator";
-import type { CopyRef, LoginRequest, LoginResult, PasswordGeneratorOptions, SecretRef, SessionState, TotpCode, UnlockResult, VaultSnapshot } from "@shared/types/vault.types";
+import { applyDraft, checkFolderDelete, isConflictError, planFolderRename, validateDraft } from "./vault.writer";
+import { folderSegments, joinFolderSegments } from "@shared/vault/folder.path";
+import type {
+	CopyRef,
+	ItemDraft,
+	LoginRequest,
+	LoginResult,
+	PasswordGeneratorOptions,
+	SecretRef,
+	SessionState,
+	TotpCode,
+	UnlockResult,
+	VaultSnapshot,
+	WriteOutcome,
+	WriteResult,
+} from "@shared/types/vault.types";
 
 /** How long a successful master password reprompt unlocks protected items */
 const REPROMPT_GRACE_MS = 5 * 60 * 1000;
+
+/** `bw serve` answers a write before its local cache shows it: the reload is retried until the change appears */
+const SETTLE_ATTEMPTS = 10;
+const SETTLE_DELAY_MS = 150;
+
+/** Whether a reloaded snapshot already shows a successful write (`done`: ids written) */
+type Settled = (snapshot: VaultSnapshot, done: string[]) => boolean;
 
 /**
  * Session and vault access on top of `bw serve`.
@@ -23,8 +45,17 @@ const REPROMPT_GRACE_MS = 5 * 60 * 1000;
  */
 @injectable()
 export class VaultModule extends LogModule {
+	/** Active (not deleted) decrypted items, by id */
 	private items = new Map<string, BwItem>();
+	/** Decrypted items of the trash, by id: the only ones a restore or a permanent delete accepts */
+	private trash = new Map<string, BwItem>();
+	/** Raw folders, as the CLI lists them (kept for folder writes) */
+	private folders: BwFolder[] = [];
 	private snapshot: VaultSnapshot | null = null;
+	/** Incremented by every clear: a result computed for a previous session is discarded */
+	private generation = 0;
+	/** Tail of the write and sync queue: operations run one after the other */
+	private queue: Promise<unknown> = Promise.resolve();
 	/** scrypt hash of the master password, kept in memory while unlocked to check reprompts offline */
 	private repromptVerifier: { salt: Buffer; hash: Buffer } | null = null;
 	private repromptValidUntil = 0;
@@ -169,7 +200,10 @@ export class VaultModule extends LogModule {
 	}
 
 	private clear() {
+		this.generation++;
 		this.items.clear();
+		this.trash.clear();
+		this.folders = [];
 		this.snapshot = null;
 		this.repromptVerifier = null;
 		this.repromptValidUntil = 0;
@@ -185,24 +219,38 @@ export class VaultModule extends LogModule {
 
 	@log("info")
 	public async sync(): Promise<VaultSnapshot> {
-		await this.bwServeModule.request<BwMessage>("POST", "/sync");
-		return await this.loadSnapshot();
+		return this.enqueue(async () => {
+			const generation = this.generation;
+			await this.bwServeModule.request<BwMessage>("POST", "/sync");
+			return await this.loadSnapshot(generation);
+		});
 	}
 
-	private async loadSnapshot(): Promise<VaultSnapshot> {
-		const [items, folders, organizations, collections, status] = await Promise.all([
+	/**
+	 * Reads the vault from `bw serve`. Nothing is published when the session changed while reading (lock)
+	 */
+	private async loadSnapshot(generation = this.generation): Promise<VaultSnapshot> {
+		// The CLI filters the archive state exactly: deleted items that were archived need their own request
+		const [items, deletedItems, deletedArchivedItems, folders, organizations, collections, status] = await Promise.all([
 			this.bwServeModule.request<BwList<BwItem>>("GET", "/list/object/items"),
+			this.bwServeModule.request<BwList<BwItem>>("GET", "/list/object/items?trash=true"),
+			this.bwServeModule.request<BwList<BwItem>>("GET", "/list/object/items?trash=true&archived=true"),
 			this.bwServeModule.request<BwList<BwFolder>>("GET", "/list/object/folders"),
 			this.bwServeModule.request<BwList<BwOrganization>>("GET", "/list/object/organizations"),
 			this.bwServeModule.request<BwList<BwCollection>>("GET", "/list/object/collections"),
 			this.bwServeModule.request<BwStatus>("GET", "/status"),
 		]);
+		this.ensureGeneration(generation);
 
+		const trashItems = [...deletedItems.data, ...deletedArchivedItems.data];
 		const active = items.data.filter((item) => !item.deletedDate);
 		this.items = new Map(active.map((item) => [item.id, item]));
+		this.trash = new Map(trashItems.map((item) => [item.id, item]));
+		this.folders = folders.data;
 
 		this.snapshot = {
 			items: active.map(sanitizeItem),
+			trash: trashItems.map(sanitizeItem),
 			// The CLI adds a virtual "No folder" entry without id
 			folders: folders.data.filter((f): f is BwFolder & { id: string } => Boolean(f.id)).map(({ id, name }) => ({ id, name })),
 			organizations: organizations.data.map(({ id, name }) => ({ id, name })),
@@ -313,6 +361,277 @@ export class VaultModule extends LogModule {
 		}
 	}
 
+	private ensureGeneration(generation: number) {
+		if (generation !== this.generation) throw new BwError("The vault is locked");
+	}
+
+	/**
+	 * Runs a task after the previous ones; a failed task does not break the queue
+	 */
+	private enqueue<T>(task: () => Promise<T>): Promise<T> {
+		const result = this.queue.then(task);
+		this.queue = result.catch(() => undefined);
+		return result;
+	}
+
+	/**
+	 * Runs a write in the queue and reloads the snapshot afterwards.
+	 *
+	 * Failures of the write become its outcome, except the ones that must reach the renderer as errors
+	 * (reprompt, locked vault). A failed reload does not hide the outcome: the snapshot is null instead.
+	 * The reload is repeated a few times until `settled` sees the change.
+	 */
+	private async write(task: () => Promise<WriteOutcome>, settled?: Settled): Promise<WriteResult> {
+		return this.enqueue(async () => {
+			const generation = this.generation;
+			let outcome: WriteOutcome;
+			try {
+				outcome = await task();
+			} catch (error) {
+				// Locked during the write: the CLI error says so in its own words
+				this.ensureGeneration(generation);
+				const message = errorMessage(error);
+				if (isFatalWriteError(message)) throw error;
+				outcome = { status: "error", message: translateError(message) };
+			}
+			this.ensureGeneration(generation);
+
+			const done = outcome.status === "success" ? (outcome.done ?? (outcome.id ? [outcome.id] : [])) : outcome.status === "partial" ? outcome.done : [];
+			try {
+				let snapshot = await this.loadSnapshot(generation);
+				for (let attempt = 1; settled && done.length > 0 && !settled(snapshot, done) && attempt < SETTLE_ATTEMPTS; attempt++) {
+					await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_DELAY_MS));
+					snapshot = await this.loadSnapshot(generation);
+				}
+				return { outcome, snapshot, refreshError: null };
+			} catch (error) {
+				return { outcome, snapshot: null, refreshError: translateError(errorMessage(error)) };
+			}
+		});
+	}
+
+	/**
+	 * Runs operations one after the other, stopping at the first failure: one operation gives success or error,
+	 * several give partial with what was done
+	 */
+	private async runSequence(steps: { id: string; run: () => Promise<unknown> }[]): Promise<WriteOutcome> {
+		const done: string[] = [];
+		for (const step of steps) {
+			try {
+				await step.run();
+				done.push(step.id);
+			} catch (error) {
+				const message = errorMessage(error);
+				if (isFatalWriteError(message)) throw error;
+				if (steps.length === 1) return { status: "error", message: translateError(message) };
+				return { status: "partial", done, failed: { id: step.id, message: translateError(message) } };
+			}
+		}
+		return { status: "success", id: steps.length === 1 ? steps[0].id : null, done };
+	}
+
+	/**
+	 * Fresh raw item from the server (the cached copy may be older than the server's)
+	 */
+	private async fetchItem(id: string): Promise<BwItem> {
+		return await this.bwServeModule.request<BwItem>("GET", `/object/item/${encodeURIComponent(id)}`);
+	}
+
+	// endregion
+
+	// region Writes
+
+	/**
+	 * Creates a personal item from the editor draft
+	 */
+	@log("info")
+	public async createItem(draft: ItemDraft): Promise<WriteResult> {
+		return this.write(async () => {
+			const error = validateDraft(null, draft);
+			if (error) return { status: "error", message: error };
+
+			const created = await this.bwServeModule.request<BwItem>("POST", "/object/item", applyDraft(null, draft));
+			return { status: "success", id: created.id };
+		}, hasItems);
+	}
+
+	/**
+	 * Edits an item with the draft; nothing is written when the item changed since `expectedRevision`
+	 */
+	@log("info")
+	public async updateItem(itemId: string, expectedRevision: string, draft: ItemDraft): Promise<WriteResult> {
+		let revision: string | null = null;
+		return this.write(
+			async () => {
+				this.ensureRepromptSatisfied(this.getItem(itemId));
+
+				const fresh = await this.fetchItem(itemId);
+				if (fresh.revisionDate !== expectedRevision) return { status: "conflict" };
+
+				const error = validateDraft(fresh, draft);
+				if (error) return { status: "error", message: error };
+
+				try {
+					revision = (await this.bwServeModule.request<BwItem>("PUT", `/object/item/${encodeURIComponent(itemId)}`, applyDraft(fresh, draft))).revisionDate;
+				} catch (writeError) {
+					if (!isConflictError(errorMessage(writeError))) throw writeError;
+					// The server has a newer copy: resync so the reload shows it
+					await this.bwServeModule.request<BwMessage>("POST", "/sync");
+					return { status: "conflict" };
+				}
+				return { status: "success", id: itemId };
+			},
+			(snapshot) => hasRevision(snapshot, itemId, revision)
+		);
+	}
+
+	/**
+	 * Moves an active item to the trash
+	 */
+	@log("info")
+	public async deleteItem(itemId: string): Promise<WriteResult> {
+		return this.write(
+			async () => {
+				this.ensureRepromptSatisfied(this.getItem(itemId));
+
+				await this.bwServeModule.request("DELETE", `/object/item/${encodeURIComponent(itemId)}`);
+				return { status: "success", id: itemId };
+			},
+			(snapshot, done) => done.every((id) => snapshot.trash.some((item) => item.id === id))
+		);
+	}
+
+	/**
+	 * Takes an item back from the trash
+	 */
+	@log("info")
+	public async restoreItem(itemId: string): Promise<WriteResult> {
+		return this.write(async () => {
+			if (!this.trash.has(itemId)) return { status: "error", message: "Item not found in the trash" };
+
+			await this.bwServeModule.request("POST", `/restore/item/${encodeURIComponent(itemId)}`);
+			return { status: "success", id: itemId };
+		}, hasItems);
+	}
+
+	/**
+	 * Permanently deletes items of the trash. Every id is checked (and every reprompt) before the first deletion.
+	 */
+	@log("info")
+	public async purgeItems(itemIds: string[]): Promise<WriteResult> {
+		return this.write(
+			async () => {
+				const ids = [...new Set(itemIds)];
+				if (ids.length === 0) return { status: "error", message: "No item selected" };
+				if (ids.some((id) => !this.trash.has(id))) return { status: "error", message: "Item not found in the trash" };
+				for (const id of ids) this.ensureRepromptSatisfied(this.trash.get(id)!);
+
+				return this.runSequence(
+					ids.map((id) => ({
+						id,
+						run: () => this.bwServeModule.request("DELETE", `/object/item/${encodeURIComponent(id)}?permanent=true`),
+					}))
+				);
+			},
+			(snapshot, done) => !snapshot.trash.some((item) => done.includes(item.id))
+		);
+	}
+
+	/**
+	 * Marks an active item as favorite, or not
+	 */
+	@log("info")
+	public async setFavorite(itemId: string, favorite: boolean): Promise<WriteResult> {
+		let revision: string | null = null;
+		return this.write(
+			async () => {
+				this.getItem(itemId);
+
+				const fresh = await this.fetchItem(itemId);
+				revision = (await this.bwServeModule.request<BwItem>("PUT", `/object/item/${encodeURIComponent(itemId)}`, { ...fresh, favorite })).revisionDate;
+				return { status: "success", id: itemId };
+			},
+			(snapshot) => hasRevision(snapshot, itemId, revision)
+		);
+	}
+
+	/**
+	 * Moves an active item to a folder, or to no folder (null)
+	 */
+	@log("info")
+	public async moveItem(itemId: string, folderId: string | null): Promise<WriteResult> {
+		let revision: string | null = null;
+		return this.write(
+			async () => {
+				this.getItem(itemId);
+				if (folderId !== null && !this.folders.some((folder) => folder.id === folderId)) return { status: "error", message: "Folder not found" };
+
+				const fresh = await this.fetchItem(itemId);
+				revision = (await this.bwServeModule.request<BwItem>("PUT", `/object/item/${encodeURIComponent(itemId)}`, { ...fresh, folderId })).revisionDate;
+				return { status: "success", id: itemId };
+			},
+			(snapshot) => hasRevision(snapshot, itemId, revision)
+		);
+	}
+
+	/**
+	 * Creates a folder from its path ("Work/Projects")
+	 */
+	@log("info")
+	public async createFolder(name: string): Promise<WriteResult> {
+		return this.write(async () => {
+			const segments = folderSegments(name);
+			if (segments.length === 0) return { status: "error", message: "The folder name is empty" };
+
+			const normalized = joinFolderSegments(segments);
+			const exists = this.folders.some((folder) => folder.id !== null && joinFolderSegments(folderSegments(folder.name)) === normalized);
+			if (exists) return { status: "error", message: "A folder with this name already exists" };
+
+			const created = await this.bwServeModule.request<BwFolder>("POST", "/object/folder", { name: normalized });
+			return { status: "success", id: created.id };
+		}, hasFolders);
+	}
+
+	/**
+	 * Renames a folder path and every folder under it
+	 */
+	@log("info")
+	public async renameFolder(path: string, newPath: string): Promise<WriteResult> {
+		let names = new Map<string, string>();
+		return this.write(
+			async () => {
+				const plan = planFolderRename(this.folders, path, newPath);
+				if ("error" in plan) return { status: "error", message: plan.error };
+				names = new Map(plan.renames.map((rename) => [rename.id, rename.name]));
+
+				return this.runSequence(
+					plan.renames.map((rename) => ({
+						id: rename.id,
+						run: () => this.bwServeModule.request("PUT", `/object/folder/${encodeURIComponent(rename.id)}`, { name: rename.name }),
+					}))
+				);
+			},
+			(snapshot, done) => done.every((id) => snapshot.folders.some((folder) => folder.id === id && folder.name === names.get(id)))
+		);
+	}
+
+	/**
+	 * Deletes a folder, refused while it holds an active item or sub folders
+	 */
+	@log("info")
+	public async deleteFolder(folderId: string): Promise<WriteResult> {
+		return this.write(
+			async () => {
+				const blocked = checkFolderDelete(this.folders, [...this.items.values()], folderId);
+				if (blocked) return { status: "error", message: blocked };
+
+				await this.bwServeModule.request("DELETE", `/object/folder/${encodeURIComponent(folderId)}`);
+				return { status: "success", id: folderId };
+			},
+			(snapshot, done) => !snapshot.folders.some((folder) => done.includes(folder.id))
+		);
+	}
+
 	// endregion
 }
 
@@ -326,8 +645,27 @@ function normalizeServerUrl(value: string): string | null {
 	}
 }
 
+function hasItems(snapshot: VaultSnapshot, ids: string[]) {
+	return ids.every((id) => snapshot.items.some((item) => item.id === id));
+}
+
+function hasFolders(snapshot: VaultSnapshot, ids: string[]) {
+	return ids.every((id) => snapshot.folders.some((folder) => folder.id === id));
+}
+
+function hasRevision(snapshot: VaultSnapshot, itemId: string, revision: string | null) {
+	return revision === null || snapshot.items.some((item) => item.id === itemId && item.revisionDate === revision);
+}
+
 function errorMessage(error: unknown) {
 	return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Errors that reach the renderer as errors instead of the outcome of a write: reprompt and locked vault
+ */
+function isFatalWriteError(message: string) {
+	return message === "REPROMPT_REQUIRED" || message === "The vault is locked";
 }
 
 function isTwoFactorError(message: string) {

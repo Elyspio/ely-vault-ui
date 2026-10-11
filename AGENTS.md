@@ -22,6 +22,7 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 | Check (fmt + lint + types, auto-fix) | `pnpm check` (`vp check --fix`)                                                                      |
 | Typecheck                            | `pnpm typecheck` (`tsc -b --noEmit`)                                                                 |
 | Test                                 | `pnpm test` (`vp test`, `src/**/*.test.ts` and `scripts/**/*.test.ts`, node environment)             |
+| Live write tests (opt-in)            | `pnpm test:live` (`scripts/dev/live/*.live.ts` against the local test server, see `docs/development/local-test-server.md`) |
 | Package both platforms (Windows host) | `pnpm package` (parallel, like a release, no publishing)                                                  |
 | Package Windows (NSIS)               | `pnpm package:win`                                                                                   |
 | Package Linux (AppImage, .deb)       | `pnpm package:linux` (native on Linux, in the root `deploy/release/linux.Dockerfile` container elsewhere) |
