@@ -1,4 +1,4 @@
-import { CancellationToken, type CustomPublishOptions, type GithubOptions, newError, parseXml } from "builder-util-runtime";
+import { CancellationToken, type CustomPublishOptions, type GithubOptions, HttpError, newError, parseXml } from "builder-util-runtime";
 import type { AppUpdater } from "electron-updater";
 import { computeReleaseNotes, GitHubProvider } from "electron-updater/out/providers/GitHubProvider";
 import { parseUpdateInfo, type ProviderRuntimeOptions } from "electron-updater/out/providers/Provider";
@@ -15,7 +15,8 @@ const tagRegExp = /\/tag\/(v?[^/]+)$/;
  *
  * The GitHub provider only follows the releases of one prerelease channel: here a channel also follows the more stable
  * releases (dev → beta → stable) and the highest version wins ({@link pickReleaseTag}). Every release ships
- * latest*.yml (scripts/release/release.ts), downloads and SHA-512 checks are unchanged.
+ * latest*.yml (scripts/release/release.ts), downloads and SHA-512 checks are unchanged. The Atom feed can list tags
+ * whose release is still a draft: only versions with publicly downloadable update metadata are offered.
  */
 export function releaseProvider(owner: string, repo: string, getChannel: () => UpdateChannel): CustomPublishOptions {
 	class ReleaseProvider extends GitHubProvider {
@@ -42,19 +43,32 @@ export function releaseProvider(owner: string, repo: string, getChannel: () => U
 				return tag ? [{ tag, entry }] : [];
 			});
 
-			const tag = pickReleaseTag(
-				releases.map((release) => release.tag),
-				getChannel()
-			);
-			const release = releases.find((candidate) => candidate.tag === tag);
-			if (!release) throw newError("No published versions on GitHub", "ERR_UPDATER_NO_PUBLISHED_VERSIONS");
-
 			const channelFile = `${this.getDefaultChannelName()}.yml`;
-			const channelFileUrl = newUrlFromBase(`${this.releasesPath}/download/${release.tag}/${channelFile}`, this.baseUrl);
-			const info = parseUpdateInfo(await this.httpRequest(channelFileUrl, null, cancellationToken), channelFile, channelFileUrl);
-			info.releaseName ??= release.entry.elementValueOrEmpty("title");
-			info.releaseNotes ??= computeReleaseNotes(this.appUpdater.currentVersion, this.appUpdater.fullChangelog, feed, release.entry);
-			return { tag: release.tag, ...info };
+			const channel = getChannel();
+			let candidates = releases;
+			while (candidates.length > 0) {
+				const tag = pickReleaseTag(
+					candidates.map((release) => release.tag),
+					channel
+				);
+				const release = candidates.find((candidate) => candidate.tag === tag);
+				if (!release) break;
+				const channelFileUrl = newUrlFromBase(`${this.releasesPath}/download/${release.tag}/${channelFile}`, this.baseUrl);
+				let rawData: string | null;
+				try {
+					rawData = await this.httpRequest(channelFileUrl, null, cancellationToken);
+				} catch (error) {
+					if (!(error instanceof HttpError) || error.statusCode !== 404) throw error;
+					// Drafts and releases without metadata for this platform cannot be downloaded yet.
+					candidates = candidates.filter((candidate) => candidate.tag !== tag);
+					continue;
+				}
+				const info = parseUpdateInfo(rawData, channelFile, channelFileUrl);
+				info.releaseName ??= release.entry.elementValueOrEmpty("title");
+				info.releaseNotes ??= computeReleaseNotes(this.appUpdater.currentVersion, this.appUpdater.fullChangelog, feed, release.entry);
+				return { tag: release.tag, ...info };
+			}
+			throw newError("No published versions on GitHub", "ERR_UPDATER_NO_PUBLISHED_VERSIONS");
 		}
 	}
 
