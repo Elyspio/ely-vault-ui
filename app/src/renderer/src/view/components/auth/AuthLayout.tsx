@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Box, Paper, Typography } from "@mui/material";
+import { alpha, Box, Paper, Typography } from "@mui/material";
 import { Logo } from "@components/shared/Logo";
 
 type Props = {
@@ -19,12 +19,12 @@ export function AuthLayout({ title, subtitle, children, footer, avatar }: Readon
 				display: "grid",
 				placeItems: "center",
 				p: 3,
-				background: "radial-gradient(1200px 600px at 50% -10%, rgba(79,210,255,0.08), transparent 60%), var(--surface-0)",
+				background: (theme) => `radial-gradient(1200px 600px at 50% -10%, ${alpha(theme.palette.primary.main, 0.08)}, transparent 60%), var(--surface-0)`,
 			}}
 		>
 			<Box sx={{ width: "100%", maxWidth: 400, animation: "fadeIn 200ms ease" }}>
 				<Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 3, textAlign: "center" }}>
-					{avatar ?? <Logo size={72} sx={{ mb: 2, filter: "drop-shadow(0 0 28px rgba(79,210,255,0.22))" }} />}
+					{avatar ?? <Logo size={72} sx={{ mb: 2, filter: (theme) => `drop-shadow(0 0 28px ${alpha(theme.palette.primary.main, 0.22)})` }} />}
 					<Typography variant="h5">{title}</Typography>
 					{subtitle && (
 						<Typography variant="body2" sx={{ color: "text.secondary", mt: 0.75 }}>

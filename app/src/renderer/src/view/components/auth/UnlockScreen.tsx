@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Avatar, Button, CircularProgress, Link, Stack } from "@mui/material";
+import { alpha, Alert, Avatar, Button, CircularProgress, Link, Stack } from "@mui/material";
 import LockOpenRounded from "@mui/icons-material/LockOpenRounded";
 import { useAppDispatch, useAppSelector } from "@store";
 import { logout, unlock } from "@modules/session/session.async.actions";
@@ -34,7 +34,7 @@ export function UnlockScreen() {
 						color: "primary.main",
 						fontWeight: 600,
 						fontSize: "1.4rem",
-						border: "1px solid rgba(79,210,255,0.25)",
+						border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.25)}`,
 					}}
 				>
 					{account?.email?.[0]?.toUpperCase() ?? "?"}

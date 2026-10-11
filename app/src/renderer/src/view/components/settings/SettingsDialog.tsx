@@ -1,5 +1,5 @@
 import { type ReactNode, useRef, useState } from "react";
-import { Box, Button, Dialog, IconButton, MenuItem, Select, Switch, TextField, Typography } from "@mui/material";
+import { alpha, Box, Button, Dialog, IconButton, MenuItem, Select, Switch, TextField, Typography } from "@mui/material";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import ShieldRounded from "@mui/icons-material/ShieldRounded";
@@ -12,7 +12,7 @@ import { useAppDispatch, useAppSelector } from "@store";
 import { setSettingsOpen } from "@modules/ui/ui.reducer";
 import { saveConfig } from "@modules/config/config.async.actions";
 import { logout } from "@modules/session/session.async.actions";
-import type { AppConfig, AutoTypeAfter, UpdateChannel } from "@shared/config/app.config";
+import type { AppConfig, AutoTypeAfter, ThemeMode, UpdateChannel } from "@shared/config/app.config";
 import { validateAutoTypeSequence } from "@shared/autotype/autotype.sequence";
 import { useAutoTypeAvailability } from "@hooks/useAutoType";
 import { formatDateTime } from "@view/utils/date.utils";
@@ -44,6 +44,12 @@ const channelOptions: { value: UpdateChannel; label: string }[] = [
 	{ value: "stable", label: "Stable" },
 	{ value: "beta", label: "Beta" },
 	{ value: "dev", label: "Dev" },
+];
+
+const themeOptions: { value: ThemeMode; label: string }[] = [
+	{ value: "dark", label: "Dark" },
+	{ value: "light", label: "Light" },
+	{ value: "system", label: "System" },
 ];
 
 const afterTypingOptions: { value: AutoTypeAfter; label: string }[] = [
@@ -178,6 +184,20 @@ export function SettingsDialog() {
 						)}
 						{active === "display" && (
 							<Group>
+								<Setting label="Theme" description="Dark, light, or the same as the operating system">
+									<Select
+										size="small"
+										value={config.display.theme}
+										onChange={(event) => update((c) => ({ ...c, display: { ...c.display, theme: event.target.value } }))}
+										sx={{ minWidth: 150 }}
+									>
+										{themeOptions.map((o) => (
+											<MenuItem key={o.value} value={o.value}>
+												{o.label}
+											</MenuItem>
+										))}
+									</Select>
+								</Setting>
 								<Setting label="Website icons" description="Fetched through your server's icon service">
 									<Switch
 										checked={config.display.showFavicons}
@@ -340,7 +360,7 @@ function SidebarItem({ label, icon, active, badge, onClick }: Readonly<{ label: 
 				textAlign: "left",
 				cursor: "pointer",
 				transition: "background-color 120ms ease, color 120ms ease",
-				"&:hover": { bgcolor: active ? "var(--surface-2)" : "rgba(255, 255, 255, 0.03)", color: "text.primary" },
+				"&:hover": { bgcolor: active ? "var(--surface-2)" : "var(--hover)", color: "text.primary" },
 				"& .MuiSvgIcon-root": { fontSize: 16, color: active ? "var(--accent)" : "inherit" },
 			}}
 		>
@@ -348,7 +368,12 @@ function SidebarItem({ label, icon, active, badge, onClick }: Readonly<{ label: 
 			<Box component="span" sx={{ flex: 1 }}>
 				{label}
 			</Box>
-			{badge && <Box component="span" sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: "var(--accent)", boxShadow: "0 0 6px rgba(79, 210, 255, 0.6)" }} />}
+			{badge && (
+				<Box
+					component="span"
+					sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: "var(--accent)", boxShadow: (theme) => `0 0 6px ${alpha(theme.palette.primary.main, 0.6)}` }}
+				/>
+			)}
 		</Box>
 	);
 }
