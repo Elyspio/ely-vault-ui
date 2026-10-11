@@ -8,6 +8,7 @@ import { VaultModule } from "../vault/vault.module";
 import { WindowModule } from "../window/window.module";
 import { type HelloVerification, isHelloAvailable, requestHelloVerification } from "./windows.hello";
 import type { AccountInfo, HelloUnlockResult, HelloUnlockStatus, UnlockResult } from "@shared/types/vault.types";
+import { appMessage } from "@shared/i18n/message";
 
 /**
  * Windows Hello choice of one account: the master password encrypted with the Windows user's key (DPAPI, Electron
@@ -88,12 +89,12 @@ export class HelloUnlockModule extends LogModule {
 	 * Without password, the one of the unlock offering Windows Hello is used.
 	 */
 	public async enable(password: string | null): Promise<HelloUnlockResult> {
-		if (!this.vaultModule.isUnlocked) return { status: "error", message: "Unlock the vault first" };
+		if (!this.vaultModule.isUnlocked) return { status: "error", message: appMessage("unlockFirst") };
 		if (password === null) {
-			if (!this.hasOffer()) return { status: "error", message: "Enable Windows Hello from the settings" };
+			if (!this.hasOffer()) return { status: "error", message: appMessage("enableHelloFromSettings") };
 			password = safeStorage.decryptString(this.offer!.password);
 		}
-		if (!this.vaultModule.checkMasterPassword(password)) return { status: "error", message: "Incorrect master password" };
+		if (!this.vaultModule.checkMasterPassword(password)) return { status: "error", message: appMessage("incorrectMasterPassword") };
 		if (!(await this.isAvailable())) return { status: "error", message: verificationErrors.unavailable };
 
 		const verification = await this.verify("Enable Windows Hello to unlock ElyVault");
@@ -126,7 +127,7 @@ export class HelloUnlockModule extends LogModule {
 
 	public async unlock(): Promise<HelloUnlockResult> {
 		const stored = this.read(await this.vaultModule.getState());
-		if (!stored?.password) return { status: "error", message: "Windows Hello unlock is not enabled for this account" };
+		if (!stored?.password) return { status: "error", message: appMessage("helloNotEnabled") };
 
 		const verification = await this.verify("Unlock ElyVault");
 		if (verification.status !== "success") return verification;
@@ -136,14 +137,14 @@ export class HelloUnlockModule extends LogModule {
 			password = safeStorage.decryptString(Buffer.from(stored.password, "base64"));
 		} catch {
 			await this.forget();
-			return { status: "error", message: "Windows Hello unlock is no longer valid, unlock with the master password" };
+			return { status: "error", message: appMessage("helloNoLongerValid") };
 		}
 
 		const result: UnlockResult = await this.vaultModule.unlock(password);
 		if (result.status === "error" && /master password/i.test(result.message)) {
 			this.logger.warn("The stored master password no longer unlocks the vault: Windows Hello unlock disabled");
 			await this.forget();
-			return { status: "error", message: "The master password changed, unlock with it to enable Windows Hello again" };
+			return { status: "error", message: appMessage("helloPasswordChanged") };
 		}
 		return result;
 	}

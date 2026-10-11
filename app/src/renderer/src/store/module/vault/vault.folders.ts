@@ -1,5 +1,6 @@
 import { folderSegments, joinFolderSegments } from "@shared/vault/folder.path";
 import type { VaultFolder } from "@shared/types/vault.types";
+import { i18n } from "@/config/i18n";
 
 /**
  * Folder of the sidebar tree. Bitwarden nests folders through their name ("Work/Projects"):
@@ -86,9 +87,9 @@ export function countFolderTree(node: FolderNode, counts: Record<string, number>
  * Why a folder cannot be deleted, null when it can. `activeItems`: active items directly in the folder (the trash excluded)
  */
 export function folderDeleteBlocker(node: FolderNode, activeItems: number): string | null {
-	if (!node.id) return "This folder only groups its sub folders";
-	if (node.children.length > 0) return "Delete its sub folders first";
-	if (activeItems > 0) return "Move or delete its items first";
+	if (!node.id) return i18n.t("actions:folders.groupsOnly");
+	if (node.children.length > 0) return i18n.t("actions:folders.deleteSubFoldersFirst");
+	if (activeItems > 0) return i18n.t("actions:folders.moveItemsFirst");
 	return null;
 }
 
@@ -96,7 +97,7 @@ export function folderDeleteBlocker(node: FolderNode, activeItems: number): stri
  * Why a folder cannot be renamed, null when it can
  */
 export function folderRenameBlocker(node: FolderNode): string | null {
-	return node.duplicated ? "Another folder has the same name" : null;
+	return node.duplicated ? i18n.t("actions:folders.sameName") : null;
 }
 
 /**
@@ -115,7 +116,7 @@ export function moveChoices(folders: VaultFolder[], query: string): FolderChoice
 
 	// "No folder" is filtered like the others: typing a folder name must not leave it highlighted first
 	const needle = foldText(query);
-	return [{ id: null, path: "No folder" }, ...all].filter((choice) => foldText(choice.path).includes(needle));
+	return [{ id: null, path: i18n.t("actions:folders.noFolder") }, ...all].filter((choice) => foldText(choice.path).includes(needle));
 }
 
 /**

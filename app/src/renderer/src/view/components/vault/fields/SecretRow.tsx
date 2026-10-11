@@ -5,6 +5,7 @@ import VisibilityOffRounded from "@mui/icons-material/VisibilityOffRounded";
 import type { SecretRef } from "@shared/types/vault.types";
 import { useVaultActions } from "@hooks/useVaultActions";
 import { FieldRow } from "./FieldRow";
+import { useTranslation } from "react-i18next";
 
 type Props = {
 	label: string;
@@ -21,6 +22,7 @@ type Props = {
  */
 export function SecretRow({ label, itemId, secret, maskedHint, multiline, colored = true }: Readonly<Props>) {
 	const actions = useVaultActions();
+	const { t } = useTranslation();
 	const [value, setValue] = useState<string | null>(null);
 
 	const toggle = async () => {
@@ -38,7 +40,7 @@ export function SecretRow({ label, itemId, secret, maskedHint, multiline, colore
 			multiline={multiline && value !== null}
 			onCopy={() => void actions.copy(itemId, secret, label)}
 			actions={
-				<Tooltip title={value === null ? "Show" : "Hide"}>
+				<Tooltip title={value === null ? t("show") : t("hide")}>
 					<IconButton size="small" onClick={() => void toggle()}>
 						{value === null ? <VisibilityRounded sx={{ fontSize: 16 }} /> : <VisibilityOffRounded sx={{ fontSize: 16 }} />}
 					</IconButton>

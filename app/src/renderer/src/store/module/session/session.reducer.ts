@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { SessionState } from "@shared/types/vault.types";
 import type { CertificateInfo } from "@shared/types/certificate.types";
 import { helloUnlock, importAuthority, initApp, lock, login, logout, refreshSession, sessionStateChanged, trustCertificate, unlock } from "./session.async.actions";
+import { i18n } from "@/config/i18n";
 
 export type SessionSliceState = {
 	current: SessionState | null;
@@ -51,7 +52,7 @@ const slice = createSlice({
 			state.current = action.payload;
 		});
 		builder.addCase(initApp.rejected, (state, action) => {
-			state.fatalError = action.error.message ?? "Unknown error";
+			state.fatalError = action.error.message ?? i18n.t("common:unknownError");
 		});
 
 		for (const thunk of [login, unlock, helloUnlock, trustCertificate, importAuthority]) {
@@ -61,7 +62,7 @@ const slice = createSlice({
 			});
 			builder.addCase(thunk.rejected, (state, action) => {
 				state.pending = false;
-				state.error = (action.payload as string | undefined) ?? action.error.message ?? "Unknown error";
+				state.error = (action.payload as string | undefined) ?? action.error.message ?? i18n.t("common:unknownError");
 				// The certificate is checked before the CLI login: a failed login is past the review, show its error on the login form
 				if (thunk === login) state.untrustedCertificate = null;
 			});

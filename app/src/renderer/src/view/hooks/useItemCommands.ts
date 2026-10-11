@@ -7,6 +7,7 @@ import { neighbourId } from "@modules/vault/vault.search";
 import { CipherType, type VaultItem } from "@shared/types/vault.types";
 import { RepromptContext } from "./useVaultActions";
 import { useVaultWrites } from "./useVaultWrites";
+import { i18n } from "@/config/i18n";
 
 /** Types the editor knows (Login, SecureNote, Card, Identity, SshKey): other types are never edited */
 export function isEditableItem(item: VaultItem): boolean {
@@ -29,7 +30,7 @@ export function useItemCommands() {
 			/** Opens the type picker; refused while the editor has unsaved changes (they would be lost) */
 			newItem() {
 				if (store.getState().vault.editorDirty) {
-					dispatch(showToast("Save or cancel the current edit first", "info"));
+					dispatch(showToast(i18n.t("actions:items.saveOrCancelFirst"), "info"));
 					return;
 				}
 				dispatch(setNewItemOpen(true));

@@ -9,8 +9,10 @@ import { type BrowserWindow, dialog } from "electron";
 import { inject, injectable } from "inversify";
 import { LogModule } from "../log.module";
 import { MainContextModule } from "../context/main.context.module";
+import { I18nModule } from "../i18n/i18n.module";
 import { log } from "@main/utils/logs.utils";
 import type { CertificateCheck, CertificateInfo, TrustedCertificate } from "@shared/types/certificate.types";
+import { appMessage } from "@shared/i18n/message";
 
 type StoredTrust = TrustedCertificate & {
 	/** Anchor and intermediates, PEM: the server may not send its intermediates */
@@ -41,7 +43,10 @@ export class CertificateModule extends LogModule {
 	/** NODE_EXTRA_CA_CERTS of the environment, kept in the bundle */
 	private readonly inheritedExtraCa = process.env.NODE_EXTRA_CA_CERTS;
 
-	public constructor(@inject(MainContextModule) private readonly mainContextModule: MainContextModule) {
+	public constructor(
+		@inject(MainContextModule) private readonly mainContextModule: MainContextModule,
+		@inject(I18nModule) private readonly i18nModule: I18nModule
+	) {
 		super("CertificateModule");
 	}
 
@@ -144,7 +149,7 @@ export class CertificateModule extends LogModule {
 	@log("info")
 	public async trust(fingerprint256: string) {
 		const pending = this.pending.get(fingerprint256);
-		if (!pending) throw new Error("Unknown certificate: log in again");
+		if (!pending) throw new Error(appMessage("certificateUnknown"));
 
 		const [leaf, ...authorities] = pending.chain;
 		const anchor = pending.chain.at(-1)!;
@@ -163,7 +168,7 @@ export class CertificateModule extends LogModule {
 			await this.handshake(hostname, Number(port), true);
 		} catch (error) {
 			this.saveStore(previous);
-			throw new Error(`The server is still not trusted: ${(error as Error).message}`);
+			throw new Error(appMessage("certificateStillNotTrusted", { detail: (error as Error).message }));
 		}
 	}
 
@@ -173,17 +178,17 @@ export class CertificateModule extends LogModule {
 	@log("info")
 	public async importAuthority(window: BrowserWindow | null): Promise<TrustedCertificate[]> {
 		const options: Electron.OpenDialogOptions = {
-			title: "Import an authority certificate",
+			title: await this.i18nModule.t("importAuthorityTitle"),
 			properties: ["openFile"],
-			filters: [{ name: "Certificats", extensions: ["pem", "crt", "cer", "der"] }],
+			filters: [{ name: await this.i18nModule.t("certificatesFilter"), extensions: ["pem", "crt", "cer", "der"] }],
 		};
 		const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
 		if (result.canceled || result.filePaths.length === 0) return [];
 
 		const certificates = parseCertificates(fs.readFileSync(result.filePaths[0]));
-		if (certificates.length === 0) throw new Error("No certificate in this file");
+		if (certificates.length === 0) throw new Error(appMessage("certificateNoneInFile"));
 		const notAuthority = certificates.find((c) => !c.ca);
-		if (notAuthority) throw new Error(`"${commonName(notAuthority.subject)}" is not an authority certificate`);
+		if (notAuthority) throw new Error(appMessage("certificateNotAuthority", { name: commonName(notAuthority.subject) }));
 
 		const added: StoredTrust[] = certificates.map((c) => ({
 			host: null,
@@ -280,11 +285,11 @@ export class CertificateModule extends LogModule {
 		const complete = isSelfSigned(anchor);
 
 		let reason: string;
-		if (!hostOk) reason = `The certificate is not issued for ${hostname}`;
-		else if (!valid) reason = "A certificate of the chain is expired or not yet valid";
-		else if (!complete) reason = "Root authority not found: import its certificate";
-		else if (chain.length === 1) reason = "Self-signed certificate";
-		else reason = `Authority "${commonName(anchor.subject)}" unknown to this computer`;
+		if (!hostOk) reason = appMessage("certificateWrongHost", { host: hostname });
+		else if (!valid) reason = appMessage("certificateChainInvalid");
+		else if (!complete) reason = appMessage("certificateRootNotFound");
+		else if (chain.length === 1) reason = appMessage("certificateSelfSigned");
+		else reason = appMessage("certificateAuthorityUnknown", { name: commonName(anchor.subject) });
 
 		const trustable = hostOk && valid && complete;
 		if (trustable) this.pending.set(anchor.fingerprint256, { host: hostPort, chain });

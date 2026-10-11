@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import sshpk from "sshpk";
+import { appMessage } from "@shared/i18n/message";
 
 /**
  * SSH key of an SSH key item: the private key is unencrypted OpenSSH, as the official clients store it
@@ -19,11 +20,11 @@ export type SshKeyError = {
 	message: string;
 };
 
-const PASSPHRASE_REQUIRED = "This key is protected by a passphrase";
-const WRONG_PASSPHRASE = "Wrong passphrase";
-const DSA_UNSUPPORTED = "DSA keys are not supported: use an Ed25519, RSA or ECDSA key";
-const PUBLIC_KEY = "This is a public key: choose or paste the private key";
-const INVALID_FORMAT = "Not a private key: OpenSSH, PEM or PKCS#8 format expected";
+const PASSPHRASE_REQUIRED = appMessage("sshPassphraseRequired");
+const WRONG_PASSPHRASE = appMessage("sshWrongPassphrase");
+const DSA_UNSUPPORTED = appMessage("sshDsaUnsupported");
+const PUBLIC_KEY = appMessage("sshPublicKey");
+const INVALID_FORMAT = appMessage("sshInvalidFormat");
 
 /** PEM blocks encrypted with a passphrase (PKCS#8, or legacy PEM with a DEK-Info header) */
 const ENCRYPTED_PEM = /-----BEGIN ENCRYPTED PRIVATE KEY-----|Proc-Type:\s*4,ENCRYPTED/;
@@ -68,7 +69,7 @@ export function convertSshKey(text: string, passphrase: string | null): SshKeyMa
 	}
 
 	if (key.type === "dsa") return { error: "unsupported", message: DSA_UNSUPPORTED };
-	if (!SUPPORTED_TYPES.has(key.type)) return { error: "unsupported", message: `Unsupported key type: ${key.type}` };
+	if (!SUPPORTED_TYPES.has(key.type)) return { error: "unsupported", message: appMessage("sshUnsupportedType", { type: key.type }) };
 
 	return toMaterial(key);
 }

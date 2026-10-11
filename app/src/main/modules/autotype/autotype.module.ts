@@ -9,6 +9,8 @@ import { type AutoTypeDriver, sleep } from "./autotype.driver";
 import { log } from "@main/utils/logs.utils";
 import { type AutoTypeField, CONTROL_CHARACTERS } from "@shared/autotype/autotype.sequence";
 import { type AutoTypeAvailability, CipherType } from "@shared/types/vault.types";
+import { appMessage } from "@shared/i18n/message";
+import { mainConfig } from "@shared/config/main.config";
 
 /** How long the focus may take to leave the minimized window */
 const TARGET_TIMEOUT_MS = 1000;
@@ -43,7 +45,7 @@ export class AutoTypeModule extends LogModule {
 	@log("info")
 	public async perform(itemId: string) {
 		// Taken before any await: two quick Ctrl+V would interleave their keystrokes
-		if (this.running) throw new Error("Auto-type already in progress");
+		if (this.running) throw new Error(appMessage("autoTypeInProgress"));
 		this.running = true;
 		try {
 			await this.run(itemId);
@@ -60,13 +62,13 @@ export class AutoTypeModule extends LogModule {
 		// Everything that can fail or ask for the master password happens before the window is minimized
 		const item = this.vaultModule.getProtectedItem(itemId);
 		const login = item.type === CipherType.Login ? item.login : undefined;
-		if (!login?.username && !login?.password) throw new Error("Auto-type needs a login with a username or a password");
+		if (!login?.username && !login?.password) throw new Error(appMessage("autoTypeNeedsLogin"));
 
 		const config = (await this.configModule.getConfig()).autoType;
 		const tokens = getItemSequence(item, config);
 		const values: Record<Exclude<AutoTypeField, "totp">, string> = { username: login.username ?? "", password: login.password ?? "" };
 		if (tokens.some((token) => token.kind === "field" && token.field !== "totp" && CONTROL_CHARACTERS.test(values[token.field]))) {
-			throw new Error("Cannot type: the username or the password contains a tab or a line break");
+			throw new Error(appMessage("autoTypeUnsafeCharacters"));
 		}
 
 		const window = this.windowModule.window;
@@ -77,12 +79,12 @@ export class AutoTypeModule extends LogModule {
 			window.minimize();
 
 			const target = await this.waitForTarget(driver, ownId);
-			if (!target) throw new Error("No target window: auto-type types into the window opened before Vault");
-			if (!(await driver.waitForKeysReleased(KEYS_TIMEOUT_MS))) throw new Error("Auto-type cancelled: release Ctrl, Shift, Alt and V");
+			if (!target) throw new Error(appMessage("autoTypeNoTarget", { app: mainConfig.names.public }));
+			if (!(await driver.waitForKeysReleased(KEYS_TIMEOUT_MS))) throw new Error(appMessage("autoTypeReleaseKeys"));
 
 			const check = async () => {
-				if (!this.vaultModule.isUnlocked) throw new Error("Auto-type stopped: the vault was locked");
-				if ((await driver.getForegroundWindow()) !== target) throw new Error("Auto-type stopped: the active window changed");
+				if (!this.vaultModule.isUnlocked) throw new Error(appMessage("autoTypeLocked"));
+				if ((await driver.getForegroundWindow()) !== target) throw new Error(appMessage("autoTypeWindowChanged"));
 			};
 
 			for (const token of tokens) {
@@ -141,10 +143,10 @@ export class AutoTypeModule extends LogModule {
 				return reason ? { reason } : { driver: new LinuxAutoTypeDriver() };
 			}
 
-			return { reason: "Auto-type is not available on this system" };
+			return { reason: appMessage("autoTypeUnavailable") };
 		} catch (error) {
 			this.logger.error("Auto-type driver unavailable", error instanceof Error ? error.message : error);
-			return { reason: "Auto-type unavailable: system module not found" };
+			return { reason: appMessage("autoTypeModuleNotFound") };
 		}
 	}
 }

@@ -3,6 +3,7 @@ import { store, useAppDispatch } from "@store";
 import { showToast } from "@modules/ui/ui.reducer";
 import { setFilter } from "@modules/vault/vault.reducer";
 import { normalizeFolderPath } from "@modules/vault/vault.folders";
+import { i18n } from "@/config/i18n";
 import { useVaultWrites } from "./useVaultWrites";
 
 /**
@@ -17,7 +18,7 @@ export function useFolderCommands() {
 		() => ({
 			async create(name: string) {
 				const outcome = await writes.createFolder(name);
-				if (outcome?.status === "success") dispatch(showToast(`Folder "${normalizeFolderPath(name)}" created`));
+				if (outcome?.status === "success") dispatch(showToast(i18n.t("actions:folders.created", { name: normalizeFolderPath(name) })));
 				return outcome;
 			},
 
@@ -27,7 +28,7 @@ export function useFolderCommands() {
 			async rename(fullName: string, newName: string) {
 				const newPath = normalizeFolderPath(newName);
 				const outcome = await writes.renameFolder(fullName, newPath);
-				if (outcome?.status === "success") dispatch(showToast(`Folder renamed to "${newPath}"`));
+				if (outcome?.status === "success") dispatch(showToast(i18n.t("actions:folders.renamed", { name: newPath })));
 				return outcome;
 			},
 
@@ -36,7 +37,7 @@ export function useFolderCommands() {
 				const outcome = await writes.deleteFolder(id);
 				if (outcome?.status !== "success") return outcome;
 
-				dispatch(showToast(`Folder "${fullName}" deleted`));
+				dispatch(showToast(i18n.t("actions:folders.deleted", { name: fullName })));
 				const { filter } = store.getState().vault;
 				if (filter.kind === "folder" && filter.id === id) dispatch(setFilter({ kind: "all" }));
 				return outcome;

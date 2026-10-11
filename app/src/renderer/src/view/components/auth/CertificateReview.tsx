@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, Box, Button, Checkbox, CircularProgress, FormControlLabel, Stack, Typography } from "@mui/material";
 import GppMaybeRounded from "@mui/icons-material/GppMaybeRounded";
 import FileUploadRounded from "@mui/icons-material/FileUploadRounded";
@@ -16,6 +17,7 @@ type Props = { certificate: CertificateInfo; request: LoginRequest };
  */
 export function CertificateReview({ certificate, request }: Readonly<Props>) {
 	const dispatch = useAppDispatch();
+	const { t } = useTranslation(["auth", "common"]);
 	const { pending, error } = useAppSelector((state) => state.session);
 	const [checked, setChecked] = useState(false);
 
@@ -26,14 +28,14 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 			</Alert>
 
 			<Box sx={{ borderRadius: 2, border: "1px solid var(--border-subtle)", bgcolor: "var(--surface-0)", px: 2, py: 1.5, display: "grid", gap: 1 }}>
-				<Detail label="Server" value={certificate.host} />
-				<Detail label="Chain" value={certificate.chain.join("  →  ")} />
-				<Detail label="Server certificate valid until" value={formatDateTime(certificate.validTo)} />
+				<Detail label={t("certificate.server")} value={certificate.host} />
+				<Detail label={t("certificate.chain")} value={certificate.chain.join("  →  ")} />
+				<Detail label={t("certificate.validUntil")} value={formatDateTime(certificate.validTo)} />
 				{certificate.trustable && (
 					<>
-						<Detail label={certificate.chain.length > 1 ? "Root authority to approve" : "Certificate to approve"} value={certificate.anchor.subject} />
+						<Detail label={certificate.chain.length > 1 ? t("certificate.rootToApprove") : t("certificate.certificateToApprove")} value={certificate.anchor.subject} />
 						<Box>
-							<Typography sx={{ fontSize: "0.7rem", color: "var(--text-faint)" }}>SHA-256 fingerprint</Typography>
+							<Typography sx={{ fontSize: "0.7rem", color: "var(--text-faint)" }}>{t("certificate.fingerprint")}</Typography>
 							<Typography className="mono" sx={{ fontSize: "0.78rem", lineHeight: 1.6, overflowWrap: "anywhere", userSelect: "text" }}>
 								{certificate.anchor.fingerprint256}
 							</Typography>
@@ -45,16 +47,16 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 			{certificate.trustable ? (
 				<>
 					<Typography variant="body2" sx={{ color: "text.secondary" }}>
-						Compare this fingerprint with the one given by the server administrator. Approving an unknown certificate would let a third party intercept the connection.
+						{t("certificate.compareHint")}
 					</Typography>
 					<FormControlLabel
 						control={<Checkbox size="small" checked={checked} onChange={(_, value) => setChecked(value)} />}
-						label={<Typography variant="body2">I checked the fingerprint</Typography>}
+						label={<Typography variant="body2">{t("certificate.checked")}</Typography>}
 					/>
 				</>
 			) : (
 				<Typography variant="body2" sx={{ color: "text.secondary" }}>
-					Import the root authority certificate of your organization (.crt, .cer or .pem file) to approve this server.
+					{t("certificate.importHint")}
 				</Typography>
 			)}
 
@@ -66,7 +68,7 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 
 			<Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
 				<Button color="inherit" disabled={pending} onClick={() => dispatch(dismissCertificate())}>
-					Cancel
+					{t("common:cancel")}
 				</Button>
 				<Button
 					variant={certificate.trustable ? "text" : "contained"}
@@ -74,7 +76,7 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 					startIcon={<FileUploadRounded />}
 					onClick={() => void dispatch(importAuthority(request))}
 				>
-					Import an authority…
+					{t("certificate.importAuthority")}
 				</Button>
 				{certificate.trustable && (
 					<Button
@@ -83,7 +85,7 @@ export function CertificateReview({ certificate, request }: Readonly<Props>) {
 						startIcon={pending ? <CircularProgress size={16} color="inherit" /> : undefined}
 						onClick={() => void dispatch(trustCertificate({ fingerprint256: certificate.anchor.fingerprint256, request }))}
 					>
-						Approve and continue
+						{t("certificate.approve")}
 					</Button>
 				)}
 			</Box>

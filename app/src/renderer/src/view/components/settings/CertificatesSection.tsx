@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Box, Button, IconButton, Tooltip, Typography } from "@mui/material";
 import VerifiedUserRounded from "@mui/icons-material/VerifiedUserRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
@@ -15,6 +16,7 @@ import { formatDateTime } from "@view/utils/date.utils";
  * Authorities approved in the application (private PKI, self-signed servers)
  */
 export function CertificatesSection() {
+	const { t } = useTranslation("settings");
 	const dispatch = useAppDispatch();
 	const [certificates, setCertificates] = useState<TrustedCertificate[]>([]);
 	const service = webContainer.get(CertificateService);
@@ -43,14 +45,21 @@ export function CertificatesSection() {
 					<Box sx={{ flex: 1, minWidth: 0 }}>
 						<Typography sx={{ fontSize: "0.85rem", fontWeight: 500 }}>{certificate.subject}</Typography>
 						<Typography sx={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-							{certificate.host ? `Approved for ${certificate.host}` : "Imported"} · expires on {formatDateTime(certificate.validTo)}
+							{t("certificates.expiresOn", {
+								origin: certificate.host ? t("certificates.approvedFor", { host: certificate.host }) : t("certificates.imported"),
+								date: formatDateTime(certificate.validTo),
+							})}
 						</Typography>
 						<Typography className="mono" noWrap sx={{ fontSize: "0.66rem", color: "var(--text-faint)" }}>
 							{certificate.fingerprint256}
 						</Typography>
 					</Box>
-					<Tooltip title="Remove (locks the vault)">
-						<IconButton size="small" onClick={() => void run(() => service.remove(certificate.fingerprint256), `"${certificate.subject}" removed`)}>
+					<Tooltip title={t("certificates.remove")}>
+						<IconButton
+							size="small"
+							aria-label={t("certificates.remove")}
+							onClick={() => void run(() => service.remove(certificate.fingerprint256), t("certificates.removed", { subject: certificate.subject }))}
+						>
 							<DeleteOutlineRounded fontSize="small" />
 						</IconButton>
 					</Tooltip>
@@ -58,8 +67,8 @@ export function CertificatesSection() {
 			))}
 			<Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 2, py: 1.5 }}>
 				<Box sx={{ flex: 1 }}>
-					<Typography sx={{ fontSize: "0.88rem", fontWeight: 500 }}>{certificates.length ? "Add an authority" : "No approved authority"}</Typography>
-					<Typography sx={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>For a server behind a corporate PKI (.crt, .cer, .pem)</Typography>
+					<Typography sx={{ fontSize: "0.88rem", fontWeight: 500 }}>{certificates.length ? t("certificates.add") : t("certificates.none")}</Typography>
+					<Typography sx={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{t("certificates.hint")}</Typography>
 				</Box>
 				<Button
 					size="small"
@@ -68,11 +77,11 @@ export function CertificatesSection() {
 					onClick={() =>
 						void run(async () => {
 							const imported = await service.import();
-							if (imported.length === 0) throw new Error("Import cancelled");
-						}, "Authority imported")
+							if (imported.length === 0) throw new Error(t("certificates.importCancelled"));
+						}, t("certificates.importSuccess"))
 					}
 				>
-					Import…
+					{t("certificates.import")}
 				</Button>
 			</Box>
 		</>

@@ -4,7 +4,7 @@ This file provides guidance to coding agents (Claude Code, Codex, Copilot…) wh
 
 ## Project Overview
 
-**ElyVault** (package `elyvault`, appId `fr.elyspio.elyvault.app`; repository `ely-vault-ui`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all vault cryptography is delegated to the CLI, the app implements none (only SSH key generation and format conversion use `sshpk`). Items (create, edit, soft delete, restore, permanent delete, favorite, folder move), folders (create, rename cascade, delete) and SSH keys are written through the CLI; attachments, organization moves, collections and archive stay in the web vault. UI strings, the readme and `docs/` are in English.
+**ElyVault** (package `elyvault`, appId `fr.elyspio.elyvault.app`; repository `ely-vault-ui`) — keyboard-first desktop client for Vaultwarden / Bitwarden servers (Windows + Linux). It is a UI on top of the official Bitwarden CLI (`@bitwarden/cli`): all vault cryptography is delegated to the CLI, the app implements none (only SSH key generation and format conversion use `sshpk`). Items (create, edit, soft delete, restore, permanent delete, favorite, folder move), folders (create, rename cascade, delete) and SSH keys are written through the CLI; attachments, organization moves, collections and archive stay in the web vault. The interface is translated (English source, French) with i18next; everything else (readme, `docs/`, logs, code, commits) is in English.
 
 ## Repository Layout
 
@@ -44,7 +44,7 @@ Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1─
 - **Main process** (`src/main/`): Node.js, modules extending `LogModule` for Winston logging, Inversify DI with `autobind: true` and singleton scope (`src/main/di/container.di.ts`).
 - **Preload** (`src/preload/`): Exposes typed `window.preload` bridge via contextBridge (`parts/` holds the IPC sender/receiver wrappers).
 - **Renderer** (`src/renderer/src/`): React 19, MUI 9, Redux Toolkit (`store/module/*`), Inversify services (`core/services/`, container in `core/di/web.container.ts`).
-- **Shared** (`src/shared/`): IPC channel contracts, config defaults, types, autotype sequence parser.
+- **Shared** (`src/shared/`): IPC channel contracts, config defaults, types, autotype sequence parser, translations (`i18n/`).
 
 ### Main Modules (`src/main/modules/`)
 
@@ -57,6 +57,7 @@ Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1─
 - `update/` — `UpdateModule`: auto update from the GitHub releases (`electron-updater`): checks at startup then hourly (setting `updates.autoCheck`), downloads newer releases, installs on restart or quit; update channel `updates.channel` (`stable` / `beta` / `dev`, flow dev → beta → stable: `release.provider.ts`, a custom electron-updater provider on the GitHub releases, takes the highest version among the channel and the more stable ones) and user-confirmed downgrade when the channel's newest version is older. Locks the vault and stops `bw serve` before `quitAndInstall`. Dev builds check through `dev-app-update.yml` and never install.
 - `security/` — auto-lock, clipboard (auto-clear, excluded from Windows history/cloud clipboard), certificate review/approval of private CAs, Windows Hello unlock (`hello-unlock.module.ts`: master password stored with `safeStorage`/DPAPI, released after a `UserConsentVerifier` check in `windows.hello.ts`, WinRT through koffi).
 - `autotype/` — KeePass-style auto-type: Windows `SendInput` via koffi FFI, Linux X11 via `xdotool`.
+- `i18n/` — `I18nModule`: texts of the native dialogs opened by main, in the language of the interface.
 - `config/`, `context/`, `window/`, `ipc.module.ts`, `log.module.ts`.
 
 ### IPC Contract
@@ -89,6 +90,9 @@ App folder: `%LOCALAPPDATA%/elyvault` (Linux: Electron `appData`), see `MainCont
 - Keep Electron hardening intact: `sandbox`, `contextIsolation`, no `nodeIntegration`, strict CSP, blocked navigation/new windows, IPC only from the app page, only `http(s)` links opened externally.
 
 ## Key Conventions
+
+- Every user-visible text goes through i18n: English source in `src/shared/i18n/en/<namespace>.ts`, French in `fr/` typed `Translation<typeof en>` (a missing key fails the typecheck; plurals `_one`/`_other`, plus `_many` in French). Components use `useTranslation("<namespace>")`, code outside React `i18n.t(...)` from `@/config/i18n` at call time. Kept in English: auto-type tokens, key names, brand/protocol names, logs.
+- Main never sends prose to the renderer: messages (results, thrown errors) are codes from `appMessage(key, params)` (`src/shared/i18n/message.ts`, texts in the `messages` namespace), translated by the renderer services / `ipcErrorMessage`; raw Bitwarden CLI and network errors pass through as is.
 
 - Extend DI modules instead of creating ad-hoc singletons
 - Keep renderer/main shared types under `src/shared`

@@ -1,10 +1,14 @@
 import { Box, Button, LinearProgress, Link, Typography } from "@mui/material";
 import RestartAltRounded from "@mui/icons-material/RestartAltRounded";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useAppDispatch, useAppSelector } from "@store";
 import { checkForUpdate, downloadUpdate, installUpdate } from "@modules/update/update.async.actions";
 import type { UpdateStatus } from "@shared/types/update.types";
 import { formatRelative } from "@view/utils/date.utils";
 import { ReleaseNotes } from "./ReleaseNotes";
+
+type T = TFunction<"settings">;
 
 const rowSx = { display: "flex", alignItems: "center", gap: 2, px: 2, py: 1.5, "&:not(:last-child)": { borderBottom: "1px solid var(--border-subtle)" } };
 
@@ -12,6 +16,7 @@ const rowSx = { display: "flex", alignItems: "center", gap: 2, px: 2, py: 1.5, "
  * Installed version, state of the automatic update and the action it waits for
  */
 export function UpdatesSection() {
+	const { t } = useTranslation("settings");
 	const dispatch = useAppDispatch();
 	const status = useAppSelector((state) => state.update.status);
 
@@ -23,12 +28,18 @@ export function UpdatesSection() {
 		<>
 			<Box sx={rowSx}>
 				<Box sx={{ flex: 1, minWidth: 0 }}>
-					<Typography sx={{ fontSize: "0.88rem", fontWeight: 500 }}>{title(status)}</Typography>
+					<Typography sx={{ fontSize: "0.88rem", fontWeight: 500 }}>{title(status, t)}</Typography>
 					<Typography sx={{ fontSize: "0.75rem", color: status.state === "error" ? "error.main" : "var(--text-muted)", overflowWrap: "anywhere" }}>
-						{description(status)}
+						{description(status, t)}
 					</Typography>
 				</Box>
-				<Action status={status} onCheck={() => dispatch(checkForUpdate())} onDownload={() => dispatch(downloadUpdate())} onInstall={() => dispatch(installUpdate())} />
+				<Action
+					status={status}
+					t={t}
+					onCheck={() => dispatch(checkForUpdate())}
+					onDownload={() => dispatch(downloadUpdate())}
+					onInstall={() => dispatch(installUpdate())}
+				/>
 			</Box>
 
 			{status.state === "downloading" && (
@@ -43,7 +54,7 @@ export function UpdatesSection() {
 			{showNotes && (
 				<Box sx={{ ...rowSx, display: "block" }}>
 					<Typography variant="overline" component="div" sx={{ color: "var(--text-faint)", lineHeight: 1.6 }}>
-						Release notes · {status.latestVersion}
+						{t("releaseNotes.title", { version: status.latestVersion })}
 					</Typography>
 					<ReleaseNotes html={status.releaseNotes!} />
 				</Box>
@@ -51,7 +62,7 @@ export function UpdatesSection() {
 
 			<Box sx={{ ...rowSx, py: 1 }}>
 				<Typography sx={{ flex: 1, fontSize: "0.72rem", color: "var(--text-faint)" }}>
-					{status.isPackaged ? lastCheck(status) : "Development build: checks through dev-app-update.yml, nothing is installed"}
+					{status.isPackaged ? lastCheck(status, t) : t("updates.developmentBuild")}
 				</Typography>
 				<Link
 					component="button"
@@ -59,27 +70,27 @@ export function UpdatesSection() {
 					sx={{ fontSize: "0.75rem" }}
 					onClick={() => void window.preload.ipc.send.app.openExternal(window.preload.config.releasesUrl)}
 				>
-					All releases
+					{t("updates.allReleases")}
 				</Link>
 			</Box>
 		</>
 	);
 }
 
-function Action({ status, onCheck, onDownload, onInstall }: Readonly<{ status: UpdateStatus; onCheck: () => void; onDownload: () => void; onInstall: () => void }>) {
+function Action({ status, t, onCheck, onDownload, onInstall }: Readonly<{ status: UpdateStatus; t: T; onCheck: () => void; onDownload: () => void; onInstall: () => void }>) {
 	switch (status.state) {
 		case "available":
 			if (status.downgrade) {
 				return (
 					<Button size="small" variant="contained" onClick={onDownload}>
-						Go back to {status.latestVersion}
+						{t("updates.action.downgrade", { version: status.latestVersion })}
 					</Button>
 				);
 			}
 			// Development builds do not download automatically
 			return status.isPackaged ? null : (
 				<Button size="small" variant="outlined" onClick={onDownload}>
-					Download
+					{t("updates.action.download")}
 				</Button>
 			);
 		case "downloading":
@@ -87,54 +98,55 @@ function Action({ status, onCheck, onDownload, onInstall }: Readonly<{ status: U
 		case "downloaded":
 			return (
 				<Button size="small" variant="contained" startIcon={<RestartAltRounded />} disabled={!status.isPackaged} onClick={onInstall}>
-					Restart and install
+					{t("updates.action.install")}
 				</Button>
 			);
 		default:
 			return (
 				<Button size="small" variant="outlined" disabled={status.state === "checking"} onClick={onCheck}>
-					{status.state === "checking" ? "Checking…" : "Check"}
+					{status.state === "checking" ? t("updates.action.checking") : t("updates.action.check")}
 				</Button>
 			);
 	}
 }
 
-function title(status: UpdateStatus) {
+function title(status: UpdateStatus, t: T) {
+	const version = status.latestVersion;
 	switch (status.state) {
 		case "checking":
-			return "Checking for updates…";
+			return t("updates.title.checking");
 		case "up-to-date":
-			return "Vault is up to date";
+			return t("updates.title.upToDate");
 		case "no-release":
-			return "No release on this channel yet";
+			return t("updates.title.noRelease");
 		case "available":
-			return status.downgrade ? `Older version ${status.latestVersion} available` : `Version ${status.latestVersion} found`;
+			return status.downgrade ? t("updates.title.olderAvailable", { version }) : t("updates.title.found", { version });
 		case "downloading":
-			return `Downloading version ${status.latestVersion}`;
+			return t("updates.title.downloading", { version });
 		case "downloaded":
-			return `Version ${status.latestVersion} ready to install`;
+			return t("updates.title.downloaded", { version });
 		case "error":
-			return "The update failed";
+			return t("updates.title.error");
 		default:
-			return `Version ${status.currentVersion}`;
+			return t("updates.title.current", { version: status.currentVersion });
 	}
 }
 
-function description(status: UpdateStatus) {
+function description(status: UpdateStatus, t: T) {
 	switch (status.state) {
 		case "available":
-			if (status.downgrade) return `Older than the installed version (${status.currentVersion}): only installed on your request`;
-			return status.isPackaged ? "The download is starting" : "Development build: manual download";
+			if (status.downgrade) return t("updates.description.downgrade", { version: status.currentVersion });
+			return status.isPackaged ? t("updates.description.downloadStarting") : t("updates.description.manualDownload");
 		case "downloaded":
-			return status.downgrade ? "Installed when Vault restarts" : "Installed when Vault restarts or quits";
+			return status.downgrade ? t("updates.description.installedOnRestart") : t("updates.description.installedOnRestartOrQuit");
 		case "error":
 			return status.error ?? "";
 		default:
-			return `Installed version: ${status.currentVersion}`;
+			return t("updates.description.installedVersion", { version: status.currentVersion });
 	}
 }
 
-function lastCheck(status: UpdateStatus) {
-	const last = status.lastCheckAt ? `Last checked ${formatRelative(status.lastCheckAt)}` : "Not checked since startup";
-	return status.nextCheckAt ? `${last} · next check ${formatRelative(status.nextCheckAt)}` : last;
+function lastCheck(status: UpdateStatus, t: T) {
+	const last = status.lastCheckAt ? t("updates.lastCheck", { when: formatRelative(status.lastCheckAt) }) : t("updates.notChecked");
+	return status.nextCheckAt ? t("updates.nextCheck", { last, when: formatRelative(status.nextCheckAt) }) : last;
 }

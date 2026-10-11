@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { AutoTypeSequenceError, parseAutoTypeSequence, validateAutoTypeSequence } from "./autotype.sequence";
+import { appMessage } from "../i18n/message";
 
 describe("parseAutoTypeSequence", () => {
 	it("parses the default sequence", () => {
@@ -65,6 +66,6 @@ describe("parseAutoTypeSequence", () => {
 describe("validateAutoTypeSequence", () => {
 	it("returns null for a valid sequence and the message otherwise", () => {
 		expect(validateAutoTypeSequence("{USERNAME}{TAB}{PASSWORD}")).toBeNull();
-		expect(validateAutoTypeSequence("{FOO}")).toBe("Code inconnu : {FOO}");
+		expect(validateAutoTypeSequence("{FOO}")).toBe(appMessage("sequenceUnknownCode", { code: "{FOO}" }));
 	});
 });

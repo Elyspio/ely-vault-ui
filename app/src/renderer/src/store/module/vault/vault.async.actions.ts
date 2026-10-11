@@ -2,6 +2,7 @@ import { createAsyncActionGenerator, getServices } from "@store/utils/utils.acti
 import { VaultService } from "@services/vault.service";
 import { showToast } from "@modules/ui/ui.reducer";
 import { ipcErrorMessage } from "@core/utils/ipc.utils";
+import { i18n } from "@/config/i18n";
 
 const createAsyncThunk = createAsyncActionGenerator("vault");
 
@@ -14,10 +15,10 @@ export const syncVault = createAsyncThunk("sync", async (_, { extra, dispatch, r
 	const services = getServices({ vault: VaultService }, extra);
 	try {
 		const snapshot = await services.vault.sync();
-		dispatch(showToast("Vault synced"));
+		dispatch(showToast(i18n.t("actions:sync.synced")));
 		return snapshot;
 	} catch (error) {
-		dispatch(showToast(`Sync failed: ${ipcErrorMessage(error)}`, "error"));
+		dispatch(showToast(i18n.t("actions:sync.failed", { error: ipcErrorMessage(error) }), "error"));
 		return rejectWithValue(ipcErrorMessage(error));
 	}
 });

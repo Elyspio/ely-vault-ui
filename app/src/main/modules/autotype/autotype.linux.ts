@@ -2,6 +2,7 @@ import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import type { AutoTypeKey } from "@shared/autotype/autotype.sequence";
 import { type AutoTypeDriver, KEY_DELAY_MS } from "./autotype.driver";
+import { appMessage } from "@shared/i18n/message";
 
 const execFileAsync = promisify(execFile);
 
@@ -17,13 +18,13 @@ const desktopTypes = ["_NET_WM_WINDOW_TYPE_DESKTOP", "_NET_WM_WINDOW_TYPE_DOCK"]
 export async function getXdotoolUnavailableReason(): Promise<string | null> {
 	// Under XWayland, DISPLAY is set too, but the other applications are mostly native Wayland
 	if (process.env["XDG_SESSION_TYPE"] === "wayland" || process.env["WAYLAND_DISPLAY"]) {
-		return "Not available on Wayland: it blocks typing keys into other applications";
+		return appMessage("autoTypeWayland");
 	}
 	try {
 		await execFileAsync("xdotool", ["version"]);
 		return null;
 	} catch {
-		return "Install xdotool to use auto-type";
+		return appMessage("autoTypeInstallXdotool");
 	}
 }
 

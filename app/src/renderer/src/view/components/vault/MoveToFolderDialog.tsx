@@ -11,6 +11,7 @@ import { moveChoices, type FolderChoice } from "@modules/vault/vault.folders";
 import { useVaultWrites } from "@hooks/useVaultWrites";
 import { useDialogFocus } from "@hooks/useDialogFocus";
 import type { VaultItem } from "@shared/types/vault.types";
+import { useTranslation } from "react-i18next";
 
 /**
  * Folder picker opened by Ctrl+M: type to filter, arrows and Enter pick the folder, Escape closes it (Dialog).
@@ -40,6 +41,7 @@ function FolderPicker({ item, close, inputRef }: Readonly<{ item: VaultItem; clo
 	const dispatch = useAppDispatch();
 	const folders = useAppSelector((state) => state.vault.snapshot?.folders ?? []);
 	const writes = useVaultWrites();
+	const { t } = useTranslation("vault");
 	const [query, setQuery] = useState("");
 	const [index, setIndex] = useState(0);
 	const [busy, setBusy] = useState(false);
@@ -54,7 +56,7 @@ function FolderPicker({ item, close, inputRef }: Readonly<{ item: VaultItem; clo
 		setBusy(false);
 		// Errors are already reported by the write hook; the dialog stays open to pick another folder
 		if (outcome?.status === "success") {
-			dispatch(showToast(`Moved to ${choice.path}`));
+			dispatch(showToast(t("move.moved", { path: choice.path })));
 			close();
 		}
 	};
@@ -74,7 +76,7 @@ function FolderPicker({ item, close, inputRef }: Readonly<{ item: VaultItem; clo
 
 	return (
 		<>
-			<DialogTitle sx={{ pb: 0.5 }}>Move to a folder</DialogTitle>
+			<DialogTitle sx={{ pb: 0.5 }}>{t("move.title")}</DialogTitle>
 			<Typography noWrap sx={{ px: 3, pb: 1.5, fontSize: "0.78rem", color: "var(--text-muted)" }}>
 				{item.name}
 			</Typography>
@@ -83,9 +85,9 @@ function FolderPicker({ item, close, inputRef }: Readonly<{ item: VaultItem; clo
 				<InputBase
 					inputRef={inputRef}
 					fullWidth
-					placeholder="Filter folders…"
+					placeholder={t("move.filterPlaceholder")}
 					value={query}
-					inputProps={{ "aria-label": "Filter folders" }}
+					inputProps={{ "aria-label": t("move.filterLabel") }}
 					onChange={(event) => {
 						setQuery(event.target.value);
 						setIndex(0);
@@ -128,13 +130,13 @@ function FolderPicker({ item, close, inputRef }: Readonly<{ item: VaultItem; clo
 						{choice.id === item.folderId && (
 							<Typography component="span" sx={{ display: "flex", alignItems: "center", gap: 0.5, fontSize: "0.72rem", color: "primary.main" }}>
 								<CheckRounded sx={{ fontSize: 15 }} />
-								Current
+								{t("move.current")}
 							</Typography>
 						)}
 					</Box>
 				))}
 				{choices.length === 0 && (
-					<Typography sx={{ p: 2, textAlign: "center", fontSize: "0.82rem", color: "var(--text-faint)" }}>No folder matches "{query.trim()}"</Typography>
+					<Typography sx={{ p: 2, textAlign: "center", fontSize: "0.82rem", color: "var(--text-faint)" }}>{t("move.noMatch", { query: query.trim() })}</Typography>
 				)}
 			</DialogContent>
 		</>

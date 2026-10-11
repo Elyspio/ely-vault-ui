@@ -1,4 +1,5 @@
 import { injectable } from "inversify";
+import { translateMessages } from "@core/utils/message.utils";
 import type { CopyRef, ItemDraft, PasswordGeneratorOptions, SecretRef, SshKeySource } from "@shared/types/vault.types";
 
 @injectable()
@@ -29,47 +30,47 @@ export class VaultService {
 	 * TOTP secret of a QR code screenshot in the clipboard, read by the main process
 	 */
 	public readTotpQr() {
-		return window.preload.ipc.send.vault.readTotpQr();
+		return window.preload.ipc.send.vault.readTotpQr().then(translateMessages);
 	}
 
 	public createItem(draft: ItemDraft) {
-		return window.preload.ipc.send.vault.createItem(draft);
+		return window.preload.ipc.send.vault.createItem(draft).then(translateMessages);
 	}
 
 	public updateItem(itemId: string, expectedRevision: string, draft: ItemDraft) {
-		return window.preload.ipc.send.vault.updateItem(itemId, expectedRevision, draft);
+		return window.preload.ipc.send.vault.updateItem(itemId, expectedRevision, draft).then(translateMessages);
 	}
 
 	public deleteItem(itemId: string) {
-		return window.preload.ipc.send.vault.deleteItem(itemId);
+		return window.preload.ipc.send.vault.deleteItem(itemId).then(translateMessages);
 	}
 
 	public restoreItem(itemId: string) {
-		return window.preload.ipc.send.vault.restoreItem(itemId);
+		return window.preload.ipc.send.vault.restoreItem(itemId).then(translateMessages);
 	}
 
 	public purgeItems(itemIds: string[]) {
-		return window.preload.ipc.send.vault.purgeItems(itemIds);
+		return window.preload.ipc.send.vault.purgeItems(itemIds).then(translateMessages);
 	}
 
 	public setFavorite(itemId: string, favorite: boolean) {
-		return window.preload.ipc.send.vault.setFavorite(itemId, favorite);
+		return window.preload.ipc.send.vault.setFavorite(itemId, favorite).then(translateMessages);
 	}
 
 	public moveItem(itemId: string, folderId: string | null) {
-		return window.preload.ipc.send.vault.moveItem(itemId, folderId);
+		return window.preload.ipc.send.vault.moveItem(itemId, folderId).then(translateMessages);
 	}
 
 	public createFolder(name: string) {
-		return window.preload.ipc.send.vault.createFolder(name);
+		return window.preload.ipc.send.vault.createFolder(name).then(translateMessages);
 	}
 
 	public renameFolder(path: string, newPath: string) {
-		return window.preload.ipc.send.vault.renameFolder(path, newPath);
+		return window.preload.ipc.send.vault.renameFolder(path, newPath).then(translateMessages);
 	}
 
 	public deleteFolder(folderId: string) {
-		return window.preload.ipc.send.vault.deleteFolder(folderId);
+		return window.preload.ipc.send.vault.deleteFolder(folderId).then(translateMessages);
 	}
 
 	/**
@@ -83,11 +84,11 @@ export class VaultService {
 	 * Converts a key from a file, pasted text, or a pending key (passphrase given)
 	 */
 	public importSshKey(source: SshKeySource, passphrase: string | null) {
-		return window.preload.ipc.send.vault.importSshKey(source, passphrase);
+		return window.preload.ipc.send.vault.importSshKey(source, passphrase).then(translateMessages);
 	}
 
 	public autoTypeAvailability() {
-		return window.preload.ipc.send.autoType.availability();
+		return window.preload.ipc.send.autoType.availability().then(translateMessages);
 	}
 
 	public autoType(itemId: string) {

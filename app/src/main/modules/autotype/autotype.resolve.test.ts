@@ -3,6 +3,7 @@ import { getItemSequence } from "./autotype.resolve";
 import type { BwItem } from "../bitwarden/bw.types";
 import { CipherType, FieldType } from "@shared/types/vault.types";
 import { defaultAppConfig } from "@shared/config/app.config";
+import { appMessage } from "@shared/i18n/message";
 
 const base: BwItem = {
 	id: "item-1",
@@ -42,7 +43,7 @@ describe("getItemSequence", () => {
 
 	it("explains which sequence is invalid", () => {
 		const item: BwItem = { ...base, fields: [{ name: "autotype", value: "x{secret}", type: FieldType.Hidden }] };
-		expect(() => getItemSequence(item, config)).toThrow('Invalid "autotype" sequence of the item (position 2)');
-		expect(() => getItemSequence(base, { ...config, defaultSequence: "{FOO" })).toThrow(/^Invalid default sequence/);
+		expect(() => getItemSequence(item, config)).toThrow(appMessage("sequenceInvalidItem", { field: "autotype", position: 2 }));
+		expect(() => getItemSequence(base, { ...config, defaultSequence: "{FOO" })).toThrow(/^i18n:sequenceInvalidDefault /);
 	});
 });

@@ -10,6 +10,7 @@ import {
 	type VaultItem,
 } from "@shared/types/vault.types";
 import { isValidTotp } from "@shared/vault/totp";
+import { i18n } from "@/config/i18n";
 
 /**
  * Pure helpers of the item editor: conversion between a sanitized item and an {@link ItemDraft}, dirty check and
@@ -96,11 +97,11 @@ export function isDraftDirty(initial: ItemDraft, current: ItemDraft): boolean {
  * `creating`: a new SSH key item needs its key (an edit keeps the current one when none is given).
  */
 export function draftErrors(draft: ItemDraft, creating: boolean): string | null {
-	if (draft.name.trim() === "") return "The name is required";
-	if (creating && draft.type === CipherType.SshKey && !draft.sshKey) return "Generate, import or paste an SSH key first";
+	if (draft.name.trim() === "") return i18n.t("editor:validation.nameRequired");
+	if (creating && draft.type === CipherType.SshKey && !draft.sshKey) return i18n.t("editor:validation.sshKeyRequired");
 
 	const totp = draft.login?.totp;
-	if (totp?.kind === "set" && !isValidTotp(totp.value)) return "The TOTP secret is not valid: use a base32 secret, an otpauth://totp uri or a steam:// secret";
+	if (totp?.kind === "set" && !isValidTotp(totp.value)) return i18n.t("editor:validation.totpInvalid");
 
 	return null;
 }

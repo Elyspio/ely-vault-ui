@@ -13,4 +13,6 @@ On first launch, enter the server address (`https://…`), the email address and
 
 The theme is set in **Settings → Display → Theme**: Dark (default), Light, or System (follows the operating system). It applies immediately.
 
+The language of the interface is set in **Settings → Display → Language**: System (default: French when the operating system is in French, English otherwise), English or Français. It applies immediately. Messages of the Bitwarden CLI and the server stay as they send them (English).
+
 On Windows, after the first master password unlock of an account, ElyVault offers to use Windows Hello (accepting only asks for the Windows Hello verification; declining is remembered for the account). **Settings → Security → Unlock with Windows Hello** also the face, fingerprint or PIN unlock the vault: enter the master password once, then confirm with Windows Hello. The lock screen then opens Windows Hello directly; the master password still works. The choice is forgotten on logout, and Windows Hello is offered again when the master password changes.

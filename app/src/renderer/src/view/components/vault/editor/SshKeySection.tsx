@@ -1,5 +1,6 @@
 import { type Dispatch, type SetStateAction, useState } from "react";
 import { Alert, Box, Button, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { webContainer } from "@core/di/web.container";
 import { VaultService } from "@services/vault.service";
 import { ipcErrorMessage } from "@core/utils/ipc.utils";
@@ -26,6 +27,7 @@ type PassphraseRequest = { token: string; error: string | null };
  * Create: a key is generated, imported or pasted. Edit: the current key is shown and can be replaced.
  */
 export function SshKeySection({ item, setDraft }: Readonly<Props>) {
+	const { t } = useTranslation("editor");
 	const actions = useVaultActions();
 	const [preview, setPreview] = useState<SshKeyPreview | null>(null);
 	const [replacing, setReplacing] = useState(false);
@@ -92,7 +94,7 @@ export function SshKeySection({ item, setDraft }: Readonly<Props>) {
 			const result = await webContainer.get(VaultService).importSshKey({ kind: "pending", token }, secret);
 			if (result.status === "success") accept(result.key);
 			else if (result.status === "error") setPassphrase({ token, error: result.message });
-			else if (result.status === "passphrase-required") setPassphrase({ token, error: "Enter the passphrase" });
+			else if (result.status === "passphrase-required") setPassphrase({ token, error: t("ssh.enterPassphrase") });
 		} catch (failure) {
 			setPassphrase({ token, error: ipcErrorMessage(failure) });
 		} finally {
@@ -108,24 +110,24 @@ export function SshKeySection({ item, setDraft }: Readonly<Props>) {
 	const copy = (value: string, label: string) => () => void actions.copy(null, { kind: "text", value }, label);
 
 	return (
-		<EditorSection title="SSH key">
+		<EditorSection title={t("ssh.title")}>
 			<Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
 				{error && <Alert severity="error">{error}</Alert>}
 
 				{preview && (
 					<>
-						<FieldRow label="Key type" mono>
+						<FieldRow label={t("ssh.keyType")} mono>
 							{preview.keyType}
 						</FieldRow>
-						<FieldRow label="Public key" mono multiline onCopy={copy(preview.publicKey, "Public key")}>
+						<FieldRow label={t("ssh.publicKey")} mono multiline onCopy={copy(preview.publicKey, t("ssh.publicKey"))}>
 							{preview.publicKey}
 						</FieldRow>
-						<FieldRow label="Fingerprint" mono onCopy={copy(preview.keyFingerprint, "Fingerprint")}>
+						<FieldRow label={t("ssh.fingerprint")} mono onCopy={copy(preview.keyFingerprint, t("ssh.fingerprint"))}>
 							{preview.keyFingerprint}
 						</FieldRow>
 						<Box>
 							<Button size="small" color="inherit" onClick={discard}>
-								{item ? "Keep the current key" : "Discard this key"}
+								{item ? t("ssh.keepCurrent") : t("ssh.discardKey")}
 							</Button>
 						</Box>
 					</>
@@ -133,18 +135,18 @@ export function SshKeySection({ item, setDraft }: Readonly<Props>) {
 
 				{!preview && item && !replacing && (
 					<>
-						<FieldRow label="Public key" mono multiline onCopy={item.sshKey?.publicKey ? copy(item.sshKey.publicKey, "Public key") : undefined}>
-							{item.sshKey?.publicKey ?? "No public key"}
+						<FieldRow label={t("ssh.publicKey")} mono multiline onCopy={item.sshKey?.publicKey ? copy(item.sshKey.publicKey, t("ssh.publicKey")) : undefined}>
+							{item.sshKey?.publicKey ?? t("ssh.noPublicKey")}
 						</FieldRow>
-						<FieldRow label="Fingerprint" mono onCopy={item.sshKey?.keyFingerprint ? copy(item.sshKey.keyFingerprint, "Fingerprint") : undefined}>
-							{item.sshKey?.keyFingerprint ?? "No fingerprint"}
+						<FieldRow label={t("ssh.fingerprint")} mono onCopy={item.sshKey?.keyFingerprint ? copy(item.sshKey.keyFingerprint, t("ssh.fingerprint")) : undefined}>
+							{item.sshKey?.keyFingerprint ?? t("ssh.noFingerprint")}
 						</FieldRow>
 						<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 							<Button size="small" variant="outlined" color="inherit" onClick={() => setReplacing(true)}>
-								Replace key
+								{t("ssh.replace")}
 							</Button>
 							<Typography sx={{ fontSize: "0.8rem", color: "var(--text-faint)" }}>
-								{item.sshKey?.hasPrivateKey ? "Private key stored, not shown." : "No private key."}
+								{item.sshKey?.hasPrivateKey ? t("ssh.privateStored") : t("ssh.noPrivate")}
 							</Typography>
 						</Box>
 					</>
@@ -164,7 +166,7 @@ export function SshKeySection({ item, setDraft }: Readonly<Props>) {
 				{!preview && item && replacing && (
 					<Box>
 						<Button size="small" color="inherit" onClick={cancelReplacement}>
-							Cancel replacement
+							{t("ssh.cancelReplacement")}
 						</Button>
 					</Box>
 				)}

@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => ({
 		environment: "node",
 		// `pnpm test:live` (vp test --mode live) runs the opt-in integration tests against a local server
 		include: mode === "live" ? ["scripts/**/*.live.ts"] : ["src/**/*.test.ts", "scripts/**/*.test.ts"],
+		setupFiles: mode === "live" ? [] : ["src/renderer/test.setup.ts"],
 		// Each live test spawns the Bitwarden CLI and talks to a real server: it is slow
 		testTimeout: mode === "live" ? 120_000 : undefined,
 		passWithNoTests: true,

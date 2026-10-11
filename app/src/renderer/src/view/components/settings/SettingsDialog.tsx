@@ -21,56 +21,55 @@ import { HelloUnlockSetting } from "./HelloUnlockSetting";
 import { UpdatesSection } from "./UpdatesSection";
 import { selectPendingUpdate } from "@modules/update/update.selectors";
 import { useDialogFocus } from "@hooks/useDialogFocus";
+import { type Language, type LanguageSetting, languages } from "@shared/i18n/i18n.languages";
+import { useTranslation } from "react-i18next";
+import { translateMessage } from "@core/utils/message.utils";
 
-const autoLockOptions = [
-	{ value: 1, label: "1 minute" },
-	{ value: 5, label: "5 minutes" },
-	{ value: 15, label: "15 minutes" },
-	{ value: 30, label: "30 minutes" },
-	{ value: 60, label: "1 hour" },
-	{ value: 240, label: "4 hours" },
-	{ value: 0, label: "Never" },
+type Duration = { value: number; unit: "seconds" | "minutes" | "hours" | "never"; count: number };
+
+const autoLockOptions: Duration[] = [
+	{ value: 1, unit: "minutes", count: 1 },
+	{ value: 5, unit: "minutes", count: 5 },
+	{ value: 15, unit: "minutes", count: 15 },
+	{ value: 30, unit: "minutes", count: 30 },
+	{ value: 60, unit: "hours", count: 1 },
+	{ value: 240, unit: "hours", count: 4 },
+	{ value: 0, unit: "never", count: 0 },
 ];
 
-const clipboardOptions = [
-	{ value: 10, label: "10 seconds" },
-	{ value: 20, label: "20 seconds" },
-	{ value: 30, label: "30 seconds" },
-	{ value: 60, label: "1 minute" },
-	{ value: 120, label: "2 minutes" },
-	{ value: 0, label: "Never" },
+const clipboardOptions: Duration[] = [
+	{ value: 10, unit: "seconds", count: 10 },
+	{ value: 20, unit: "seconds", count: 20 },
+	{ value: 30, unit: "seconds", count: 30 },
+	{ value: 60, unit: "minutes", count: 1 },
+	{ value: 120, unit: "minutes", count: 2 },
+	{ value: 0, unit: "never", count: 0 },
 ];
 
-const channelOptions: { value: UpdateChannel; label: string }[] = [
-	{ value: "stable", label: "Stable" },
-	{ value: "beta", label: "Beta" },
-	{ value: "dev", label: "Dev" },
-];
+const channelOptions: UpdateChannel[] = ["stable", "beta", "dev"];
 
-const themeOptions: { value: ThemeMode; label: string }[] = [
-	{ value: "dark", label: "Dark" },
-	{ value: "light", label: "Light" },
-	{ value: "system", label: "System" },
-];
+const themeOptions: ThemeMode[] = ["dark", "light", "system"];
 
-const afterTypingOptions: { value: AutoTypeAfter; label: string }[] = [
-	{ value: "minimized", label: "Stay minimized" },
-	{ value: "restore", label: "Come back to the front" },
-	{ value: "lock", label: "Lock the vault" },
-];
+/** Language names are written in their own language, never translated */
+const languageNames: Record<Language, string> = { en: "English", fr: "Français" };
+
+const languageOptions: LanguageSetting[] = ["system", ...languages];
+
+const afterTypingOptions: AutoTypeAfter[] = ["minimized", "restore", "lock"];
 
 type SectionKey = "security" | "display" | "autoType" | "updates" | "certificates" | "account";
 
-const sections: { key: SectionKey; label: string; description: string; icon: ReactNode }[] = [
-	{ key: "security", label: "Security", description: "Locking and clipboard", icon: <ShieldRounded /> },
-	{ key: "display", label: "Display", description: "Vault appearance", icon: <PaletteRounded /> },
-	{ key: "autoType", label: "Auto-type", description: "Sequence typed into the previous window (Ctrl V)", icon: <KeyboardRounded /> },
-	{ key: "updates", label: "Updates", description: "Releases published on GitHub", icon: <SystemUpdateAltRounded /> },
-	{ key: "certificates", label: "Certificates", description: "Authorities approved for your server", icon: <VerifiedUserRounded /> },
-	{ key: "account", label: "Account", description: "Server and login", icon: <PersonRounded /> },
+const sections: { key: SectionKey; icon: ReactNode }[] = [
+	{ key: "security", icon: <ShieldRounded /> },
+	{ key: "display", icon: <PaletteRounded /> },
+	{ key: "autoType", icon: <KeyboardRounded /> },
+	{ key: "updates", icon: <SystemUpdateAltRounded /> },
+	{ key: "certificates", icon: <VerifiedUserRounded /> },
+	{ key: "account", icon: <PersonRounded /> },
 ];
 
 export function SettingsDialog() {
+	const { t } = useTranslation(["settings", "common"]);
 	const dispatch = useAppDispatch();
 	const open = useAppSelector((state) => state.ui.settingsOpen);
 	const config = useAppSelector((state) => state.config.current);
@@ -96,7 +95,7 @@ export function SettingsDialog() {
 	const focus = useDialogFocus(() => contentRef.current?.querySelector<HTMLElement>('[role="combobox"], button, input:not([tabindex="-1"]), [role="switch"]'));
 
 	const update = (updater: (config: AppConfig) => AppConfig) => void dispatch(saveConfig(updater(config)));
-	const section = sections.find((s) => s.key === active)!;
+	const durationLabel = (o: Duration) => (o.unit === "never" ? t("durations.never") : t(`durations.${o.unit}`, { count: o.count }));
 
 	return (
 		<Dialog open={open} onClose={close} maxWidth="md" fullWidth slotProps={{ transition: focus, paper: { sx: { height: "min(70vh, 640px)", minHeight: 420 } } }}>
@@ -115,11 +114,11 @@ export function SettingsDialog() {
 						bgcolor: "var(--surface-0)",
 					}}
 				>
-					<Typography sx={{ px: 1.25, pb: 1.5, fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>Settings</Typography>
+					<Typography sx={{ px: 1.25, pb: 1.5, fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>{t("dialog.title")}</Typography>
 					{sections.map((s) => (
 						<SidebarItem
 							key={s.key}
-							label={s.label}
+							label={t(`sections.${s.key}.label`)}
 							icon={s.icon}
 							active={s.key === active}
 							badge={s.key === "updates" && pendingUpdate !== null}
@@ -137,17 +136,17 @@ export function SettingsDialog() {
 				<Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
 					<Box sx={{ display: "flex", alignItems: "flex-start", px: 3, pt: 2.5, pb: 2 }}>
 						<Box sx={{ flex: 1 }}>
-							<Typography sx={{ fontSize: "1rem", fontWeight: 600 }}>{section.label}</Typography>
-							<Typography sx={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{section.description}</Typography>
+							<Typography sx={{ fontSize: "1rem", fontWeight: 600 }}>{t(`sections.${active}.label`)}</Typography>
+							<Typography sx={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{t(`sections.${active}.description`)}</Typography>
 						</Box>
-						<IconButton size="small" onClick={close} sx={{ color: "var(--text-muted)" }}>
+						<IconButton size="small" onClick={close} aria-label={t("common:close")} sx={{ color: "var(--text-muted)" }}>
 							<CloseRounded fontSize="small" />
 						</IconButton>
 					</Box>
 					<Box ref={contentRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 3, pb: 3, display: "flex", flexDirection: "column", gap: 2 }}>
 						{active === "security" && (
 							<Group>
-								<Setting label="Auto-lock" description="After a period of computer inactivity">
+								<Setting label={t("security.autoLock.label")} description={t("security.autoLock.description")}>
 									<Select
 										size="small"
 										value={config.security.autoLockMinutes ?? 0}
@@ -156,12 +155,12 @@ export function SettingsDialog() {
 									>
 										{autoLockOptions.map((o) => (
 											<MenuItem key={o.value} value={o.value}>
-												{o.label}
+												{durationLabel(o)}
 											</MenuItem>
 										))}
 									</Select>
 								</Setting>
-								<Setting label="Lock with the session" description="When the computer is locked or goes to sleep">
+								<Setting label={t("security.lockOnSystemLock.label")} description={t("security.lockOnSystemLock.description")}>
 									<Switch
 										checked={config.security.lockOnSystemLock}
 										onChange={(_, checked) => update((c) => ({ ...c, security: { ...c.security, lockOnSystemLock: checked } }))}
@@ -169,12 +168,12 @@ export function SettingsDialog() {
 								</Setting>
 								<HelloUnlockSetting
 									render={(control) => (
-										<Setting label="Unlock with Windows Hello" description="Face, fingerprint or PIN instead of the master password">
+										<Setting label={t("security.hello.label")} description={t("security.hello.description")}>
 											{control}
 										</Setting>
 									)}
 								/>
-								<Setting label="Clear the clipboard" description="After copying a value, if it is still there">
+								<Setting label={t("security.clipboard.label")} description={t("security.clipboard.description")}>
 									<Select
 										size="small"
 										value={config.security.clipboardClearSeconds ?? 0}
@@ -183,7 +182,7 @@ export function SettingsDialog() {
 									>
 										{clipboardOptions.map((o) => (
 											<MenuItem key={o.value} value={o.value}>
-												{o.label}
+												{durationLabel(o)}
 											</MenuItem>
 										))}
 									</Select>
@@ -192,7 +191,7 @@ export function SettingsDialog() {
 						)}
 						{active === "display" && (
 							<Group>
-								<Setting label="Theme" description="Dark, light, or the same as the operating system">
+								<Setting label={t("display.theme.label")} description={t("display.theme.description")}>
 									<Select
 										size="small"
 										value={config.display.theme}
@@ -200,13 +199,27 @@ export function SettingsDialog() {
 										sx={{ minWidth: 150 }}
 									>
 										{themeOptions.map((o) => (
-											<MenuItem key={o.value} value={o.value}>
-												{o.label}
+											<MenuItem key={o} value={o}>
+												{t(`display.theme.${o}`)}
 											</MenuItem>
 										))}
 									</Select>
 								</Setting>
-								<Setting label="Website icons" description="Fetched through your server's icon service">
+								<Setting label={t("display.language.label")} description={t("display.language.description")}>
+									<Select
+										size="small"
+										value={config.display.language}
+										onChange={(event) => update((c) => ({ ...c, display: { ...c.display, language: event.target.value } }))}
+										sx={{ minWidth: 150 }}
+									>
+										{languageOptions.map((o) => (
+											<MenuItem key={o} value={o}>
+												{o === "system" ? t("display.language.system") : languageNames[o]}
+											</MenuItem>
+										))}
+									</Select>
+								</Setting>
+								<Setting label={t("display.favicons.label")} description={t("display.favicons.description")}>
 									<Switch
 										checked={config.display.showFavicons}
 										onChange={(_, checked) => update((c) => ({ ...c, display: { ...c.display, showFavicons: checked } }))}
@@ -217,27 +230,24 @@ export function SettingsDialog() {
 						{active === "autoType" && (
 							<Group>
 								{autoType?.available === false && (
-									<Setting label="Unavailable" description={autoType.reason}>
+									<Setting label={t("autoType.unavailable")} description={autoType.reason}>
 										{null}
 									</Setting>
 								)}
-								<Setting
-									label="Default sequence"
-									description="{USERNAME} {PASSWORD} {TOTP} {TAB} {ENTER} {DELAY n}. An autotype custom field replaces it for an item."
-								>
+								<Setting label={t("autoType.defaultSequence.label")} description={t("autoType.defaultSequence.description")}>
 									<SequenceInput
 										key={config.autoType.defaultSequence}
 										value={config.autoType.defaultSequence}
 										onSave={(defaultSequence) => update((c) => ({ ...c, autoType: { ...c.autoType, defaultSequence } }))}
 									/>
 								</Setting>
-								<Setting label="Press Enter" description="Presses Enter after the default sequence">
+								<Setting label={t("autoType.pressEnter.label")} description={t("autoType.pressEnter.description")}>
 									<Switch
 										checked={config.autoType.pressEnter}
 										onChange={(_, checked) => update((c) => ({ ...c, autoType: { ...c.autoType, pressEnter: checked } }))}
 									/>
 								</Setting>
-								<Setting label="After typing" description="Vault window once the sequence is typed">
+								<Setting label={t("autoType.afterTyping.label")} description={t("autoType.afterTyping.description")}>
 									<Select
 										size="small"
 										value={config.autoType.afterTyping}
@@ -245,8 +255,8 @@ export function SettingsDialog() {
 										sx={{ minWidth: 150 }}
 									>
 										{afterTypingOptions.map((o) => (
-											<MenuItem key={o.value} value={o.value}>
-												{o.label}
+											<MenuItem key={o} value={o}>
+												{t(`autoType.afterTyping.${o}`)}
 											</MenuItem>
 										))}
 									</Select>
@@ -259,16 +269,13 @@ export function SettingsDialog() {
 									<UpdatesSection />
 								</Group>
 								<Group>
-									<Setting label="Automatic updates" description="Checks for a new version at startup then every hour, and downloads it">
+									<Setting label={t("updates.autoCheck.label")} description={t("updates.autoCheck.description")}>
 										<Switch
 											checked={config.updates.autoCheck}
 											onChange={(_, checked) => update((c) => ({ ...c, updates: { ...c.updates, autoCheck: checked } }))}
 										/>
 									</Setting>
-									<Setting
-										label="Channel"
-										description="Stable releases, also the betas, or also the development builds: the highest version wins. An older version of the new channel is only installed on request"
-									>
+									<Setting label={t("updates.channel.label")} description={t("updates.channel.description")}>
 										<Select
 											size="small"
 											value={config.updates.channel}
@@ -276,8 +283,8 @@ export function SettingsDialog() {
 											sx={{ minWidth: 150 }}
 										>
 											{channelOptions.map((o) => (
-												<MenuItem key={o.value} value={o.value}>
-													{o.label}
+												<MenuItem key={o} value={o}>
+													{t(`updates.channel.${o}`)}
 												</MenuItem>
 											))}
 										</Select>
@@ -292,7 +299,12 @@ export function SettingsDialog() {
 						)}
 						{active === "account" && (
 							<Group>
-								<Setting label={account?.email ?? ""} description={`${account?.serverUrl ?? ""}${lastSync ? ` · synced on ${formatDateTime(lastSync)}` : ""}`}>
+								<Setting
+									label={account?.email ?? ""}
+									description={
+										lastSync ? t("account.syncedOn", { server: account?.serverUrl ?? "", date: formatDateTime(lastSync) }) : (account?.serverUrl ?? "")
+									}
+								>
 									<Button
 										color={confirmLogout ? "error" : "inherit"}
 										variant={confirmLogout ? "contained" : "outlined"}
@@ -307,7 +319,7 @@ export function SettingsDialog() {
 											void dispatch(logout());
 										}}
 									>
-										{confirmLogout ? "Confirm" : "Log out"}
+										{confirmLogout ? t("common:confirm") : t("account.logout")}
 									</Button>
 								</Setting>
 							</Group>
@@ -324,7 +336,8 @@ export function SettingsDialog() {
  */
 function SequenceInput({ value, onSave }: Readonly<{ value: string; onSave: (value: string) => void }>) {
 	const [draft, setDraft] = useState(value);
-	const error = validateAutoTypeSequence(draft);
+	const validation = validateAutoTypeSequence(draft);
+	const error = validation && translateMessage(validation);
 
 	return (
 		<TextField

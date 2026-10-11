@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Box, TextField } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import type { IdentityKey, ItemDraft } from "@shared/types/vault.types";
 import { EditorSection } from "./EditorSection";
 
@@ -8,52 +9,19 @@ type Props = {
 	setDraft: Dispatch<SetStateAction<ItemDraft>>;
 };
 
-/** Readable labels, grouped like the detail view of an identity */
-const identityGroups: { title: string; fields: { key: IdentityKey; label: string }[] }[] = [
-	{
-		title: "Name",
-		fields: [
-			{ key: "title", label: "Title" },
-			{ key: "firstName", label: "First name" },
-			{ key: "middleName", label: "Middle name" },
-			{ key: "lastName", label: "Last name" },
-		],
-	},
-	{
-		title: "Contact",
-		fields: [
-			{ key: "username", label: "Username" },
-			{ key: "company", label: "Company" },
-			{ key: "email", label: "E-mail" },
-			{ key: "phone", label: "Phone" },
-		],
-	},
-	{
-		title: "Address",
-		fields: [
-			{ key: "address1", label: "Address line 1" },
-			{ key: "address2", label: "Address line 2" },
-			{ key: "address3", label: "Address line 3" },
-			{ key: "city", label: "City" },
-			{ key: "state", label: "State / Province" },
-			{ key: "postalCode", label: "Postal code" },
-			{ key: "country", label: "Country" },
-		],
-	},
-	{
-		title: "Documents",
-		fields: [
-			{ key: "ssn", label: "Social security number" },
-			{ key: "passportNumber", label: "Passport number" },
-			{ key: "licenseNumber", label: "License number" },
-		],
-	},
+/** Fields grouped like the detail view of an identity; labels in `editor:identity` */
+const identityGroups: { title: "name" | "contact" | "address" | "documents"; fields: IdentityKey[] }[] = [
+	{ title: "name", fields: ["title", "firstName", "middleName", "lastName"] },
+	{ title: "contact", fields: ["username", "company", "email", "phone"] },
+	{ title: "address", fields: ["address1", "address2", "address3", "city", "state", "postalCode", "country"] },
+	{ title: "documents", fields: ["ssn", "passportNumber", "licenseNumber"] },
 ];
 
 /**
  * Identity values: plain text, grouped
  */
 export function IdentityFields({ draft, setDraft }: Readonly<Props>) {
+	const { t } = useTranslation("editor");
 	const identity = draft.identity ?? {};
 
 	const setValue = (key: IdentityKey, value: string) =>
@@ -62,12 +30,12 @@ export function IdentityFields({ draft, setDraft }: Readonly<Props>) {
 	return (
 		<>
 			{identityGroups.map((group) => (
-				<EditorSection key={group.title} title={group.title}>
+				<EditorSection key={group.title} title={t(`identity.groups.${group.title}`)}>
 					<Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-						{group.fields.map(({ key, label }) => (
+						{group.fields.map((key) => (
 							<TextField
 								key={key}
-								label={label}
+								label={t(`identity.fields.${key}`)}
 								size="small"
 								value={identity[key] ?? ""}
 								onChange={(event) => setValue(key, event.target.value)}

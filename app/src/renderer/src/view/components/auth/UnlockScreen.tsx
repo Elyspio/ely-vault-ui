@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { alpha, Alert, Avatar, Button, CircularProgress, Link, Stack } from "@mui/material";
 import LockOpenRounded from "@mui/icons-material/LockOpenRounded";
 import FingerprintRounded from "@mui/icons-material/FingerprintRounded";
@@ -11,6 +12,7 @@ import { PasswordField } from "@components/shared/PasswordField";
 
 export function UnlockScreen() {
 	const dispatch = useAppDispatch();
+	const { t } = useTranslation("auth");
 	const { pending, error } = useAppSelector((state) => state.session);
 	const account = useAppSelector((state) => state.session.current);
 	const [password, setPassword] = useState("");
@@ -37,7 +39,7 @@ export function UnlockScreen() {
 
 	return (
 		<AuthLayout
-			title="Vault locked"
+			title={t("unlock.title")}
 			subtitle={
 				<>
 					{account?.email}
@@ -63,7 +65,7 @@ export function UnlockScreen() {
 			}
 			footer={
 				<Link component="button" variant="body2" underline="hover" sx={{ color: "var(--text-muted)" }} onClick={() => dispatch(logout())}>
-					Log out or switch account
+					{t("unlock.logout")}
 				</Link>
 			}
 		>
@@ -74,7 +76,7 @@ export function UnlockScreen() {
 				}}
 			>
 				<Stack spacing={2}>
-					<PasswordField autoFocus label="Master password" value={password} onChange={(event) => setPassword(event.target.value)} />
+					<PasswordField autoFocus label={t("unlock.masterPasswordLabel")} value={password} onChange={(event) => setPassword(event.target.value)} />
 					{error && (
 						<Alert severity="error" variant="outlined">
 							{error}
@@ -87,11 +89,11 @@ export function UnlockScreen() {
 						disabled={!password || pending}
 						startIcon={pending ? <CircularProgress size={16} color="inherit" /> : <LockOpenRounded />}
 					>
-						{pending ? "Decrypting…" : "Unlock"}
+						{pending ? t("unlock.pending") : t("unlock.submit")}
 					</Button>
 					{helloEnabled && (
 						<Button variant="outlined" size="large" disabled={pending} startIcon={<FingerprintRounded />} onClick={() => void dispatch(helloUnlock())}>
-							Unlock with Windows Hello
+							{t("unlock.withHello")}
 						</Button>
 					)}
 				</Stack>

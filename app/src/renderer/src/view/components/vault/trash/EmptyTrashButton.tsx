@@ -5,6 +5,7 @@ import { useAppSelector } from "@store";
 import { selectTrashItems } from "@modules/vault/vault.selectors";
 import { useVaultWrites } from "@hooks/useVaultWrites";
 import { PurgeConfirmDialog } from "./PurgeConfirmDialog";
+import { useTranslation } from "react-i18next";
 
 /**
  * "Empty trash" of the list header: shown with the trash filter when the trash is not empty.
@@ -14,6 +15,7 @@ export function EmptyTrashButton() {
 	const filterKind = useAppSelector((state) => state.vault.filter.kind);
 	const trash = useAppSelector(selectTrashItems);
 	const writes = useVaultWrites();
+	const { t } = useTranslation("vault");
 	const [confirming, setConfirming] = useState(false);
 	const [busy, setBusy] = useState(false);
 
@@ -29,13 +31,13 @@ export function EmptyTrashButton() {
 	return (
 		<>
 			<Button size="small" color="error" variant="outlined" startIcon={<DeleteSweepRounded />} disabled={busy} onClick={() => setConfirming(true)}>
-				Empty trash
+				{t("trash.emptyTrash")}
 			</Button>
 			<PurgeConfirmDialog
 				open={confirming}
-				title="Empty the trash?"
-				message={`Permanently delete ${trash.length} item${trash.length > 1 ? "s" : ""}? This cannot be undone.`}
-				confirmLabel="Empty trash"
+				title={t("trash.emptyTrashTitle")}
+				message={t("trash.emptyTrashMessage", { count: trash.length })}
+				confirmLabel={t("trash.emptyTrash")}
 				onConfirm={() => void confirm()}
 				onClose={() => setConfirming(false)}
 			/>

@@ -3,6 +3,7 @@ import { CipherType, type DraftField, FieldType, type IdentityKey, identityKeys,
 import { folderSegments, joinFolderSegments } from "@shared/vault/folder.path";
 import { isValidTotp } from "@shared/vault/totp";
 import type { SshKeyMaterial } from "./ssh.keys";
+import { appMessage } from "@shared/i18n/message";
 
 export { isValidTotp };
 
@@ -60,30 +61,30 @@ export function applyDraft(original: BwItem | null, draft: ItemDraft, sshKey: Ss
  * Error message when the draft cannot be written, null when valid. A new SSH key item needs `sshKey`.
  */
 export function validateDraft(original: BwItem | null, draft: ItemDraft, sshKey: SshKeyMaterial | null): string | null {
-	if (draft.name.trim() === "") return "The name is required";
+	if (draft.name.trim() === "") return appMessage("nameRequired");
 
 	if (original) {
-		if (!isCipherType(original.type)) return "This item type cannot be edited";
-		if (draft.type !== original.type) return "The item type cannot change";
-		if (original.deletedDate) return "Restore the item before editing it";
+		if (!isCipherType(original.type)) return appMessage("itemTypeNotEditable");
+		if (draft.type !== original.type) return appMessage("itemTypeCannotChange");
+		if (original.deletedDate) return appMessage("restoreBeforeEditing");
 	} else {
-		if (!isCipherType(draft.type)) return "Unsupported item type";
-		if (draft.type === CipherType.SshKey && !sshKey) return "An SSH key is required: generate, import or paste one";
+		if (!isCipherType(draft.type)) return appMessage("unsupportedItemType");
+		if (draft.type === CipherType.SshKey && !sshKey) return appMessage("sshKeyRequired");
 	}
 
 	const originalFields = (original?.fields ?? []) as BwField[];
 	const usedIndexes = new Set<number>();
 	for (const field of draft.fields) {
 		if (field.originalIndex === null) {
-			if (field.type === FieldType.Linked) return "Linked fields cannot be created";
+			if (field.type === FieldType.Linked) return appMessage("linkedFieldCannotBeCreated");
 			continue;
 		}
 
 		const source = originalFields[field.originalIndex];
-		if (!source) return "A custom field refers to a field that does not exist";
-		if (usedIndexes.has(field.originalIndex)) return "A custom field is listed more than once";
+		if (!source) return appMessage("customFieldMissing");
+		if (usedIndexes.has(field.originalIndex)) return appMessage("customFieldDuplicated");
 		usedIndexes.add(field.originalIndex);
-		if ((source.type === FieldType.Linked) !== (field.type === FieldType.Linked)) return "Linked fields keep their type";
+		if ((source.type === FieldType.Linked) !== (field.type === FieldType.Linked)) return appMessage("linkedFieldKeepsType");
 	}
 
 	if (original?.organizationId) {
@@ -92,7 +93,7 @@ export function validateDraft(original: BwItem | null, draft: ItemDraft, sshKey:
 	}
 
 	const totp = draft.login?.totp;
-	if (totp?.kind === "set" && !isValidTotp(totp.value)) return "Invalid TOTP secret";
+	if (totp?.kind === "set" && !isValidTotp(totp.value)) return appMessage("invalidTotpSecret");
 
 	return null;
 }
@@ -107,14 +108,14 @@ export function planFolderRename(folders: BwFolder[], path: string, newPath: str
 	const from = folderSegments(path);
 	const to = folderSegments(newPath);
 
-	if (from.length === 0) return { error: "The folder name is empty" };
-	if (to.length === 0) return { error: "The new folder name is empty" };
-	if (joinFolderSegments(to) === joinFolderSegments(from)) return { error: "The new name is the same as the current one" };
+	if (from.length === 0) return { error: appMessage("folderNameEmpty") };
+	if (to.length === 0) return { error: appMessage("newFolderNameEmpty") };
+	if (joinFolderSegments(to) === joinFolderSegments(from)) return { error: appMessage("folderNameUnchanged") };
 	if (startsWithSegments(to, from)) return { error: "A folder cannot be moved inside itself" };
 
 	const realFolders = folders.filter((folder): folder is BwFolder & { id: string } => folder.id !== null);
 	const affected = realFolders.filter((folder) => startsWithSegments(folderSegments(folder.name), from));
-	if (affected.length === 0) return { error: `No folder under "${joinFolderSegments(from)}"` };
+	if (affected.length === 0) return { error: appMessage("noFolderUnder", { path: joinFolderSegments(from) }) };
 
 	const renames = affected.map((folder) => {
 		const segments = folderSegments(folder.name);
@@ -134,9 +135,9 @@ export function planFolderRename(folders: BwFolder[], path: string, newPath: str
 /** Error message when the folder cannot be deleted, null when it can. `activeItems` excludes the trash */
 export function checkFolderDelete(folders: BwFolder[], activeItems: BwItem[], folderId: string): string | null {
 	const folder = folders.find((candidate) => candidate.id === folderId);
-	if (!folder) return "Folder not found";
+	if (!folder) return appMessage("folderNotFound");
 
-	if (activeItems.some((item) => item.folderId === folderId)) return "Move or delete its items first";
+	if (activeItems.some((item) => item.folderId === folderId)) return appMessage("folderHasItems");
 
 	const segments = folderSegments(folder.name);
 	const hasSubFolder = folders.some((candidate) => {
@@ -144,7 +145,7 @@ export function checkFolderDelete(folders: BwFolder[], activeItems: BwItem[], fo
 		const candidateSegments = folderSegments(candidate.name);
 		return candidateSegments.length > segments.length && startsWithSegments(candidateSegments, segments);
 	});
-	if (hasSubFolder) return "Delete its sub folders first";
+	if (hasSubFolder) return appMessage("folderHasSubFolders");
 
 	return null;
 }

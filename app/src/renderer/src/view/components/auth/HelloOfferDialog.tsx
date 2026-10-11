@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
 import FingerprintRounded from "@mui/icons-material/FingerprintRounded";
 import { useAppDispatch } from "@store";
@@ -13,6 +14,7 @@ import { ipcErrorMessage } from "@core/utils/ipc.utils";
  */
 export function HelloOfferDialog() {
 	const dispatch = useAppDispatch();
+	const { t } = useTranslation("auth");
 	const [open, setOpen] = useState(false);
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export function HelloOfferDialog() {
 			const result = await service.enableHello(null);
 			if (result.status === "success") {
 				setOpen(false);
-				dispatch(showToast("Windows Hello unlock enabled"));
+				dispatch(showToast(t("hello.enabled")));
 			} else if (result.status === "error") setError(result.message);
 		} catch (err) {
 			setError(ipcErrorMessage(err));
@@ -54,12 +56,11 @@ export function HelloOfferDialog() {
 		<Dialog open={open} onClose={decline} maxWidth="xs" fullWidth>
 			<DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 				<FingerprintRounded fontSize="small" color="primary" />
-				Unlock with Windows Hello?
+				{t("hello.title")}
 			</DialogTitle>
 			<DialogContent>
 				<Typography variant="body2" sx={{ color: "text.secondary" }}>
-					Next time, unlock the vault with your face, fingerprint or PIN instead of the master password. Your master password is stored encrypted for your Windows
-					account. You can change this in Settings → Security.
+					{t("hello.description")}
 				</Typography>
 				{error && (
 					<Alert severity="error" variant="outlined" sx={{ mt: 2, py: 0 }}>
@@ -69,10 +70,10 @@ export function HelloOfferDialog() {
 			</DialogContent>
 			<DialogActions>
 				<Button onClick={decline} disabled={pending}>
-					No thanks
+					{t("hello.decline")}
 				</Button>
 				<Button variant="contained" autoFocus startIcon={<FingerprintRounded />} disabled={pending} onClick={() => void accept()}>
-					Use Windows Hello
+					{t("hello.accept")}
 				</Button>
 			</DialogActions>
 		</Dialog>

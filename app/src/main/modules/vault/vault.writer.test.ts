@@ -8,6 +8,7 @@ import cardFixture from "./fixtures/card.json";
 import sshFixture from "./fixtures/ssh-key.json";
 import noteFixture from "./fixtures/secure-note.json";
 import type { SshKeyMaterial } from "./ssh.keys";
+import { appMessage } from "@shared/i18n/message";
 
 /** Fresh copy of a fixture, typed as the decrypted item returned by `bw serve` */
 function item(json: unknown): BwItem {
@@ -345,41 +346,39 @@ describe("validateDraft", () => {
 	});
 
 	it("refuses an empty name", () => {
-		expect(validateDraft(null, draftWith({ name: "   " }), null)).toBe("The name is required");
+		expect(validateDraft(null, draftWith({ name: "   " }), null)).toBe(appMessage("nameRequired"));
 	});
 
 	it("refuses an unknown type on create", () => {
-		expect(validateDraft(null, draftWith({ type: 6 as CipherType }), null)).toBe("Unsupported item type");
+		expect(validateDraft(null, draftWith({ type: 6 as CipherType }), null)).toBe(appMessage("unsupportedItemType"));
 	});
 
 	it("requires a key on create, and accepts one", () => {
 		const draft = draftWith({ type: CipherType.SshKey, login: undefined });
-		expect(validateDraft(null, draft, null)).toBe("An SSH key is required: generate, import or paste one");
+		expect(validateDraft(null, draft, null)).toBe(appMessage("sshKeyRequired"));
 		expect(validateDraft(null, draft, NEW_KEY)).toBeNull();
 	});
 
 	it("refuses to edit an item of another type than 1 to 5", () => {
 		const original = { ...item(loginFixture), type: 6 };
-		expect(validateDraft(original, draftOf(original), null)).toBe("This item type cannot be edited");
+		expect(validateDraft(original, draftOf(original), null)).toBe(appMessage("itemTypeNotEditable"));
 	});
 
 	it("refuses a type change", () => {
 		const original = item(loginFixture);
-		expect(validateDraft(original, { ...draftOf(original), type: CipherType.SecureNote }, null)).toBe("The item type cannot change");
+		expect(validateDraft(original, { ...draftOf(original), type: CipherType.SecureNote }, null)).toBe(appMessage("itemTypeCannotChange"));
 	});
 
 	it("refuses to edit a deleted item", () => {
 		const original = { ...item(loginFixture), deletedDate: "2026-10-09T08:00:00.000Z" };
-		expect(validateDraft(original, draftOf(original), null)).toBe("Restore the item before editing it");
+		expect(validateDraft(original, draftOf(original), null)).toBe(appMessage("restoreBeforeEditing"));
 	});
 
 	it("refuses unknown or duplicated original field indexes", () => {
 		const original = item(loginFixture);
 		const draft = draftOf(original);
 
-		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: 7, name: "x", type: FieldType.Text, value: "" }] }, null)).toBe(
-			"A custom field refers to a field that does not exist"
-		);
+		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: 7, name: "x", type: FieldType.Text, value: "" }] }, null)).toBe(appMessage("customFieldMissing"));
 		expect(
 			validateDraft(
 				original,
@@ -392,16 +391,16 @@ describe("validateDraft", () => {
 				},
 				null
 			)
-		).toBe("A custom field is listed more than once");
+		).toBe(appMessage("customFieldDuplicated"));
 	});
 
 	it("refuses a new linked field and a linked field changing type", () => {
 		const original = item(loginFixture);
 		const draft = draftOf(original);
 
-		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: null, name: "Link", type: FieldType.Linked }] }, null)).toBe("Linked fields cannot be created");
+		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: null, name: "Link", type: FieldType.Linked }] }, null)).toBe(appMessage("linkedFieldCannotBeCreated"));
 		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: 2, name: "Username", type: FieldType.Text, value: "" }] }, null)).toBe(
-			"Linked fields keep their type"
+			appMessage("linkedFieldKeepsType")
 		);
 	});
 
@@ -410,8 +409,8 @@ describe("validateDraft", () => {
 		const draft = draftOf(original);
 		const withTotp = (value: string) => ({ ...draft, login: { username: "octocat", uris: [], totp: { kind: "set" as const, value } } });
 
-		expect(validateDraft(original, withTotp("not a secret!"), null)).toBe("Invalid TOTP secret");
-		expect(validateDraft(original, withTotp("otpauth://hotp/x?secret=JBSWY3DPEHPK3PXP&counter=1"), null)).toBe("Invalid TOTP secret");
+		expect(validateDraft(original, withTotp("not a secret!"), null)).toBe(appMessage("invalidTotpSecret"));
+		expect(validateDraft(original, withTotp("otpauth://hotp/x?secret=JBSWY3DPEHPK3PXP&counter=1"), null)).toBe(appMessage("invalidTotpSecret"));
 		expect(validateDraft(original, withTotp("JBSWY3DPEHPK3PXP"), null)).toBeNull();
 		expect(validateDraft(original, { ...draft, login: { username: "octocat", uris: [], totp: { kind: "clear" } } }, null)).toBeNull();
 	});
@@ -543,11 +542,11 @@ describe("planFolderRename", () => {
 	});
 
 	it("refuses an empty new path", () => {
-		expect(planFolderRename(folders, "Work", "  /  ")).toEqual({ error: "The new folder name is empty" });
+		expect(planFolderRename(folders, "Work", "  /  ")).toEqual({ error: appMessage("newFolderNameEmpty") });
 	});
 
 	it("refuses the same name", () => {
-		expect(planFolderRename(folders, "Work", "Work/")).toEqual({ error: "The new name is the same as the current one" });
+		expect(planFolderRename(folders, "Work", "Work/")).toEqual({ error: appMessage("folderNameUnchanged") });
 	});
 
 	it("refuses to move a folder inside itself", () => {
@@ -555,11 +554,11 @@ describe("planFolderRename", () => {
 	});
 
 	it("refuses a folder that does not exist under the path", () => {
-		expect(planFolderRename(folders, "Nothing", "Other")).toEqual({ error: 'No folder under "Nothing"' });
+		expect(planFolderRename(folders, "Nothing", "Other")).toEqual({ error: appMessage("noFolderUnder", { path: "Nothing" }) });
 	});
 
 	it("ignores the virtual No folder entry", () => {
-		expect(planFolderRename(folders, "No folder", "Other")).toEqual({ error: 'No folder under "No folder"' });
+		expect(planFolderRename(folders, "No folder", "Other")).toEqual({ error: appMessage("noFolderUnder", { path: "No folder" }) });
 	});
 
 	it("refuses a new name colliding with a folder that is not renamed", () => {
@@ -572,11 +571,11 @@ describe("checkFolderDelete", () => {
 	const activeItem = item({ ...loginFixture, folderId: "f-personal" });
 
 	it("refuses an unknown folder", () => {
-		expect(checkFolderDelete(folders, [], "missing")).toBe("Folder not found");
+		expect(checkFolderDelete(folders, [], "missing")).toBe(appMessage("folderNotFound"));
 	});
 
 	it("refuses a folder with active items", () => {
-		expect(checkFolderDelete(folders, [activeItem], "f-personal")).toBe("Move or delete its items first");
+		expect(checkFolderDelete(folders, [activeItem], "f-personal")).toBe(appMessage("folderHasItems"));
 	});
 
 	it("allows a folder whose items are only in the trash (caller excludes them)", () => {
@@ -584,8 +583,8 @@ describe("checkFolderDelete", () => {
 	});
 
 	it("refuses a folder with sub folders", () => {
-		expect(checkFolderDelete(folders, [], "f-work")).toBe("Delete its sub folders first");
-		expect(checkFolderDelete(folders, [], "f-proj")).toBe("Delete its sub folders first");
+		expect(checkFolderDelete(folders, [], "f-work")).toBe(appMessage("folderHasSubFolders"));
+		expect(checkFolderDelete(folders, [], "f-proj")).toBe(appMessage("folderHasSubFolders"));
 	});
 
 	it("allows a folder that only shares the start of its name with another", () => {

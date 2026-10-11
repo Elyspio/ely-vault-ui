@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Button, Dialog, DialogContent, DialogTitle, FormControlLabel, IconButton, Slider, Switch, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from "@mui/material";
 import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import ContentCopyRounded from "@mui/icons-material/ContentCopyRounded";
+import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "@store";
 import { setGeneratorOpen, setGeneratorOptions, showToast } from "@modules/ui/ui.reducer";
 import { webContainer } from "@core/di/web.container";
@@ -12,16 +13,14 @@ import type { PasswordGeneratorMode, PasswordGeneratorOptions } from "@shared/ty
 import { ColoredSecret } from "./fields/SecretRow";
 import { useDialogFocus } from "@hooks/useDialogFocus";
 
-const modeLabels: Record<PasswordGeneratorMode, string> = {
-	password: "Password",
-	hex: "Hexadecimal",
-	base64: "Base64",
-};
+/** Labels in `editor:generator.modes` */
+const modes: PasswordGeneratorMode[] = ["password", "hex", "base64"];
 
 /**
  * Password generator: Bitwarden CLI (upper/lower case, digits, optional symbols) or random bytes in hex / base64
  */
 export function GeneratorDialog() {
+	const { t } = useTranslation(["editor", "common"]);
 	const dispatch = useAppDispatch();
 	const open = useAppSelector((state) => state.ui.generatorOpen);
 	const actions = useVaultActions();
@@ -60,7 +59,7 @@ export function GeneratorDialog() {
 
 	return (
 		<Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ transition: focus }}>
-			<DialogTitle>Password generator</DialogTitle>
+			<DialogTitle>{t("generator.title")}</DialogTitle>
 			<DialogContent>
 				<ToggleButtonGroup
 					exclusive
@@ -70,9 +69,9 @@ export function GeneratorDialog() {
 					onChange={(_, mode: PasswordGeneratorMode | null) => mode && update({ mode })}
 					sx={{ mb: 2 }}
 				>
-					{Object.entries(modeLabels).map(([mode, label]) => (
+					{modes.map((mode) => (
 						<ToggleButton key={mode} value={mode}>
-							{label}
+							{t(`generator.modes.${mode}`)}
 						</ToggleButton>
 					))}
 				</ToggleButtonGroup>
@@ -92,14 +91,14 @@ export function GeneratorDialog() {
 					}}
 				>
 					<Box sx={{ flex: 1 }}>{password && <ColoredSecret value={password} />}</Box>
-					<Tooltip title="Regenerate">
+					<Tooltip title={t("generator.regenerate")}>
 						<IconButton onClick={() => void generate(options)}>
 							<RefreshRounded />
 						</IconButton>
 					</Tooltip>
 				</Box>
 				<Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2.5 }}>
-					<Typography sx={{ fontSize: "0.85rem", color: "text.secondary", whiteSpace: "nowrap" }}>Longueur : {options.length}</Typography>
+					<Typography sx={{ fontSize: "0.85rem", color: "text.secondary", whiteSpace: "nowrap" }}>{t("generator.length", { length: options.length })}</Typography>
 					<Slider
 						value={options.length}
 						min={8}
@@ -112,11 +111,11 @@ export function GeneratorDialog() {
 					sx={{ mt: 1 }}
 					disabled={options.mode !== "password"}
 					control={<Switch checked={options.special} onChange={(_, special) => update({ special })} />}
-					label={<Typography sx={{ fontSize: "0.85rem" }}>Special characters (!@#$%^&amp;*)</Typography>}
+					label={<Typography sx={{ fontSize: "0.85rem" }}>{t("generator.special")}</Typography>}
 				/>
 				<Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
 					<Button color="inherit" onClick={close}>
-						Close
+						{t("common:close")}
 					</Button>
 					<Button
 						ref={copyRef}
@@ -124,11 +123,11 @@ export function GeneratorDialog() {
 						startIcon={<ContentCopyRounded />}
 						disabled={!password}
 						onClick={() => {
-							void actions.copy(null, { kind: "text", value: password }, "Password");
+							void actions.copy(null, { kind: "text", value: password }, t("generator.password"));
 							close();
 						}}
 					>
-						Copy
+						{t("common:copy")}
 					</Button>
 				</Box>
 			</DialogContent>

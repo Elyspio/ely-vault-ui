@@ -1,6 +1,7 @@
 import { Menu, MenuItem, Tooltip } from "@mui/material";
 import DriveFileRenameOutlineRounded from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
+import { useTranslation } from "react-i18next";
 
 export type FolderMenuPosition = { top: number; left: number };
 
@@ -20,6 +21,7 @@ type Props = {
  * The focus is not restored on close: the rename field takes it.
  */
 export function FolderMenu({ fullName, position, renameBlocker, deleteBlocker, onRename, onDelete, onClose }: Readonly<Props>) {
+	const { t } = useTranslation(["vault", "common"]);
 	return (
 		<Menu
 			open
@@ -29,7 +31,7 @@ export function FolderMenu({ fullName, position, renameBlocker, deleteBlocker, o
 			anchorPosition={position}
 			slotProps={{ paper: { sx: { minWidth: 180, bgcolor: "var(--surface-1)", border: "1px solid var(--border-medium)" } } }}
 		>
-			<Tooltip title={renameBlocker ?? "Renames the folder; its sub folders follow the new name"} placement="right">
+			<Tooltip title={renameBlocker ?? t("folderMenu.renameTooltip")} placement="right">
 				<MenuItem
 					aria-disabled={renameBlocker !== null}
 					onClick={() => {
@@ -38,10 +40,10 @@ export function FolderMenu({ fullName, position, renameBlocker, deleteBlocker, o
 					sx={{ fontSize: "0.85rem", gap: 1.25, opacity: renameBlocker ? 0.45 : 1 }}
 				>
 					<DriveFileRenameOutlineRounded sx={{ fontSize: 17 }} />
-					Rename
+					{t("common:rename")}
 				</MenuItem>
 			</Tooltip>
-			<Tooltip title={deleteBlocker ?? `Delete "${fullName}"`} placement="right">
+			<Tooltip title={deleteBlocker ?? t("folderMenu.deleteTooltip", { name: fullName })} placement="right">
 				<MenuItem
 					aria-disabled={deleteBlocker !== null}
 					onClick={() => {
@@ -50,7 +52,7 @@ export function FolderMenu({ fullName, position, renameBlocker, deleteBlocker, o
 					sx={{ fontSize: "0.85rem", gap: 1.25, color: "error.main", opacity: deleteBlocker ? 0.45 : 1 }}
 				>
 					<DeleteOutlineRounded sx={{ fontSize: 17 }} />
-					Delete
+					{t("common:delete")}
 				</MenuItem>
 			</Tooltip>
 		</Menu>

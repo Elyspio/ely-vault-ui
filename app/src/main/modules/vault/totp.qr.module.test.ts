@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { TotpQrModule } from "./totp.qr.module";
+import { appMessage } from "@shared/i18n/message";
 
 type FakeImage = {
 	isEmpty: () => boolean;
@@ -79,19 +80,19 @@ describe("TotpQrModule", () => {
 	it("asks for a screenshot when the clipboard holds no image", async () => {
 		clipboardImage = null;
 
-		expect(await module.readFromClipboard()).toEqual({ status: "error", message: "Copy a screenshot of the QR code first" });
+		expect(await module.readFromClipboard()).toEqual({ status: "error", message: appMessage("qrScreenshotRequired") });
 	});
 
 	it("asks for a screenshot when the clipboard image is empty", async () => {
 		clipboardImage = { ...fakeImage(Buffer.alloc(0), 0, 0), isEmpty: () => true };
 
-		expect(await module.readFromClipboard()).toEqual({ status: "error", message: "Copy a screenshot of the QR code first" });
+		expect(await module.readFromClipboard()).toEqual({ status: "error", message: appMessage("qrScreenshotRequired") });
 	});
 
 	it("refuses an image too large to be a QR code screenshot", async () => {
 		clipboardImage = fakeImage(Buffer.alloc(0), 5000, 100);
 
-		expect(await module.readFromClipboard()).toEqual({ status: "error", message: "This image is too large to contain a QR code" });
+		expect(await module.readFromClipboard()).toEqual({ status: "error", message: appMessage("qrImageTooLarge") });
 	});
 
 	it("reads a TOTP secret from a clipboard image", async () => {
