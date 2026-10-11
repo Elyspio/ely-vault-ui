@@ -358,8 +358,6 @@ function SidebarItem({ label, icon, active, badge, onClick }: Readonly<{ label: 
 				px: 1.25,
 				py: 0.75,
 				border: 0,
-				borderLeft: "2px solid",
-				borderColor: active ? "var(--accent)" : "transparent",
 				borderRadius: 1.5,
 				bgcolor: active ? "var(--surface-2)" : "transparent",
 				color: active ? "text.primary" : "var(--text-muted)",
