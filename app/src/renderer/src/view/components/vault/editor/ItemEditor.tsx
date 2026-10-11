@@ -87,7 +87,7 @@ function DeletedItem() {
 		<Box sx={{ height: "100%", display: "grid", placeItems: "center", bgcolor: "var(--surface-0)" }}>
 			<Box sx={{ textAlign: "center" }}>
 				<Typography sx={{ color: "var(--text-muted)", mb: 2 }}>This item was deleted elsewhere</Typography>
-				<Button variant="outlined" onClick={() => dispatch(closeEditor())}>
+				<Button size="small" variant="outlined" onClick={() => dispatch(closeEditor())}>
 					Close
 				</Button>
 			</Box>

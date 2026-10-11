@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { useDialogFocus } from "@hooks/useDialogFocus";
 import { Box, Dialog, InputBase, Typography } from "@mui/material";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import LockRounded from "@mui/icons-material/LockRounded";
@@ -38,6 +39,8 @@ export function CommandPalette() {
 	const dispatch = useAppDispatch();
 	const open = useAppSelector((state) => state.ui.paletteOpen);
 	const close = () => dispatch(setPaletteOpen(false));
+	const inputRef = useRef<HTMLInputElement>(null);
+	const focus = useDialogFocus(() => inputRef.current);
 
 	return (
 		<Dialog
@@ -45,6 +48,7 @@ export function CommandPalette() {
 			onClose={close}
 			maxWidth={false}
 			slotProps={{
+				transition: focus,
 				paper: {
 					sx: {
 						width: 640,
@@ -60,12 +64,12 @@ export function CommandPalette() {
 			}}
 		>
 			{/* Mounted on each opening: the query starts empty */}
-			{open && <PaletteContent close={close} />}
+			{open && <PaletteContent close={close} inputRef={inputRef} />}
 		</Dialog>
 	);
 }
 
-function PaletteContent({ close }: Readonly<{ close: () => void }>) {
+function PaletteContent({ close, inputRef }: Readonly<{ close: () => void; inputRef: RefObject<HTMLInputElement | null> }>) {
 	const dispatch = useAppDispatch();
 	const items = useAppSelector(selectItems);
 	const actions = useVaultActions();
@@ -183,7 +187,7 @@ function PaletteContent({ close }: Readonly<{ close: () => void }>) {
 			<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.5, borderBottom: "1px solid var(--border-subtle)" }}>
 				<SearchRounded sx={{ color: "var(--text-faint)" }} />
 				<InputBase
-					autoFocus
+					inputRef={inputRef}
 					fullWidth
 					placeholder="Search an item or an action…"
 					value={query}

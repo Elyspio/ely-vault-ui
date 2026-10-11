@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { Box, Dialog, DialogContent, DialogTitle, Typography } from "@mui/material";
 import LoginRounded from "@mui/icons-material/LoginRounded";
 import StickyNote2Rounded from "@mui/icons-material/StickyNote2Rounded";
@@ -11,6 +11,7 @@ import { openEditor } from "@modules/vault/vault.reducer";
 import { useHotkeys } from "@hooks/useHotkeys";
 import { CipherType } from "@shared/types/vault.types";
 import { Kbd } from "@components/shared/Kbd";
+import { useDialogFocus } from "@hooks/useDialogFocus";
 
 type Option = { type: CipherType; label: string; hint: string; key: string; icon: ReactNode };
 
@@ -29,16 +30,19 @@ export function NewItemDialog() {
 	const dispatch = useAppDispatch();
 	const open = useAppSelector((state) => state.ui.newItemOpen);
 	const close = () => dispatch(setNewItemOpen(false));
+	// No field: the first type is the main action
+	const firstRef = useRef<HTMLButtonElement>(null);
+	const focus = useDialogFocus(() => firstRef.current);
 
 	return (
-		<Dialog open={open} onClose={close} maxWidth="xs" fullWidth>
+		<Dialog open={open} onClose={close} maxWidth="xs" fullWidth slotProps={{ transition: focus }}>
 			{/* Mounted on each opening: the highlight starts on the first type */}
-			{open && <TypePicker />}
+			{open && <TypePicker firstRef={firstRef} />}
 		</Dialog>
 	);
 }
 
-function TypePicker() {
+function TypePicker({ firstRef }: Readonly<{ firstRef: RefObject<HTMLButtonElement | null> }>) {
 	const dispatch = useAppDispatch();
 	const [index, setIndex] = useState(0);
 
@@ -62,6 +66,7 @@ function TypePicker() {
 				{options.map((option, i) => (
 					<Box
 						key={option.type}
+						ref={i === 0 ? firstRef : undefined}
 						component="button"
 						type="button"
 						onMouseMove={() => setIndex(i)}

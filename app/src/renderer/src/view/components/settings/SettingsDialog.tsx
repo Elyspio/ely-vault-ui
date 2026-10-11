@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { Box, Button, Dialog, IconButton, MenuItem, Select, Switch, TextField, Typography } from "@mui/material";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
@@ -19,6 +19,7 @@ import { formatDateTime } from "@view/utils/date.utils";
 import { CertificatesSection } from "./CertificatesSection";
 import { UpdatesSection } from "./UpdatesSection";
 import { selectPendingUpdate } from "@modules/update/update.selectors";
+import { useDialogFocus } from "@hooks/useDialogFocus";
 
 const autoLockOptions = [
 	{ value: 1, label: "1 minute" },
@@ -83,12 +84,15 @@ export function SettingsDialog() {
 	}
 
 	const close = () => dispatch(setSettingsOpen(false));
+	// Focus goes to the first control of the active section (the section changes while the dialog is open: read at focus time)
+	const contentRef = useRef<HTMLDivElement>(null);
+	const focus = useDialogFocus(() => contentRef.current?.querySelector<HTMLElement>('[role="combobox"], button, input:not([tabindex="-1"]), [role="switch"]'));
 
 	const update = (updater: (config: AppConfig) => AppConfig) => void dispatch(saveConfig(updater(config)));
 	const section = sections.find((s) => s.key === active)!;
 
 	return (
-		<Dialog open={open} onClose={close} maxWidth="md" fullWidth slotProps={{ paper: { sx: { height: "min(70vh, 640px)", minHeight: 420 } } }}>
+		<Dialog open={open} onClose={close} maxWidth="md" fullWidth slotProps={{ transition: focus, paper: { sx: { height: "min(70vh, 640px)", minHeight: 420 } } }}>
 			<Box sx={{ display: "flex", height: "100%", minHeight: 0 }}>
 				<Box
 					component="nav"
@@ -133,7 +137,7 @@ export function SettingsDialog() {
 							<CloseRounded fontSize="small" />
 						</IconButton>
 					</Box>
-					<Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 3, pb: 3, display: "flex", flexDirection: "column", gap: 2 }}>
+					<Box ref={contentRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 3, pb: 3, display: "flex", flexDirection: "column", gap: 2 }}>
 						{active === "security" && (
 							<Group>
 								<Setting label="Auto-lock" description="After a period of computer inactivity">

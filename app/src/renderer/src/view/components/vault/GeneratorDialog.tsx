@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Button, Dialog, DialogContent, DialogTitle, FormControlLabel, IconButton, Slider, Switch, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from "@mui/material";
 import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import ContentCopyRounded from "@mui/icons-material/ContentCopyRounded";
@@ -10,6 +10,7 @@ import { useVaultActions } from "@hooks/useVaultActions";
 import { ipcErrorMessage } from "@core/utils/ipc.utils";
 import type { PasswordGeneratorMode, PasswordGeneratorOptions } from "@shared/types/vault.types";
 import { ColoredSecret } from "./fields/SecretRow";
+import { useDialogFocus } from "@hooks/useDialogFocus";
 
 const modeLabels: Record<PasswordGeneratorMode, string> = {
 	password: "Password",
@@ -27,6 +28,9 @@ export function GeneratorDialog() {
 	/** Saved in the store: the item editor generates with the same options */
 	const options = useAppSelector((state) => state.ui.generatorOptions);
 	const [password, setPassword] = useState("");
+	// Copy is the main action: focused on opening, once the password is generated (the button is disabled before)
+	const copyRef = useRef<HTMLButtonElement>(null);
+	const focus = useDialogFocus(() => copyRef.current, !!password);
 
 	const generate = useCallback(
 		async (next: PasswordGeneratorOptions) => {
@@ -55,7 +59,7 @@ export function GeneratorDialog() {
 	};
 
 	return (
-		<Dialog open={open} onClose={close} maxWidth="sm" fullWidth>
+		<Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ transition: focus }}>
 			<DialogTitle>Password generator</DialogTitle>
 			<DialogContent>
 				<ToggleButtonGroup
@@ -115,6 +119,7 @@ export function GeneratorDialog() {
 						Close
 					</Button>
 					<Button
+						ref={copyRef}
 						variant="contained"
 						startIcon={<ContentCopyRounded />}
 						disabled={!password}

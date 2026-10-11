@@ -8,7 +8,7 @@ import { useHotkeys } from "@hooks/useHotkeys";
 import { CipherType, type ItemDraft, type VaultItem, type WriteOutcome } from "@shared/types/vault.types";
 import { draftErrors, isDraftDirty } from "@view/utils/draft.utils";
 import { Kbd } from "@components/shared/Kbd";
-import { EditorHeader } from "./EditorHeader";
+import { EditorHeader, cipherTypeLabels } from "./EditorHeader";
 import { LoginFields } from "./LoginFields";
 import { CardFields } from "./CardFields";
 import { IdentityFields } from "./IdentityFields";
@@ -164,13 +164,25 @@ export function EditorForm({ item, initial }: Readonly<Props>) {
 				</Box>
 			</Box>
 
-			<Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 1.5, px: 4, py: 1.5, borderTop: "1px solid var(--border-subtle)" }}>
-				<Typography sx={{ mr: "auto", fontSize: "0.75rem", color: "var(--text-faint)" }}>{item ? "Editing" : "New item"}</Typography>
-				<Button color="inherit" onClick={() => dispatch(closeEditor())} endIcon={<Kbd>Esc</Kbd>}>
+			<Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 4, py: 1.25, borderTop: "1px solid var(--border-subtle)", bgcolor: "var(--surface-1)" }}>
+				<Typography sx={{ fontSize: "0.75rem", color: "var(--text-faint)" }}>
+					{item ? "Editing" : "New"} · {cipherTypeLabels[type]}
+				</Typography>
+				{/* Shortcut hints next to the buttons: inside a button's icon slot MUI would scale the keys up */}
+				<Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "auto", mr: 1, fontSize: "0.72rem", color: "var(--text-faint)" }}>
+					<Kbd>Ctrl</Kbd>
+					<Kbd>S</Kbd>
+					<Box component="span" sx={{ mr: 1 }}>
+						save
+					</Box>
+					<Kbd>Esc</Kbd>
+					<span>cancel</span>
+				</Box>
+				<Button size="small" color="inherit" onClick={() => dispatch(closeEditor())}>
 					Cancel
 				</Button>
-				<Button variant="contained" disabled={saving} onClick={() => void save()} endIcon={<Kbd>Ctrl+S</Kbd>}>
-					Save
+				<Button size="small" variant="contained" disabled={saving} onClick={() => void save()}>
+					{saving ? "Saving…" : "Save"}
 				</Button>
 			</Box>
 
