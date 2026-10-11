@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { canCheck, fromUpdateInfo, isDowngrade, isNoReleaseError, shortErrorMessage, updaterChannel } from "./update.status";
+import { canCheck, fromUpdateInfo, isDowngrade, isNoReleaseError, pickReleaseTag, shortErrorMessage } from "./update.status";
 
 describe("canCheck", () => {
 	it("allows a check when nothing is pending", () => {
@@ -11,11 +11,25 @@ describe("canCheck", () => {
 	});
 });
 
-describe("updaterChannel", () => {
-	it("maps each channel to the electron-updater options", () => {
-		expect(updaterChannel("stable")).toEqual({ channel: "latest", allowPrerelease: false });
-		expect(updaterChannel("beta")).toEqual({ channel: "beta", allowPrerelease: true });
-		expect(updaterChannel("dev")).toEqual({ channel: "dev", allowPrerelease: true });
+describe("pickReleaseTag", () => {
+	const tags = ["v0.3.1-dev.1", "v0.3.0", "v0.3.0-beta.2", "v0.2.0", "v0.2.0-dev.1", "v0.1.0-alpha.1", "nightly"];
+
+	it("takes the highest version of the channel and of the more stable ones", () => {
+		expect(pickReleaseTag(tags, "stable")).toBe("v0.3.0");
+		expect(pickReleaseTag(tags, "beta")).toBe("v0.3.0");
+		expect(pickReleaseTag(tags, "dev")).toBe("v0.3.1-dev.1");
+	});
+
+	it("prefers a more stable release with a higher version", () => {
+		expect(pickReleaseTag(["v0.2.0-dev.1", "v0.3.0", "v0.2.0-beta.1"], "dev")).toBe("v0.3.0");
+		expect(pickReleaseTag(["v0.4.0-beta.1", "v0.3.0", "v0.3.5-dev.1"], "dev")).toBe("v0.4.0-beta.1");
+		expect(pickReleaseTag(["v0.4.0-dev.1", "v0.3.0", "v0.4.0-beta.1"], "beta")).toBe("v0.4.0-beta.1");
+	});
+
+	it("ignores the less stable releases and the unknown tags", () => {
+		expect(pickReleaseTag(["v0.4.0-dev.1", "v0.4.0-beta.1", "v0.3.0"], "stable")).toBe("v0.3.0");
+		expect(pickReleaseTag(["v0.4.0-dev.1", "v0.1.0-alpha.1", "nightly"], "beta")).toBeNull();
+		expect(pickReleaseTag([], "dev")).toBeNull();
 	});
 });
 

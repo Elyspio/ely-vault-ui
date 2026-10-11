@@ -18,4 +18,4 @@
 - pushes the `vX.Y.Z-dev.N` tag and publishes a **prerelease** right away (not marked latest), with the branch, the commit and the commits since the previous development build as notes;
 - keeps the 5 newest development builds: the older releases and their tags are deleted.
 
-Only the applications on the **Dev** update channel install them (see [Updates](../usage/updates.md)). Stable and beta releases ignore the development tags (`1.2.0-beta.1` sorts before `1.2.0-dev.3`), and their notes start from the previous stable or beta release.
+Only the applications on the **Dev** update channel install them (see [Updates](../usage/updates.md)); they also install a stable or beta release of a higher version. Stable and beta releases ignore the development tags (`1.2.0-beta.1` sorts before `1.2.0-dev.3`), and their notes start from the previous stable or beta release.
