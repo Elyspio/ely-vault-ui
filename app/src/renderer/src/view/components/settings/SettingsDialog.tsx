@@ -239,7 +239,7 @@ export function SettingsDialog() {
 									</Setting>
 									<Setting
 										label="Channel"
-										description="Stable releases, also the betas, or the development builds. An older version of the new channel is only installed on request"
+										description="Stable releases, also the betas, or also the development builds: the highest version wins. An older version of the new channel is only installed on request"
 									>
 										<Select
 											size="small"

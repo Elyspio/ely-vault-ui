@@ -178,6 +178,9 @@ importers:
       '@bitwarden/cli':
         specifier: 2026.9.1
         version: 2026.9.1(supports-color@10.2.2)
+      builder-util-runtime:
+        specifier: 9.7.0
+        version: 9.7.0(supports-color@10.2.2)
       electron-updater:
         specifier: ^6.8.9
         version: 6.8.9(supports-color@10.2.2)

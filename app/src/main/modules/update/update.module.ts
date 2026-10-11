@@ -10,12 +10,13 @@ import { log } from "../../utils/logs.utils";
 import { mainConfig } from "@shared/config/main.config";
 import type { AppConfig } from "@shared/config/app.config";
 import type { UpdateStatus } from "@shared/types/update.types";
-import { canCheck, fromUpdateInfo, isDowngrade, isNoReleaseError, shortErrorMessage, updaterChannel } from "./update.status";
+import { releaseProvider } from "./release.provider";
+import { canCheck, fromUpdateInfo, isDowngrade, isNoReleaseError, shortErrorMessage } from "./update.status";
 
 /**
  * Updates the application from the GitHub releases (electron-updater).
  *
- * A newer release of the selected channel (stable, beta or dev) is downloaded as soon as it is found and installed
+ * A newer release of the selected channel (stable, beta or dev, each also following the more stable releases) is downloaded as soon as it is found and installed
  * on restart or when the application quits. An older one (after a channel change) is only downloaded and installed
  * on the user's request.
  */
@@ -54,8 +55,11 @@ export class UpdateModule extends LogModule {
 		this.autoUpdater.autoInstallOnAppQuit = false;
 		if (!app.isPackaged) {
 			this.autoUpdater.forceDevUpdateConfig = true;
-			this.logger.info("Development build: update checks use dev-app-update.yml");
+			this.logger.info("Development build: update checks are enabled by dev-app-update.yml");
 		}
+		// Releases picked by channel (dev → beta → stable), app-update.yml still gives the download cache folder
+		const { owner, repo } = mainConfig.autoUpdate.repository;
+		this.autoUpdater.setFeedURL(releaseProvider(owner, repo, () => this.settings?.channel ?? "stable"));
 
 		this.autoUpdater.on("checking-for-update", () => this.setStatus({ state: "checking", error: null }));
 		this.autoUpdater.on("update-available", (info) => {
@@ -177,10 +181,8 @@ export class UpdateModule extends LogModule {
 	}
 
 	private applySettings(settings: AppConfig["updates"]) {
+		// The channel is read by the release provider at each check
 		this.settings = settings;
-		const { channel, allowPrerelease } = updaterChannel(settings.channel);
-		this.autoUpdater.channel = channel;
-		this.autoUpdater.allowPrerelease = allowPrerelease;
 		// An older release of the channel is offered, never downloaded nor installed without the user's request
 		this.autoUpdater.allowDowngrade = true;
 	}

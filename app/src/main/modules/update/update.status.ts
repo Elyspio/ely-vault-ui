@@ -11,20 +11,28 @@ export function canCheck(state: UpdateState): boolean {
 }
 
 /**
- * electron-updater options of a channel (GitHub provider):
- * - stable: the latest release, prereleases ignored;
- * - beta: the newest stable or beta release, the development builds (custom "dev" channel) are skipped;
- * - dev: the newest development build only.
+ * Prerelease identifiers followed by a channel, besides the stable releases: dev → beta → stable, each channel also takes
+ * the more stable releases
  */
-export function updaterChannel(channel: UpdateChannel): { channel: "latest" | "beta" | "dev"; allowPrerelease: boolean } {
-	switch (channel) {
-		case "stable":
-			return { channel: "latest", allowPrerelease: false };
-		case "beta":
-			return { channel: "beta", allowPrerelease: true };
-		case "dev":
-			return { channel: "dev", allowPrerelease: true };
+const channelPrereleases: Record<UpdateChannel, readonly string[]> = {
+	stable: [],
+	beta: ["beta"],
+	dev: ["beta", "dev"],
+};
+
+/**
+ * Release of a channel among the GitHub release tags (`v1.2.0`, `v1.3.0-beta.1`, `v1.3.0-dev.2`): the highest version
+ * followed by the channel, so a more stable release with a higher version replaces a development build or a beta
+ */
+export function pickReleaseTag(tags: readonly string[], channel: UpdateChannel): string | null {
+	let best: string | null = null;
+	for (const tag of tags) {
+		if (!semver.valid(tag)) continue;
+		const prerelease = semver.prerelease(tag)?.[0];
+		if (prerelease !== undefined && !channelPrereleases[channel].includes(String(prerelease))) continue;
+		if (best === null || semver.gt(tag, best)) best = tag;
 	}
+	return best;
 }
 
 export function isDowngrade(currentVersion: string, latestVersion: string) {

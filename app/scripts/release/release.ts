@@ -163,7 +163,7 @@ export function devReleaseNotes(branch: string, commit: string, previousTag: str
  * Files uploaded to the release: installers, their blockmap and the update files of electron-updater.
  *
  * The GitHub publisher ignores the version channel: betas and development builds also ship latest*.yml,
- * which electron-updater reads when a prerelease has no beta*.yml or dev*.yml.
+ * the only update file read by the release provider (src/main/modules/update/release.provider.ts).
  */
 export function releaseAssets(name: string, release: ReleaseVersion): string[] {
 	const { version } = release;
