@@ -21,5 +21,7 @@ export function useFilterLabel() {
 			return snapshot?.organizations.find((o) => o.id === filter.id)?.name ?? "Organization";
 		case "collection":
 			return snapshot?.collections.find((c) => c.id === filter.id)?.name ?? "Collection";
+		case "trash":
+			return "Trash";
 	}
 }

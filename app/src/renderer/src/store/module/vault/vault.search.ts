@@ -7,7 +7,9 @@ export type VaultFilter =
 	/** id null: items without folder */
 	| { kind: "folder"; id: string | null }
 	| { kind: "organization"; id: string }
-	| { kind: "collection"; id: string };
+	| { kind: "collection"; id: string }
+	/** Deleted items only (the list reads `snapshot.trash`) */
+	| { kind: "trash" };
 
 const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
 
@@ -18,7 +20,13 @@ export function normalize(value: string) {
 		.toLowerCase();
 }
 
+/**
+ * Whether an item belongs to a filter. Deleted items only match the trash filter, active items never match it.
+ */
 export function matchesFilter(item: VaultItem, filter: VaultFilter) {
+	if (filter.kind === "trash") return item.deletedDate !== null;
+	if (item.deletedDate !== null) return false;
+
 	switch (filter.kind) {
 		case "all":
 			return true;
@@ -33,6 +41,15 @@ export function matchesFilter(item: VaultItem, filter: VaultFilter) {
 		case "collection":
 			return item.collectionIds.includes(filter.id);
 	}
+}
+
+/**
+ * Item to select once `id` leaves the list (restored or purged): the next one, else the previous one, else none
+ */
+export function neighbourId(items: VaultItem[], id: string): string | null {
+	const index = items.findIndex((item) => item.id === id);
+	if (index === -1) return null;
+	return items[index + 1]?.id ?? items[index - 1]?.id ?? null;
 }
 
 /**

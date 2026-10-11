@@ -13,22 +13,27 @@ import { ItemIcon } from "./ItemIcon";
 import { Kbd } from "@components/shared/Kbd";
 import { useFilterLabel } from "./useFilterLabel";
 import { usePrimaryCopy } from "./usePrimaryCopy";
+import { EmptyTrashButton } from "./trash/EmptyTrashButton";
+import { formatDateTime } from "@view/utils/date.utils";
 
 export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInputElement | null> }>) {
 	const dispatch = useAppDispatch();
 	const items = useAppSelector(selectVisibleItems);
 	const query = useAppSelector((state) => state.vault.query);
 	const selectedId = useAppSelector((state) => state.vault.selectedId);
+	// While the editor is open, the selection never moves on its own: moving it asks about the unsaved changes
+	const editing = useAppSelector((state) => state.vault.editor !== null);
 	const filterLabel = useFilterLabel();
 	const copyPrimary = usePrimaryCopy();
 	const listRef = useRef<HTMLDivElement>(null);
 
 	// Keep a visible selection: the first result when searching
 	useEffect(() => {
+		if (editing) return;
 		if (items.length > 0 && !items.some((item) => item.id === selectedId)) {
 			dispatch(selectItem(items[0].id));
 		}
-	}, [items, selectedId, dispatch]);
+	}, [items, selectedId, editing, dispatch]);
 
 	useEffect(() => {
 		listRef.current?.querySelector(`[data-id="${CSS.escape(selectedId ?? "")}"]`)?.scrollIntoView({ block: "nearest" });
@@ -49,8 +54,9 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 			event.preventDefault();
 			move(-1);
 		} else if (event.key === "Enter") {
+			// Deleted items are never copied: only active items have a primary copy; nothing is copied while editing
 			const item = items.find((i) => i.id === selectedId);
-			if (item) {
+			if (item && !item.deletedDate && !editing) {
 				event.preventDefault();
 				void copyPrimary(item);
 			}
@@ -88,9 +94,12 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 						},
 					}}
 				/>
-				<Typography sx={{ mt: 1.25, px: 0.5, fontSize: "0.72rem", color: "var(--text-faint)" }}>
-					{filterLabel} · {items.length} item{items.length > 1 ? "s" : ""}
-				</Typography>
+				<Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mt: 1.25, px: 0.5 }}>
+					<Typography sx={{ fontSize: "0.72rem", color: "var(--text-faint)" }}>
+						{filterLabel} · {items.length} item{items.length > 1 ? "s" : ""}
+					</Typography>
+					<EmptyTrashButton />
+				</Box>
 			</Box>
 
 			<Box ref={listRef} tabIndex={0} onKeyDown={onKeyDown} sx={{ flex: 1, overflow: "auto", px: 1, pb: 1, outline: "none" }}>
@@ -106,7 +115,7 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 							item={item}
 							selected={item.id === selectedId}
 							onSelect={() => dispatch(selectItem(item.id))}
-							onActivate={() => void copyPrimary(item)}
+							onActivate={item.deletedDate ? undefined : () => void copyPrimary(item)}
 						/>
 					))
 				)}
@@ -115,10 +124,11 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 	);
 }
 
-type RowProps = { item: VaultItem; selected: boolean; onSelect: () => void; onActivate: () => void };
+type RowProps = { item: VaultItem; selected: boolean; onSelect: () => void; onActivate?: () => void };
 
 function ItemRow({ item, selected, onSelect, onActivate }: Readonly<RowProps>) {
-	const subtitle = getItemSubtitle(item);
+	// Deleted items show when they were deleted instead of their secondary line
+	const subtitle = item.deletedDate ? `Deleted ${formatDateTime(item.deletedDate)}` : getItemSubtitle(item);
 
 	return (
 		<Box

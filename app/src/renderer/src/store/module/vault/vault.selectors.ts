@@ -5,13 +5,33 @@ import { searchItems } from "./vault.search";
 
 const emptyItems: VaultItem[] = [];
 
+/** Active items: everything but the trash, the only source of the palette, the counts and the other filters */
 export const selectItems = (state: StoreState) => state.vault.snapshot?.items ?? emptyItems;
 
-export const selectVisibleItems = createSelector([selectItems, (state: StoreState) => state.vault.filter, (state: StoreState) => state.vault.query], (items, filter, query) =>
+/** Deleted items */
+export const selectTrashItems = (state: StoreState) => state.vault.snapshot?.trash ?? emptyItems;
+
+/**
+ * Items of the list: the trash when the trash filter is active, the active items otherwise
+ */
+export const selectListSource = (state: StoreState) => (state.vault.filter.kind === "trash" ? selectTrashItems(state) : selectItems(state));
+
+export const selectVisibleItems = createSelector([selectListSource, (state: StoreState) => state.vault.filter, (state: StoreState) => state.vault.query], (items, filter, query) =>
 	searchItems(items, filter, query)
 );
 
-export const selectSelectedItem = createSelector([selectItems, (state: StoreState) => state.vault.selectedId], (items, id) => items.find((item) => item.id === id) ?? null);
+/**
+ * Selected item, active or deleted: used by the detail panel, which is read-only for deleted items
+ */
+export const selectSelectedItem = createSelector(
+	[selectItems, selectTrashItems, (state: StoreState) => state.vault.selectedId],
+	(items, trash, id) => items.find((item) => item.id === id) ?? trash.find((item) => item.id === id) ?? null
+);
+
+/**
+ * Selected active item only: every action that copies, types or opens a secret reads this one, so a deleted item can never be used by them
+ */
+export const selectActiveSelectedItem = createSelector([selectItems, (state: StoreState) => state.vault.selectedId], (items, id) => items.find((item) => item.id === id) ?? null);
 
 export type VaultCounts = {
 	all: number;
@@ -21,9 +41,13 @@ export type VaultCounts = {
 	noFolder: number;
 	collections: Record<string, number>;
 	organizations: Record<string, number>;
+	trash: number;
 };
 
-export const selectCounts = createSelector([selectItems], (items): VaultCounts => {
+/**
+ * Counts of the sidebar. Active items and the trash are counted apart: deleted items never count in the other entries.
+ */
+export const selectCounts = createSelector([selectItems, selectTrashItems], (items, trash): VaultCounts => {
 	const counts: VaultCounts = {
 		all: items.length,
 		favorites: 0,
@@ -32,6 +56,7 @@ export const selectCounts = createSelector([selectItems], (items): VaultCounts =
 		noFolder: 0,
 		collections: {},
 		organizations: {},
+		trash: trash.length,
 	};
 
 	for (const item of items) {

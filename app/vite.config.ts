@@ -2,6 +2,7 @@ import path from "node:path";
 import { convertPathToAlias, defaultFmtConfig, defaultLintConfig } from "@elyspio/vite-eslint-config";
 import { defineConfig } from "vite-plus";
 import tsconfigNode from "./tsconfig.node.json";
+import tsconfigWeb from "./tsconfig.web.json";
 
 // Build and dev still go through electron-vite (config/electron.vite.config.ts).
 // This file only configures the vite-plus toolchain: fmt, lint and test.
@@ -17,7 +18,8 @@ export default defineConfig(({ mode }) => ({
 		ignorePatterns: [...defaultLintConfig.ignorePatterns, ...ignorePatterns],
 	},
 	resolve: {
-		alias: convertPathToAlias(tsconfigNode.compilerOptions.paths, path.resolve(import.meta.dirname)),
+		// Main and renderer aliases: unit tests cover both processes
+		alias: convertPathToAlias({ ...tsconfigWeb.compilerOptions.paths, ...tsconfigNode.compilerOptions.paths }, path.resolve(import.meta.dirname)),
 	},
 	test: {
 		environment: "node",

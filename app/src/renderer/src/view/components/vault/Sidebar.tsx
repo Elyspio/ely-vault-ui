@@ -13,6 +13,7 @@ import ChevronRightRounded from "@mui/icons-material/ChevronRightRounded";
 import FolderOffRounded from "@mui/icons-material/FolderOffRounded";
 import BusinessRounded from "@mui/icons-material/BusinessRounded";
 import CollectionsBookmarkRounded from "@mui/icons-material/CollectionsBookmarkRounded";
+import DeleteRounded from "@mui/icons-material/DeleteRounded";
 import { useAppDispatch, useAppSelector } from "@store";
 import { selectCounts } from "@modules/vault/vault.selectors";
 import { setFilter } from "@modules/vault/vault.reducer";
@@ -125,6 +126,8 @@ export function Sidebar() {
 					</Box>
 				))}
 			</Box>
+
+			<Box sx={{ px: 1, pt: 1, borderTop: "1px solid var(--border-subtle)" }}>{entry({ kind: "trash" }, <DeleteRounded />, "Trash", counts.trash)}</Box>
 
 			<ButtonBase
 				onClick={() => dispatch(setSettingsOpen(true))}

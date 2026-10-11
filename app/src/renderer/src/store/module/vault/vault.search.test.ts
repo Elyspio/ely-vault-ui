@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { CipherType, type VaultItem } from "@shared/types/vault.types";
-import { getItemSubtitle, searchItems } from "./vault.search";
+import { getItemSubtitle, matchesFilter, neighbourId, searchItems } from "./vault.search";
 
 function item(name: string, overrides: Partial<VaultItem> = {}): VaultItem {
 	return {
@@ -71,5 +71,35 @@ describe("getItemSubtitle", () => {
 	it("shows the username of a login and the masked number of a card", () => {
 		expect(getItemSubtitle(items[0])).toBe("jean@company.com");
 		expect(getItemSubtitle(items[4])).toBe("Visa •••• 1111");
+	});
+});
+
+describe("trash filter", () => {
+	const trashed = [item("Old forum", { deletedDate: "2026-10-01T10:00:00.000Z" }), item("Old bank", { deletedDate: "2026-10-02T10:00:00.000Z" })];
+
+	it("matches only deleted items", () => {
+		expect(matchesFilter(trashed[0], { kind: "trash" })).toBe(true);
+		expect(matchesFilter(items[0], { kind: "trash" })).toBe(false);
+	});
+
+	it("never lets a deleted item into the other filters", () => {
+		expect(matchesFilter(trashed[0], { kind: "all" })).toBe(false);
+		expect(matchesFilter(trashed[0], { kind: "favorites" })).toBe(false);
+		expect(searchItems(trashed, { kind: "all" }, "")).toEqual([]);
+	});
+
+	it("searches inside the trash", () => {
+		expect(searchItems(trashed, { kind: "trash" }, "bank").map((i) => i.name)).toEqual(["Old bank"]);
+	});
+});
+
+describe("neighbourId", () => {
+	const list = [item("a"), item("b"), item("c")];
+
+	it("picks the next item, else the previous one, else none", () => {
+		expect(neighbourId(list, "a")).toBe("b");
+		expect(neighbourId(list, "c")).toBe("b");
+		expect(neighbourId([item("only")], "only")).toBeNull();
+		expect(neighbourId(list, "missing")).toBeNull();
 	});
 });

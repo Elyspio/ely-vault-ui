@@ -3,7 +3,7 @@ import { Box, Button, Dialog, DialogContent, DialogTitle, FormControlLabel, Icon
 import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import ContentCopyRounded from "@mui/icons-material/ContentCopyRounded";
 import { useAppDispatch, useAppSelector } from "@store";
-import { setGeneratorOpen, showToast } from "@modules/ui/ui.reducer";
+import { setGeneratorOpen, setGeneratorOptions, showToast } from "@modules/ui/ui.reducer";
 import { webContainer } from "@core/di/web.container";
 import { VaultService } from "@services/vault.service";
 import { useVaultActions } from "@hooks/useVaultActions";
@@ -24,7 +24,8 @@ export function GeneratorDialog() {
 	const dispatch = useAppDispatch();
 	const open = useAppSelector((state) => state.ui.generatorOpen);
 	const actions = useVaultActions();
-	const [options, setOptions] = useState<PasswordGeneratorOptions>({ mode: "password", length: 24, special: true });
+	/** Saved in the store: the item editor generates with the same options */
+	const options = useAppSelector((state) => state.ui.generatorOptions);
 	const [password, setPassword] = useState("");
 
 	const generate = useCallback(
@@ -49,7 +50,7 @@ export function GeneratorDialog() {
 
 	const update = (changes: Partial<PasswordGeneratorOptions>) => {
 		const next = { ...options, ...changes };
-		setOptions(next);
+		dispatch(setGeneratorOptions(next));
 		void generate(next);
 	};
 
@@ -99,7 +100,7 @@ export function GeneratorDialog() {
 						value={options.length}
 						min={8}
 						max={64}
-						onChange={(_, length) => setOptions((current) => ({ ...current, length }))}
+						onChange={(_, length) => dispatch(setGeneratorOptions({ ...options, length }))}
 						onChangeCommitted={(_, length) => update({ length })}
 					/>
 				</Box>

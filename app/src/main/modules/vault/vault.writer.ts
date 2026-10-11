@@ -1,6 +1,9 @@
 import type { BwField, BwFolder, BwItem } from "../bitwarden/bw.types";
 import { CipherType, type DraftField, FieldType, type IdentityKey, identityKeys, type ItemDraft, type SecretChange } from "@shared/types/vault.types";
 import { folderSegments, joinFolderSegments } from "@shared/vault/folder.path";
+import { isValidTotp } from "@shared/vault/totp";
+
+export { isValidTotp };
 
 /**
  * Pure rules of the write operations: they build the request bodies sent to `bw serve` and validate the drafts.
@@ -86,27 +89,6 @@ export function validateDraft(original: BwItem | null, draft: ItemDraft): string
 	if (totp?.kind === "set" && !isValidTotp(totp.value)) return "Invalid TOTP secret";
 
 	return null;
-}
-
-/** Accepts a base32 secret, an otpauth://totp uri or a steam:// secret. No TOTP is computed here. */
-export function isValidTotp(value: string): boolean {
-	const trimmed = value.trim();
-	const lower = trimmed.toLowerCase();
-
-	if (lower.startsWith("otpauth://")) {
-		let url: URL;
-		try {
-			url = new URL(trimmed);
-		} catch {
-			return false;
-		}
-		if (url.protocol !== "otpauth:" || url.host !== "totp") return false;
-		return isBase32Secret(url.searchParams.get("secret") ?? "");
-	}
-
-	if (lower.startsWith("steam://")) return isBase32Secret(trimmed.slice("steam://".length));
-
-	return isBase32Secret(trimmed);
 }
 
 /** The server refused an edit made on a stale copy of the item */
@@ -287,11 +269,6 @@ function isCipherType(type: number): boolean {
 
 function hasSshKey(sshKey: ItemDraft["sshKey"]): boolean {
 	return Boolean(sshKey && sshKey.privateKey.trim() && sshKey.publicKey.trim() && sshKey.keyFingerprint.trim());
-}
-
-function isBase32Secret(value: string): boolean {
-	const cleaned = value.replaceAll(/[\s=]/g, "");
-	return cleaned.length >= 16 && /^[A-Z2-7]+$/i.test(cleaned);
 }
 
 function emptyToNull(value: string | null | undefined): string | null {
