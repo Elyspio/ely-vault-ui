@@ -1,7 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { SessionState } from "@shared/types/vault.types";
 import type { CertificateInfo } from "@shared/types/certificate.types";
-import { importAuthority, initApp, lock, login, logout, refreshSession, sessionStateChanged, trustCertificate, unlock } from "./session.async.actions";
+import { helloUnlock, importAuthority, initApp, lock, login, logout, refreshSession, sessionStateChanged, trustCertificate, unlock } from "./session.async.actions";
 
 export type SessionSliceState = {
 	current: SessionState | null;
@@ -54,7 +54,7 @@ const slice = createSlice({
 			state.fatalError = action.error.message ?? "Unknown error";
 		});
 
-		for (const thunk of [login, unlock, trustCertificate, importAuthority]) {
+		for (const thunk of [login, unlock, helloUnlock, trustCertificate, importAuthority]) {
 			builder.addCase(thunk.pending, (state) => {
 				state.pending = true;
 				state.error = null;
@@ -77,9 +77,11 @@ const slice = createSlice({
 				state.pending = false;
 			});
 		}
-		builder.addCase(unlock.fulfilled, (state) => {
-			state.pending = false;
-		});
+		for (const thunk of [unlock, helloUnlock]) {
+			builder.addCase(thunk.fulfilled, (state) => {
+				state.pending = false;
+			});
+		}
 		builder.addCase(lock.pending, (state) => {
 			state.error = null;
 		});

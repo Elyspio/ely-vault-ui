@@ -215,6 +215,12 @@ export type AutoTypeAvailability = { available: true } | { available: false; rea
 
 export type UnlockResult = { status: "success" } | { status: "error"; message: string };
 
+/** Unlock with Windows Hello: `available` when Windows Hello is set up on this computer, `enabled` when it can unlock the current account */
+export type HelloUnlockStatus = { available: boolean; enabled: boolean };
+
+/** Closing the Windows Hello dialog is not an error */
+export type HelloUnlockResult = UnlockResult | { status: "canceled" };
+
 // region Write operations
 
 /**

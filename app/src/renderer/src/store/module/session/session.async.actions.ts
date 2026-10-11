@@ -78,6 +78,21 @@ export const unlock = createAsyncThunk("unlock", async (password: string, { extr
 	return result.status;
 });
 
+/**
+ * Unlocks with Windows Hello; closing its dialog is not an error
+ */
+export const helloUnlock = createAsyncThunk("hello-unlock", async (_, { extra, dispatch, rejectWithValue }) => {
+	const services = getServices({ session: SessionService }, extra);
+	const result = await services.session.helloUnlock();
+
+	if (result.status === "error") return rejectWithValue(result.message);
+	if (result.status === "success") {
+		await dispatch(refreshSession());
+		await dispatch(loadVault());
+	}
+	return result.status;
+});
+
 export const lock = createAsyncThunk("lock", async (_, { extra, dispatch }) => {
 	const services = getServices({ session: SessionService }, extra);
 	await services.session.lock();

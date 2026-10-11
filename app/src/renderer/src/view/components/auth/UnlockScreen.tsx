@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { alpha, Alert, Avatar, Button, CircularProgress, Link, Stack } from "@mui/material";
 import LockOpenRounded from "@mui/icons-material/LockOpenRounded";
+import FingerprintRounded from "@mui/icons-material/FingerprintRounded";
 import { useAppDispatch, useAppSelector } from "@store";
-import { logout, unlock } from "@modules/session/session.async.actions";
+import { helloUnlock, logout, unlock } from "@modules/session/session.async.actions";
+import { webContainer } from "@core/di/web.container";
+import { SessionService } from "@services/session.service";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "@components/shared/PasswordField";
 
@@ -11,6 +14,24 @@ export function UnlockScreen() {
 	const { pending, error } = useAppSelector((state) => state.session);
 	const account = useAppSelector((state) => state.session.current);
 	const [password, setPassword] = useState("");
+	const [helloEnabled, setHelloEnabled] = useState(false);
+
+	// Windows Hello opens right away when the window has the focus (not after an auto-lock while away)
+	useEffect(() => {
+		let active = true;
+		void webContainer
+			.get(SessionService)
+			.helloStatus()
+			.then(({ enabled }) => {
+				if (!active) return;
+				setHelloEnabled(enabled);
+				if (enabled && document.hasFocus()) void dispatch(helloUnlock());
+			})
+			.catch(() => undefined);
+		return () => {
+			active = false;
+		};
+	}, [dispatch]);
 
 	const host = account?.serverUrl ? new URL(account.serverUrl).host : "";
 
@@ -68,6 +89,11 @@ export function UnlockScreen() {
 					>
 						{pending ? "Decrypting…" : "Unlock"}
 					</Button>
+					{helloEnabled && (
+						<Button variant="outlined" size="large" disabled={pending} startIcon={<FingerprintRounded />} onClick={() => void dispatch(helloUnlock())}>
+							Unlock with Windows Hello
+						</Button>
+					)}
 				</Stack>
 			</form>
 		</AuthLayout>
