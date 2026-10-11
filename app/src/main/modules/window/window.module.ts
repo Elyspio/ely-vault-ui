@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { is } from "@electron-toolkit/utils";
-import { app, BrowserWindow, type Rectangle, session, shell } from "electron";
+import { app, BrowserWindow, nativeTheme, type Rectangle, session, shell } from "electron";
 import { inject, injectable } from "inversify";
 import { LogModule } from "../log.module";
 import { MainContextModule } from "../context/main.context.module";
@@ -52,7 +52,10 @@ export class WindowModule extends LogModule {
 
 	@log()
 	public async createMainWindow() {
-		const { bounds } = (await this.configModule.getConfig()).window;
+		const config = await this.configModule.getConfig();
+		const { bounds } = config.window;
+		// Native colors (window background, prefers-color-scheme seen by the renderer) follow the theme setting
+		nativeTheme.themeSource = config.display.theme;
 
 		const mainWindow = new BrowserWindow({
 			width: 1180,
@@ -62,7 +65,7 @@ export class WindowModule extends LogModule {
 			show: false,
 			frame: false,
 			title: mainConfig.names.public,
-			backgroundColor: "#0a0a0a",
+			backgroundColor: nativeTheme.shouldUseDarkColors ? "#0a0a0a" : "#f6f7f9",
 			// Taskbar and title icon (the Windows executable icon comes from build/icon.ico)
 			icon: join(app.getAppPath(), "resources", "icon.png"),
 			autoHideMenuBar: true,

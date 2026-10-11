@@ -15,6 +15,8 @@ export type AppConfig = {
 	display: {
 		/** Fetches website icons through the server's icon service */
 		showFavicons: boolean;
+		/** Colors of the application: "system" follows the operating system */
+		theme: ThemeMode;
 	};
 	autoType: {
 		/** Sequence typed for the items without an "autotype" custom field */
@@ -46,6 +48,8 @@ export type AutoTypeAfter = "minimized" | "restore" | "lock";
 
 export type UpdateChannel = "stable" | "beta" | "dev";
 
+export type ThemeMode = "dark" | "light" | "system";
+
 export const defaultAppConfig: AppConfig = {
 	version: 1,
 	security: {
@@ -55,6 +59,7 @@ export const defaultAppConfig: AppConfig = {
 	},
 	display: {
 		showFavicons: true,
+		theme: "dark",
 	},
 	autoType: {
 		defaultSequence: "{USERNAME}{TAB}{PASSWORD}",

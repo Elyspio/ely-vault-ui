@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Box, IconButton, Tooltip, Typography } from "@mui/material";
+import { alpha, Box, IconButton, Tooltip, Typography } from "@mui/material";
 import ContentCopyRounded from "@mui/icons-material/ContentCopyRounded";
 
 type Props = {
@@ -33,7 +33,7 @@ export function FieldRow({ label, children, onCopy, actions, mono, multiline }: 
 				cursor: onCopy ? "pointer" : "default",
 				transition: "background-color 120ms ease",
 				"&:not(:last-of-type)": { borderBottom: "1px solid var(--border-subtle)" },
-				"&:hover": { bgcolor: onCopy ? "rgba(255,255,255,0.025)" : undefined },
+				"&:hover": { bgcolor: onCopy ? (theme) => alpha(theme.palette.text.primary, 0.025) : undefined },
 				"&:hover .FieldRow__actions": { opacity: 1 },
 			}}
 		>

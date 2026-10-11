@@ -1,4 +1,6 @@
+/* Dark is the default; the light values apply when the root element carries data-theme="light" (set from the theme setting) */
 :root {
+	color-scheme: dark;
 	--surface-0: #0a0a0a;
 	--surface-1: #111111;
 	--surface-2: #171717;
@@ -7,10 +9,32 @@
 	--border-medium: rgba(255, 255, 255, 0.12);
 	--text-muted: rgba(255, 255, 255, 0.45);
 	--text-faint: rgba(255, 255, 255, 0.28);
+	--hover: rgba(255, 255, 255, 0.03);
 	--accent: #4fd2ff;
 	--accent-soft: rgba(79, 210, 255, 0.1);
+	--selection: rgba(79, 210, 255, 0.25);
+	--scrollbar-thumb: rgba(255, 255, 255, 0.08);
+	--scrollbar-thumb-hover: rgba(79, 210, 255, 0.4);
 	--font-mono: "IBM Plex Mono", ui-monospace, monospace;
 	--titlebar-height: 2.375rem;
+}
+
+:root[data-theme="light"] {
+	color-scheme: light;
+	--surface-0: #f6f7f9;
+	--surface-1: #ffffff;
+	--surface-2: #eceef2;
+	--surface-3: #e2e5ea;
+	--border-subtle: rgba(0, 0, 0, 0.08);
+	--border-medium: rgba(0, 0, 0, 0.16);
+	--text-muted: rgba(0, 0, 0, 0.6);
+	--text-faint: rgba(0, 0, 0, 0.42);
+	--hover: rgba(0, 0, 0, 0.03);
+	--accent: #0a84b8;
+	--accent-soft: rgba(10, 132, 184, 0.1);
+	--selection: rgba(10, 132, 184, 0.2);
+	--scrollbar-thumb: rgba(0, 0, 0, 0.14);
+	--scrollbar-thumb-hover: rgba(10, 132, 184, 0.45);
 }
 
 * {
@@ -26,7 +50,6 @@ body,
 	/* clip, not hidden: scrollIntoView must never scroll the window itself */
 	overflow: clip;
 	background-color: var(--surface-0);
-	color-scheme: dark;
 }
 
 body {
@@ -36,7 +59,7 @@ body {
 }
 
 ::selection {
-	background: rgba(79, 210, 255, 0.25);
+	background: var(--selection);
 }
 
 *::-webkit-scrollbar {
@@ -46,12 +69,12 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-	background-color: rgba(255, 255, 255, 0.08);
+	background-color: var(--scrollbar-thumb);
 	border-radius: 3px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-	background-color: rgba(79, 210, 255, 0.4);
+	background-color: var(--scrollbar-thumb-hover);
 }
 
 .mono {

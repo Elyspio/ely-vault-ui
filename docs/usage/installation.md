@@ -10,3 +10,5 @@ The installers are published in the [GitHub releases](https://github.com/Elyspio
 | Linux    | AppImage, `.deb` | `pnpm package:linux` |
 
 On first launch, enter the server address (`https://…`), the email address and the master password. Two-step login (authenticator app, email, YubiKey) is supported.
+
+The theme is set in **Settings → Display → Theme**: Dark (default), Light, or System (follows the operating system). It applies immediately.

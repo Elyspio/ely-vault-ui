@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from "electron";
+import { BrowserWindow, ipcMain, type IpcMainInvokeEvent, nativeTheme } from "electron";
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
 import type { IpcHandledEvents } from "@shared/ipc/ipc.handled.events";
@@ -39,6 +39,7 @@ const ipcHandlers: IpcHandledEvents = {
 		// The window bounds are owned by the main process
 		const { window, updates } = await mainContainer.get(ConfigModule).getConfig();
 		await mainContainer.get(ConfigModule).writeConfig({ ...config, window });
+		nativeTheme.themeSource = config.display.theme;
 		await mainContainer.get(UpdateModule).onSettingsChanged(updates, config.updates);
 	},
 	async "session:state:get"() {

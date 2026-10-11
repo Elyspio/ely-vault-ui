@@ -1,6 +1,6 @@
-import { useEffect } from "react";
-import { Box, CircularProgress, StyledEngineProvider, ThemeProvider, Typography } from "@mui/material";
-import { theme } from "@/config/theme";
+import { useEffect, useMemo } from "react";
+import { Box, CircularProgress, StyledEngineProvider, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
+import { type ColorMode, createAppTheme } from "@/config/theme";
 import { store, useAppSelector } from "@store";
 import { closeEditor } from "@modules/vault/vault.reducer";
 import { Titlebar } from "@components/frame/Titlebar";
@@ -22,6 +22,15 @@ export function App() {
 		window.addEventListener("beforeunload", onBeforeUnload);
 		return () => window.removeEventListener("beforeunload", onBeforeUnload);
 	}, []);
+
+	const themeSetting = useAppSelector((state) => state.config.current.display.theme);
+	const systemDark = useMediaQuery("(prefers-color-scheme: dark)", { noSsr: true });
+	const mode: ColorMode = themeSetting === "system" ? (systemDark ? "dark" : "light") : themeSetting;
+	const theme = useMemo(() => createAppTheme(mode), [mode]);
+	// main.css variables of the mode (data-theme), see :root[data-theme="light"]
+	useEffect(() => {
+		document.documentElement.dataset.theme = mode;
+	}, [mode]);
 
 	return (
 		<StyledEngineProvider injectFirst>
