@@ -1,5 +1,5 @@
 import { injectable } from "inversify";
-import type { CopyRef, ItemDraft, PasswordGeneratorOptions, SecretRef } from "@shared/types/vault.types";
+import type { CopyRef, ItemDraft, PasswordGeneratorOptions, SecretRef, SshKeySource } from "@shared/types/vault.types";
 
 @injectable()
 export class VaultService {
@@ -63,6 +63,20 @@ export class VaultService {
 
 	public deleteFolder(folderId: string) {
 		return window.preload.ipc.send.vault.deleteFolder(folderId);
+	}
+
+	/**
+	 * New Ed25519 key, held by the main process until the item is saved
+	 */
+	public generateSshKey() {
+		return window.preload.ipc.send.vault.generateSshKey();
+	}
+
+	/**
+	 * Converts a key from a file, pasted text, or a pending key (passphrase given)
+	 */
+	public importSshKey(source: SshKeySource, passphrase: string | null) {
+		return window.preload.ipc.send.vault.importSshKey(source, passphrase);
 	}
 
 	public autoTypeAvailability() {

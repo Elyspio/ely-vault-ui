@@ -1,6 +1,6 @@
 import { ipcRendererWrapper } from "./preload.ipc.wrapper";
 import type { AppConfig } from "@shared/config/app.config";
-import type { CopyRef, ItemDraft, LoginRequest, PasswordGeneratorOptions, SecretRef } from "@shared/types/vault.types";
+import type { CopyRef, ItemDraft, LoginRequest, PasswordGeneratorOptions, SecretRef, SshKeySource } from "@shared/types/vault.types";
 
 export function getIpcSender() {
 	return {
@@ -44,6 +44,8 @@ export function getIpcSender() {
 			createFolder: (name: string) => ipcRendererWrapper.invoke("vault:folder:create", name),
 			renameFolder: (path: string, newPath: string) => ipcRendererWrapper.invoke("vault:folder:rename", path, newPath),
 			deleteFolder: (folderId: string) => ipcRendererWrapper.invoke("vault:folder:delete", folderId),
+			generateSshKey: () => ipcRendererWrapper.invoke("vault:ssh:generate"),
+			importSshKey: (source: SshKeySource, passphrase: string | null) => ipcRendererWrapper.invoke("vault:ssh:import", source, passphrase),
 		},
 		autoType: {
 			availability: () => ipcRendererWrapper.invoke("autotype:availability"),

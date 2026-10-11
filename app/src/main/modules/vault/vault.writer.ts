@@ -2,6 +2,7 @@ import type { BwField, BwFolder, BwItem } from "../bitwarden/bw.types";
 import { CipherType, type DraftField, FieldType, type IdentityKey, identityKeys, type ItemDraft, type SecretChange } from "@shared/types/vault.types";
 import { folderSegments, joinFolderSegments } from "@shared/vault/folder.path";
 import { isValidTotp } from "@shared/vault/totp";
+import type { SshKeyMaterial } from "./ssh.keys";
 
 export { isValidTotp };
 
@@ -16,8 +17,11 @@ type RawRecord = Record<string, unknown>;
 
 const PROTECTED_FIELDS_MESSAGE = "Hidden fields protected by the organization cannot be renamed, moved or removed";
 
-/** Request body for POST /object/item (original null) or PUT /object/item/:id: the original raw item with the draft applied */
-export function applyDraft(original: BwItem | null, draft: ItemDraft): RawRecord {
+/**
+ * Request body for POST /object/item (original null) or PUT /object/item/:id: the original raw item with the draft applied.
+ * `sshKey` is the key generated or imported for the draft, null when the item keeps its current key.
+ */
+export function applyDraft(original: BwItem | null, draft: ItemDraft, sshKey: SshKeyMaterial | null): RawRecord {
 	const item: RawRecord = original ? structuredClone(original) : { type: draft.type, organizationId: null, collectionIds: [] };
 
 	item.name = draft.name.trim();
@@ -41,19 +45,21 @@ export function applyDraft(original: BwItem | null, draft: ItemDraft): RawRecord
 	if (type === CipherType.Identity && (draft.identity || !original)) {
 		item.identity = applyIdentity((item.identity as RawRecord | undefined) ?? defaultIdentity(), draft.identity);
 	}
-	if (type === CipherType.SshKey && draft.sshKey) {
+	if (type === CipherType.SshKey && sshKey) {
 		item.sshKey = {
-			privateKey: draft.sshKey.privateKey,
-			publicKey: draft.sshKey.publicKey,
-			keyFingerprint: draft.sshKey.keyFingerprint,
+			privateKey: sshKey.privateKey,
+			publicKey: sshKey.publicKey,
+			keyFingerprint: sshKey.keyFingerprint,
 		};
 	}
 
 	return item;
 }
 
-/** Error message when the draft cannot be written, null when valid */
-export function validateDraft(original: BwItem | null, draft: ItemDraft): string | null {
+/**
+ * Error message when the draft cannot be written, null when valid. A new SSH key item needs `sshKey`.
+ */
+export function validateDraft(original: BwItem | null, draft: ItemDraft, sshKey: SshKeyMaterial | null): string | null {
 	if (draft.name.trim() === "") return "The name is required";
 
 	if (original) {
@@ -62,7 +68,7 @@ export function validateDraft(original: BwItem | null, draft: ItemDraft): string
 		if (original.deletedDate) return "Restore the item before editing it";
 	} else {
 		if (!isCipherType(draft.type)) return "Unsupported item type";
-		if (draft.type === CipherType.SshKey && !hasSshKey(draft.sshKey)) return "An SSH key needs a private key, a public key and a fingerprint";
+		if (draft.type === CipherType.SshKey && !sshKey) return "An SSH key is required: generate, import or paste one";
 	}
 
 	const originalFields = (original?.fields ?? []) as BwField[];
@@ -265,10 +271,6 @@ function startsWithSegments(segments: string[], prefix: string[]): boolean {
 
 function isCipherType(type: number): boolean {
 	return type >= CipherType.Login && type <= CipherType.SshKey;
-}
-
-function hasSshKey(sshKey: ItemDraft["sshKey"]): boolean {
-	return Boolean(sshKey && sshKey.privateKey.trim() && sshKey.publicKey.trim() && sshKey.keyFingerprint.trim());
 }
 
 function emptyToNull(value: string | null | undefined): string | null {
