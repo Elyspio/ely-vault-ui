@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildFolderTree, countFolderTree, type FolderNode } from "./vault.folders";
+import { buildFolderTree, countFolderTree, folderDeleteBlocker, folderRenameBlocker, moveChoices, normalizeFolderPath, type FolderNode } from "./vault.folders";
 
 function shape(nodes: FolderNode[]): unknown[] {
 	return nodes.map((node) => ({ name: node.name, id: node.id, children: shape(node.children) }));
@@ -65,5 +65,84 @@ describe("countFolderTree", () => {
 		]);
 
 		expect(countFolderTree(root, { a: 2, b: 3, c: 1 })).toBe(6);
+	});
+});
+
+describe("folderDeleteBlocker", () => {
+	const [root] = buildFolderTree([
+		{ id: "a", name: "Work" },
+		{ id: "b", name: "Work/Projects" },
+	]);
+
+	it("refuses a virtual node", () => {
+		const [virtual] = buildFolderTree([{ id: "x", name: "A/B" }]);
+		expect(folderDeleteBlocker(virtual, 0)).toBe("This folder only groups its sub folders");
+	});
+
+	it("refuses a folder with sub folders, even empty ones", () => {
+		expect(folderDeleteBlocker(root, 0)).toBe("Delete its sub folders first");
+	});
+
+	it("refuses a folder holding active items", () => {
+		expect(folderDeleteBlocker(root.children[0], 2)).toBe("Move or delete its items first");
+	});
+
+	it("allows an empty leaf", () => {
+		expect(folderDeleteBlocker(root.children[0], 0)).toBeNull();
+	});
+});
+
+describe("folderRenameBlocker", () => {
+	it("refuses a duplicated name, on both folders", () => {
+		const tree = buildFolderTree([
+			{ id: "1", name: "Mail" },
+			{ id: "2", name: "Mail" },
+		]);
+
+		expect(tree.map((node) => folderRenameBlocker(node))).toEqual(["Another folder has the same name", "Another folder has the same name"]);
+	});
+
+	it("allows a unique name", () => {
+		const [node] = buildFolderTree([{ id: "1", name: "Mail" }]);
+		expect(folderRenameBlocker(node)).toBeNull();
+	});
+});
+
+describe("moveChoices", () => {
+	const folders = [
+		{ id: "b", name: "Work/Projects" },
+		{ id: "a", name: "Work" },
+		{ id: "c", name: "Écoles" },
+		{ id: "d", name: "Personal" },
+	];
+
+	it("lists No folder first, then the folders in sidebar order with their full path", () => {
+		expect(moveChoices(folders, "")).toEqual([
+			{ id: null, path: "No folder" },
+			{ id: "c", path: "Écoles" },
+			{ id: "d", path: "Personal" },
+			{ id: "a", path: "Work" },
+			{ id: "b", path: "Work/Projects" },
+		]);
+	});
+
+	it("filters on the full path, ignoring case and accents", () => {
+		expect(moveChoices(folders, "  projects").map((choice) => choice.path)).toEqual(["Work/Projects"]);
+		expect(moveChoices(folders, "no f").map((choice) => choice.path)).toEqual(["No folder"]);
+		expect(moveChoices(folders, "ecoles").map((choice) => choice.path)).toEqual(["Écoles"]);
+	});
+
+	it("never offers a virtual parent", () => {
+		const choices = moveChoices([{ id: "x", name: "A/B" }], "");
+		expect(choices).toEqual([
+			{ id: null, path: "No folder" },
+			{ id: "x", path: "A/B" },
+		]);
+	});
+});
+
+describe("normalizeFolderPath", () => {
+	it("trims segments and drops empty ones", () => {
+		expect(normalizeFolderPath(" /Work / Projects// ")).toBe("Work/Projects");
 	});
 });

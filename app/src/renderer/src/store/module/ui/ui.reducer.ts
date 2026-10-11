@@ -18,6 +18,10 @@ export type UiState = {
 	generatorOpen: boolean;
 	/** Type picker of a new item */
 	newItemOpen: boolean;
+	/** Item whose folder is picked in the move dialog, null when closed */
+	moveItemId: string | null;
+	/** Context menu or delete confirmation of a folder of the sidebar */
+	folderPromptOpen: boolean;
 	/** Last options of the generator, reused by the generator dialog and the item editor */
 	generatorOptions: PasswordGeneratorOptions;
 };
@@ -28,6 +32,8 @@ const initialState: UiState = {
 	settingsOpen: false,
 	generatorOpen: false,
 	newItemOpen: false,
+	moveItemId: null,
+	folderPromptOpen: false,
 	generatorOptions: { mode: "password", length: 24, special: true },
 };
 
@@ -60,16 +66,23 @@ const slice = createSlice({
 		setNewItemOpen(state, action: PayloadAction<boolean>) {
 			state.newItemOpen = action.payload;
 		},
+		setMoveItemId(state, action: PayloadAction<string | null>) {
+			state.moveItemId = action.payload;
+		},
+		setFolderPromptOpen(state, action: PayloadAction<boolean>) {
+			state.folderPromptOpen = action.payload;
+		},
 		setGeneratorOptions(state, action: PayloadAction<PasswordGeneratorOptions>) {
 			state.generatorOptions = action.payload;
 		},
 	},
 });
 
-export const { showToast, hideToast, setPaletteOpen, setSettingsOpen, setGeneratorOpen, setNewItemOpen, setGeneratorOptions } = slice.actions;
+export const { showToast, hideToast, setPaletteOpen, setSettingsOpen, setGeneratorOpen, setNewItemOpen, setMoveItemId, setFolderPromptOpen, setGeneratorOptions } = slice.actions;
 export const uiReducer = slice.reducer;
 
 /**
  * A dialog covers the vault screen: its window shortcuts (vault and editor) stand aside
  */
-export const selectModalOpen = (state: { ui: UiState }) => state.ui.paletteOpen || state.ui.settingsOpen || state.ui.generatorOpen || state.ui.newItemOpen;
+export const selectModalOpen = (state: { ui: UiState }) =>
+	state.ui.paletteOpen || state.ui.settingsOpen || state.ui.generatorOpen || state.ui.newItemOpen || state.ui.moveItemId !== null || state.ui.folderPromptOpen;

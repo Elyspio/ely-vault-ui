@@ -1,6 +1,6 @@
 import { useContext, useMemo } from "react";
 import { store, useAppDispatch } from "@store";
-import { setNewItemOpen, showToast } from "@modules/ui/ui.reducer";
+import { setMoveItemId, setNewItemOpen, showToast } from "@modules/ui/ui.reducer";
 import { openEditor, selectItem } from "@modules/vault/vault.reducer";
 import { selectVisibleItems } from "@modules/vault/vault.selectors";
 import { neighbourId } from "@modules/vault/vault.search";
@@ -54,6 +54,12 @@ export function useItemCommands() {
 			async toggleFavorite(item: VaultItem) {
 				if (editorOpen() || item.deletedDate) return;
 				await writes.setFavorite(item.id, !item.favorite);
+			},
+
+			/** Opens the folder picker of the item (the dialog writes the choice) */
+			move(item: VaultItem) {
+				if (editorOpen() || item.deletedDate) return;
+				dispatch(setMoveItemId(item.id));
 			},
 		};
 	}, [dispatch, requestReprompt, writes]);
