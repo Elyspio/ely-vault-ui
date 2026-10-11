@@ -11,9 +11,9 @@ import type { Plugin } from "vite";
  */
 function contentSecurityPolicy(): Plugin {
 	const strict =
-		"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'";
+		"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.gravatar.com/avatar/; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'";
 	const dev =
-		"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws:; base-uri 'none'; form-action 'none'";
+		"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.gravatar.com/avatar/; font-src 'self'; connect-src 'self' ws:; base-uri 'none'; form-action 'none'";
 	let isDev = false;
 	return {
 		name: "content-security-policy",

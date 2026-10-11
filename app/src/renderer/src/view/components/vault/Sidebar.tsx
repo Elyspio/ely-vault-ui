@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Avatar, Box, ButtonBase, IconButton, Tooltip, Typography } from "@mui/material";
+import { Box, ButtonBase, IconButton, Tooltip, Typography } from "@mui/material";
 import AppsRounded from "@mui/icons-material/AppsRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
 import LanguageRounded from "@mui/icons-material/LanguageRounded";
@@ -29,6 +29,7 @@ import { FolderMenu, type FolderMenuPosition } from "./folders/FolderMenu";
 import { FolderNameField } from "./folders/FolderNameField";
 import { useTranslation } from "react-i18next";
 import type { vault } from "@shared/i18n/en/vault";
+import { AccountAvatar } from "./AccountAvatar";
 
 /** Translation keys (`vault:types.*`) of the item types, as sidebar filters */
 export const typeLabelKeys: Record<CipherType, keyof typeof vault.types> = {
@@ -250,9 +251,7 @@ export function Sidebar() {
 					"&:hover": { bgcolor: "var(--surface-1)" },
 				}}
 			>
-				<Avatar sx={{ width: 28, height: 28, fontSize: "0.8rem", fontWeight: 600, bgcolor: "var(--accent-soft)", color: "primary.main" }}>
-					{account?.email?.[0]?.toUpperCase()}
-				</Avatar>
+				<AccountAvatar email={account?.email} />
 				<Box sx={{ minWidth: 0 }}>
 					<Typography noWrap sx={{ fontSize: "0.78rem", fontWeight: 500 }}>
 						{account?.email}
