@@ -1,5 +1,5 @@
 import type { BwItem } from "../bitwarden/bw.types";
-import { CipherType, type CopyRef, FieldType, identityKeys, type LoginUri, type SecretRef, type VaultItem } from "@shared/types/vault.types";
+import { CipherType, type CopyRef, FieldType, identityKeys, type LoginUri, type SecretRef, type UriMatchType, type VaultItem } from "@shared/types/vault.types";
 
 /**
  * Removes every secret of a decrypted item: the renderer only gets what it displays without a click.
@@ -17,6 +17,7 @@ export function sanitizeItem(item: BwItem): VaultItem {
 		collectionIds: item.collectionIds ?? [],
 		revisionDate: item.revisionDate,
 		creationDate: item.creationDate ?? null,
+		deletedDate: item.deletedDate ?? null,
 		passwordHistoryCount: item.passwordHistory?.length ?? 0,
 		fields: (item.fields ?? []).map((field) => {
 			const hidden = field.type === FieldType.Hidden;
@@ -25,6 +26,7 @@ export function sanitizeItem(item: BwItem): VaultItem {
 				type: field.type as FieldType,
 				value: hidden ? null : (field.value ?? null),
 				hasValue: Boolean(field.value),
+				linkedId: field.linkedId ?? null,
 			};
 		}),
 	};
@@ -32,10 +34,11 @@ export function sanitizeItem(item: BwItem): VaultItem {
 	if (item.login) {
 		result.login = {
 			username: item.login.username ?? null,
-			uris: (item.login.uris ?? []).filter((u) => u.uri).map((u) => toLoginUri(u.uri!)),
+			uris: (item.login.uris ?? []).filter((u) => u.uri).map((u) => toLoginUri(u.uri!, u.match)),
 			hasPassword: Boolean(item.login.password),
 			hasTotp: Boolean(item.login.totp),
 			passwordRevisionDate: item.login.passwordRevisionDate ?? null,
+			passkeyCount: item.login.fido2Credentials?.length ?? 0,
 		};
 	}
 
@@ -68,8 +71,8 @@ export function sanitizeItem(item: BwItem): VaultItem {
 	return result;
 }
 
-export function toLoginUri(uri: string): LoginUri {
-	return { uri, host: getHost(uri) };
+export function toLoginUri(uri: string, match?: UriMatchType | number | null): LoginUri {
+	return { uri, host: getHost(uri), match: (match ?? null) as UriMatchType | null };
 }
 
 /**

@@ -16,10 +16,16 @@ export type BwStatus = {
 	};
 };
 
-export type BwField = { name: string | null; value: string | null; type: number };
+export type BwField = { name: string | null; value: string | null; type: number; linkedId?: number | null };
 
-/** A decrypted cipher, as `bw serve` returns it */
+/**
+ * A decrypted cipher, as `bw serve` returns it.
+ *
+ * Edits send back the whole object returned by `GET /object/item/:id` (the CLI replaces nested objects instead of
+ * merging them): the index signature keeps the properties the app does not know.
+ */
 export type BwItem = {
+	[key: string]: unknown;
 	id: string;
 	organizationId?: string | null;
 	folderId: string | null;
@@ -33,6 +39,7 @@ export type BwItem = {
 	revisionDate: string;
 	creationDate?: string | null;
 	deletedDate?: string | null;
+	archivedDate?: string | null;
 	passwordHistory?: unknown[] | null;
 	login?: {
 		uris?: { uri: string | null; match?: number | null }[] | null;
@@ -40,6 +47,8 @@ export type BwItem = {
 		password: string | null;
 		totp: string | null;
 		passwordRevisionDate: string | null;
+		/** Passkeys: never read by the app, kept as they are by edits */
+		fido2Credentials?: unknown[] | null;
 	};
 	card?: {
 		cardholderName: string | null;

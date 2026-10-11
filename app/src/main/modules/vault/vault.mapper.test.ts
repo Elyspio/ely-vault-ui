@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { getHost, getSecretValue, getTotpPeriod, sanitizeItem } from "./vault.mapper";
 import type { BwItem } from "../bitwarden/bw.types";
-import { CipherType } from "@shared/types/vault.types";
+import { CipherType, FieldType, UriMatchType } from "@shared/types/vault.types";
 
 const base: BwItem = {
 	id: "item-1",
@@ -22,10 +22,11 @@ describe("sanitizeItem", () => {
 
 		expect(item.login).toEqual({
 			username: "octocat",
-			uris: [{ uri: "https://github.com/login", host: "github.com" }],
+			uris: [{ uri: "https://github.com/login", host: "github.com", match: null }],
 			hasPassword: true,
 			hasTotp: true,
 			passwordRevisionDate: null,
+			passkeyCount: 0,
 		});
 		expect(JSON.stringify(item)).not.toContain("secret-password");
 		expect(JSON.stringify(item)).not.toContain("JBSWY3DPEHPK3PXP");
@@ -53,8 +54,8 @@ describe("sanitizeItem", () => {
 		});
 
 		expect(item.fields).toEqual([
-			{ name: "Recovery code", type: 1, value: null, hasValue: true },
-			{ name: "Organisation", type: 0, value: "elyspio", hasValue: true },
+			{ name: "Recovery code", type: 1, value: null, hasValue: true, linkedId: null },
+			{ name: "Organisation", type: 0, value: "elyspio", hasValue: true, linkedId: null },
 		]);
 	});
 
@@ -70,6 +71,62 @@ describe("sanitizeItem", () => {
 
 	it("flags items protected by a master password reprompt", () => {
 		expect(sanitizeItem({ ...base, reprompt: 1 }).reprompt).toBe(true);
+	});
+
+	it("counts the passkeys of a login without keeping them", () => {
+		const item = sanitizeItem({
+			...base,
+			login: {
+				username: "octocat",
+				password: null,
+				totp: null,
+				passwordRevisionDate: null,
+				uris: null,
+				fido2Credentials: [{ credentialId: "cred-1", keyValue: "private-key-material" }, { credentialId: "cred-2" }],
+			},
+		});
+
+		expect(item.login?.passkeyCount).toBe(2);
+		expect(JSON.stringify(item)).not.toContain("private-key-material");
+	});
+
+	it("keeps the uri match type, null when the account default is used", () => {
+		const item = sanitizeItem({
+			...base,
+			login: {
+				username: null,
+				password: null,
+				totp: null,
+				passwordRevisionDate: null,
+				uris: [{ uri: "https://github.com", match: UriMatchType.Exact }, { uri: "https://gitlab.com", match: null }, { uri: "https://bitbucket.org" }],
+			},
+		});
+
+		expect(item.login?.uris).toEqual([
+			{ uri: "https://github.com", host: "github.com", match: UriMatchType.Exact },
+			{ uri: "https://gitlab.com", host: "gitlab.com", match: null },
+			{ uri: "https://bitbucket.org", host: "bitbucket.org", match: null },
+		]);
+	});
+
+	it("exposes the deletion date of a trashed item", () => {
+		expect(sanitizeItem(base).deletedDate).toBeNull();
+		expect(sanitizeItem({ ...base, deletedDate: "2026-10-09T08:00:00.000Z" }).deletedDate).toBe("2026-10-09T08:00:00.000Z");
+	});
+
+	it("exposes the linked property of a linked field", () => {
+		const item = sanitizeItem({
+			...base,
+			fields: [
+				{ name: "Username", value: null, type: FieldType.Linked, linkedId: 0 },
+				{ name: "Plain", value: "x", type: FieldType.Text },
+			],
+		});
+
+		expect(item.fields).toEqual([
+			{ name: "Username", type: FieldType.Linked, value: null, hasValue: false, linkedId: 0 },
+			{ name: "Plain", type: FieldType.Text, value: "x", hasValue: true, linkedId: null },
+		]);
 	});
 });
 

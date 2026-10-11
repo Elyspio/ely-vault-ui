@@ -1,0 +1,24 @@
+{
+	"object": "item",
+	"id": "e5f6a7b8-0000-4000-8000-000000000004",
+	"organizationId": null,
+	"folderId": "3a4b5c6d-0000-4000-8000-000000000002",
+	"type": 5,
+	"reprompt": 1,
+	"name": "Deploy key",
+	"notes": null,
+	"favorite": false,
+	"fields": [],
+	"sshKey": {
+		"privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\n-----END OPENSSH PRIVATE KEY-----",
+		"publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDeployKey deploy@host",
+		"keyFingerprint": "SHA256:abcdefABCDEF0123456789"
+	},
+	"collectionIds": [],
+	"revisionDate": "2026-10-04T08:00:00.000Z",
+	"creationDate": "2025-04-01T08:00:00.000Z",
+	"deletedDate": null,
+	"archivedDate": null,
+	"passwordHistory": null,
+	"key": null
+}

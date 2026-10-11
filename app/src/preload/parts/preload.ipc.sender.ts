@@ -1,6 +1,6 @@
 import { ipcRendererWrapper } from "./preload.ipc.wrapper";
 import type { AppConfig } from "@shared/config/app.config";
-import type { CopyRef, LoginRequest, PasswordGeneratorOptions, SecretRef } from "@shared/types/vault.types";
+import type { CopyRef, ItemDraft, LoginRequest, PasswordGeneratorOptions, SecretRef } from "@shared/types/vault.types";
 
 export function getIpcSender() {
 	return {
@@ -34,6 +34,16 @@ export function getIpcSender() {
 			verifyReprompt: (password: string) => ipcRendererWrapper.invoke("vault:reprompt:verify", password),
 			icon: (host: string) => ipcRendererWrapper.invoke("vault:icon:get", host),
 			generatePassword: (options: PasswordGeneratorOptions) => ipcRendererWrapper.invoke("vault:generate-password", options),
+			createItem: (draft: ItemDraft) => ipcRendererWrapper.invoke("vault:item:create", draft),
+			updateItem: (itemId: string, expectedRevision: string, draft: ItemDraft) => ipcRendererWrapper.invoke("vault:item:update", itemId, expectedRevision, draft),
+			deleteItem: (itemId: string) => ipcRendererWrapper.invoke("vault:item:delete", itemId),
+			restoreItem: (itemId: string) => ipcRendererWrapper.invoke("vault:item:restore", itemId),
+			purgeItems: (itemIds: string[]) => ipcRendererWrapper.invoke("vault:item:purge", itemIds),
+			setFavorite: (itemId: string, favorite: boolean) => ipcRendererWrapper.invoke("vault:item:favorite", itemId, favorite),
+			moveItem: (itemId: string, folderId: string | null) => ipcRendererWrapper.invoke("vault:item:move", itemId, folderId),
+			createFolder: (name: string) => ipcRendererWrapper.invoke("vault:folder:create", name),
+			renameFolder: (path: string, newPath: string) => ipcRendererWrapper.invoke("vault:folder:rename", path, newPath),
+			deleteFolder: (folderId: string) => ipcRendererWrapper.invoke("vault:folder:delete", folderId),
 		},
 		autoType: {
 			availability: () => ipcRendererWrapper.invoke("autotype:availability"),

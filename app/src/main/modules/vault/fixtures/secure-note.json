@@ -1,0 +1,20 @@
+{
+	"object": "item",
+	"id": "a1b2c3d4-0000-4000-8000-000000000005",
+	"organizationId": null,
+	"folderId": null,
+	"type": 2,
+	"reprompt": 0,
+	"name": "Wi-Fi",
+	"notes": "Guest network rotates every quarter",
+	"favorite": false,
+	"fields": [{ "name": "Guest password", "value": "guest-2026", "type": 1, "linkedId": null }],
+	"secureNote": { "type": 0 },
+	"collectionIds": [],
+	"revisionDate": "2026-10-05T08:00:00.000Z",
+	"creationDate": "2025-05-01T08:00:00.000Z",
+	"deletedDate": null,
+	"archivedDate": null,
+	"passwordHistory": null,
+	"key": null
+}
