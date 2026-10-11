@@ -25,6 +25,13 @@ export class VaultService {
 		return window.preload.ipc.send.vault.totp(itemId);
 	}
 
+	/**
+	 * TOTP secret of a QR code screenshot in the clipboard, read by the main process
+	 */
+	public readTotpQr() {
+		return window.preload.ipc.send.vault.readTotpQr();
+	}
+
 	public createItem(draft: ItemDraft) {
 		return window.preload.ipc.send.vault.createItem(draft);
 	}

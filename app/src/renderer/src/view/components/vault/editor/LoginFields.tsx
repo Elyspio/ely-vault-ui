@@ -1,10 +1,14 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { Box, Button, IconButton, MenuItem, TextField, Tooltip, Typography } from "@mui/material";
 import AddRounded from "@mui/icons-material/AddRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import KeyboardArrowUpRounded from "@mui/icons-material/KeyboardArrowUpRounded";
 import KeyboardArrowDownRounded from "@mui/icons-material/KeyboardArrowDownRounded";
+import QrCode2Rounded from "@mui/icons-material/QrCode2Rounded";
 import { useVaultActions } from "@hooks/useVaultActions";
+import { webContainer } from "@core/di/web.container";
+import { VaultService } from "@services/vault.service";
+import { ipcErrorMessage } from "@core/utils/ipc.utils";
 import { isValidTotp } from "@shared/vault/totp";
 import { type DraftUri, type ItemDraft, type SecretChange, UriMatchType, type VaultItem } from "@shared/types/vault.types";
 import { SecretInput } from "./SecretInput";
@@ -40,6 +44,26 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 	const setUris = (uris: DraftUri[]) => patch({ uris });
 
 	const totpError = login.totp?.kind === "set" && !isValidTotp(login.totp.value) ? "Not a valid TOTP secret" : null;
+	const [qrError, setQrError] = useState<string | null>(null);
+	const [readingQr, setReadingQr] = useState(false);
+
+	/** The main process decodes the screenshot in the clipboard; the secret goes straight into the draft (shown masked) */
+	const readQr = async () => {
+		setReadingQr(true);
+		try {
+			const result = await webContainer.get(VaultService).readTotpQr();
+			if (result.status === "success") {
+				setQrError(null);
+				patch({ totp: { kind: "set", value: result.value } });
+			} else {
+				setQrError(result.message);
+			}
+		} catch (error) {
+			setQrError(ipcErrorMessage(error));
+		} finally {
+			setReadingQr(false);
+		}
+	};
 
 	return (
 		<EditorSection title="Login">
@@ -56,11 +80,23 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 				<SecretInput
 					label="TOTP secret"
 					value={login.totp}
-					onChange={(totp: SecretChange | undefined) => patch({ totp })}
+					onChange={(totp: SecretChange | undefined) => {
+						setQrError(null);
+						patch({ totp });
+					}}
 					stored={item?.login?.hasTotp ?? false}
-					error={totpError}
+					error={qrError ?? totpError}
 					helperText="Base32 secret, otpauth://totp uri or steam:// secret"
 				/>
+				<Box>
+					<Tooltip title="Copy a screenshot of the QR code first, then read it">
+						<span>
+							<Button size="small" startIcon={<QrCode2Rounded />} disabled={readingQr} onClick={() => void readQr()}>
+								Read QR from clipboard
+							</Button>
+						</span>
+					</Tooltip>
+				</Box>
 			</Box>
 
 			<Typography variant="overline" component="div" sx={{ color: "var(--text-faint)", mt: 3, mb: 1 }}>

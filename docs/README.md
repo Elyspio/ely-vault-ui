@@ -7,6 +7,7 @@
 - [Installation](usage/installation.md): installers, first launch
 - [Updates](usage/updates.md): automatic updates, beta versions
 - [Auto-type](usage/auto-type.md): sequences, safeguards, platforms
+- [Editing items](usage/editing.md): create, edit, trash, folders, SSH keys, TOTP
 - [Keyboard shortcuts](usage/keyboard-shortcuts.md)
 
 ## Technical

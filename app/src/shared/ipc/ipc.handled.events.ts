@@ -15,6 +15,7 @@ import type {
 	SshKeySource,
 	ItemDraft,
 	TotpCode,
+	TotpQrResult,
 	UnlockResult,
 	VaultSnapshot,
 	WriteResult,
@@ -63,6 +64,10 @@ export interface IpcHandledEvents {
 	 */
 	"vault:copy": (event: IpcMainInvokeEvent, itemId: string | null, ref: CopyRef) => Promise<void>;
 	"vault:totp:get": (event: IpcMainInvokeEvent, itemId: string) => Promise<TotpCode>;
+	/**
+	 * Reads the TOTP secret of a QR code screenshot in the clipboard; the value goes back to the item draft only
+	 */
+	"vault:totp:read-qr": (event: IpcMainInvokeEvent) => Promise<TotpQrResult>;
 	/**
 	 * Checks the master password for the protected items (reprompt), without network call
 	 */

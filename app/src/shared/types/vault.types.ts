@@ -180,6 +180,9 @@ export type TotpCode = {
 	remaining: number;
 };
 
+/** Outcome of reading a TOTP secret from a QR code in the clipboard: the value is the secret, never shown back */
+export type TotpQrResult = { status: "success"; value: string } | { status: "error"; message: string };
+
 export type LoginRequest = {
 	serverUrl: string;
 	email: string;

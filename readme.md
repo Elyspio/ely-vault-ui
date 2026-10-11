@@ -18,9 +18,9 @@
 
 ElyVault is a desktop interface on top of the **official Bitwarden CLI** (`@bitwarden/cli`). It connects to any **Vaultwarden** or **Bitwarden** server and lets you find, view and use your secrets without leaving the keyboard.
 
-All cryptography is delegated to the official CLI: the application implements no encryption algorithm.
+All vault cryptography is delegated to the official CLI: the application implements no encryption algorithm (SSH keys are generated and converted with the `sshpk` library, like the official clients do with their SDK).
 
-> **Status**: version 1, read-only. Items are created and edited from the web vault.
+> **Status**: items can be created, edited, moved to the trash and restored, marked as favorites, put in folders, and SSH keys can be generated or imported. Attachments, organization moves and collections stay in the web vault.
 
 ## Features
 
@@ -28,6 +28,11 @@ All cryptography is delegated to the official CLI: the application implements no
 - **Command palette** (`Ctrl K`): find and copy a password, a username or a TOTP code in two keystrokes.
 - **KeePass-style auto-type**: `Ctrl V` types the username then the password into the application opened just before.
 - **Every item type**: logins, TOTP codes, cards, identities, secure notes, SSH keys, custom fields.
+- **Keyboard-driven editing**: create (`Ctrl N`), edit (`Ctrl E`), save (`Ctrl S`), move to the trash (`Del`, with undo), favorite (`Ctrl D`), move to a folder (`Ctrl M`).
+- **Trash**: restore items, delete them permanently or empty the trash.
+- **Folders**: nested folders (`Work/Projects`), renamed or deleted from the sidebar.
+- **TOTP from a QR code**: copy a screenshot of the QR code, then read it in the editor.
+- **SSH keys**: generate an Ed25519 key or import an existing one; the private key never reaches the interface.
 - **Controlled clipboard**: automatic clearing, excluded from the Windows history (`Win V`) and the cloud clipboard.
 - **Auto-lock**: inactivity, session lock, sleep, quit.
 - **Master password re-entry** for protected items ("reprompt").
@@ -45,6 +50,7 @@ Windows (NSIS) and Linux (AppImage, `.deb`) installers are published in the [Git
 | [Installation](docs/usage/installation.md)             | [Architecture](docs/technical/architecture.md) | [Getting started](docs/development/getting-started.md)     |
 | [Updates](docs/usage/updates.md)                       | [Security model](docs/technical/security.md)   | [Releasing](docs/development/releasing.md)                 |
 | [Auto-type](docs/usage/auto-type.md)                   |                                                | [Local test server](docs/development/local-test-server.md) |
+| [Editing items](docs/usage/editing.md)                 |                                                |                                                            |
 | [Keyboard shortcuts](docs/usage/keyboard-shortcuts.md) |                                                |                                                            |
 
 ## License
