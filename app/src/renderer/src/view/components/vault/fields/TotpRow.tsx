@@ -3,12 +3,14 @@ import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import type { TotpCode } from "@shared/types/vault.types";
 import { useVaultActions } from "@hooks/useVaultActions";
 import { FieldRow } from "./FieldRow";
+import { useTranslation } from "react-i18next";
 
 /**
  * Live TOTP code with its countdown. Protected items wait for an explicit click (master password reprompt).
  */
 export function TotpRow({ itemId, reprompt }: Readonly<{ itemId: string; reprompt: boolean }>) {
 	const actions = useVaultActions();
+	const { t } = useTranslation(["vault", "common"]);
 	const [enabled, setEnabled] = useState(!reprompt);
 	const [totp, setTotp] = useState<TotpCode | null>(null);
 	const [remaining, setRemaining] = useState(0);
@@ -45,12 +47,12 @@ export function TotpRow({ itemId, reprompt }: Readonly<{ itemId: string; repromp
 
 	return (
 		<FieldRow
-			label="Verification code (TOTP)"
-			onCopy={() => void actions.copy(itemId, { kind: "totp" }, "Code")}
+			label={t("fields.totp")}
+			onCopy={() => void actions.copy(itemId, { kind: "totp" }, t("copied.code"))}
 			actions={
 				!enabled && (
 					<Button size="small" onClick={() => setEnabled(true)}>
-						Show
+						{t("common:show")}
 					</Button>
 				)
 			}

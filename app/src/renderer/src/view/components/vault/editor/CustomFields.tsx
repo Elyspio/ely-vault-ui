@@ -1,10 +1,11 @@
 import { type Dispatch, type SetStateAction, useState } from "react";
 import { Box, Button, Menu, MenuItem } from "@mui/material";
 import AddRounded from "@mui/icons-material/AddRounded";
+import { useTranslation } from "react-i18next";
 import { useVaultActions } from "@hooks/useVaultActions";
 import { FieldType, type DraftField, type ItemDraft, type SecretChange, type VaultItem } from "@shared/types/vault.types";
 import { toSecretChange } from "@view/utils/draft.utils";
-import { CustomFieldRow } from "./CustomFieldRow";
+import { CustomFieldRow, fieldTypeKeys } from "./CustomFieldRow";
 import { EditorSection } from "./EditorSection";
 
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
  * A hidden field of an organization item without a visible value is locked (the CLI matches it by name and order).
  */
 export function CustomFields({ draft, setDraft, item }: Readonly<Props>) {
+	const { t } = useTranslation("editor");
 	const actions = useVaultActions();
 	const [addAnchor, setAddAnchor] = useState<HTMLElement | null>(null);
 	// Rows are keyed by position: bumped on structural changes so a revealed secret never stays on another field
@@ -79,8 +81,8 @@ export function CustomFields({ draft, setDraft, item }: Readonly<Props>) {
 	};
 
 	return (
-		<EditorSection title="Custom fields">
-			{draft.fields.length === 0 && <Box sx={{ color: "var(--text-faint)", fontSize: "0.85rem", mb: 1 }}>No custom field</Box>}
+		<EditorSection title={t("fields.title")}>
+			{draft.fields.length === 0 && <Box sx={{ color: "var(--text-faint)", fontSize: "0.85rem", mb: 1 }}>{t("fields.empty")}</Box>}
 			{draft.fields.map((field, index) => {
 				const original = originalOf(field);
 				return (
@@ -102,12 +104,14 @@ export function CustomFields({ draft, setDraft, item }: Readonly<Props>) {
 				);
 			})}
 			<Button size="small" startIcon={<AddRounded />} onClick={(event) => setAddAnchor(event.currentTarget)} sx={{ mt: 1 }}>
-				Add field
+				{t("fields.add")}
 			</Button>
 			<Menu anchorEl={addAnchor} open={Boolean(addAnchor)} onClose={() => setAddAnchor(null)}>
-				<MenuItem onClick={() => add(FieldType.Text)}>Text</MenuItem>
-				<MenuItem onClick={() => add(FieldType.Hidden)}>Hidden</MenuItem>
-				<MenuItem onClick={() => add(FieldType.Boolean)}>Boolean</MenuItem>
+				{[FieldType.Text, FieldType.Hidden, FieldType.Boolean].map((type) => (
+					<MenuItem key={type} onClick={() => add(type)}>
+						{t(`fields.types.${fieldTypeKeys[type]}`)}
+					</MenuItem>
+				))}
 			</Menu>
 		</EditorSection>
 	);

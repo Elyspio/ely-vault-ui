@@ -3,6 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { SshKeyModule } from "./ssh.key.module";
+import { appMessage } from "@shared/i18n/message";
+import type { I18nModule } from "../i18n/i18n.module";
+
+/** Native dialog texts: their key is enough here */
+const i18n = { t: async (key: string) => key } as unknown as I18nModule;
 
 const showOpenDialog = vi.fn();
 
@@ -11,6 +16,9 @@ vi.mock("electron", () => ({
 }));
 
 // Logs go to winston and the app folder: the module only needs a logger object here
+// Native dialog texts come from the configuration: not needed here
+vi.mock("../i18n/i18n.module", () => ({ I18nModule: class {} }));
+
 vi.mock("../log.module", () => ({
 	LogModule: class {
 		public logger = { info: () => undefined, debug: () => undefined, warn: () => undefined, error: () => undefined };
@@ -38,7 +46,7 @@ afterEach(() => {
 
 describe("SshKeyModule", () => {
 	it("holds a generated key behind a token, until it is taken", () => {
-		const module = new SshKeyModule();
+		const module = new SshKeyModule(i18n);
 		const preview = module.generate();
 
 		expect(preview).toMatchObject({ keyType: "ssh-ed25519", publicKey: expect.stringMatching(/^ssh-ed25519 /), keyFingerprint: expect.stringMatching(/^SHA256:/) });
@@ -51,7 +59,7 @@ describe("SshKeyModule", () => {
 	});
 
 	it("forgets every key on clear", () => {
-		const module = new SshKeyModule();
+		const module = new SshKeyModule(i18n);
 		const preview = module.generate();
 
 		module.clear();
@@ -61,7 +69,7 @@ describe("SshKeyModule", () => {
 
 	it("lets a held key expire after ten minutes", () => {
 		vi.useFakeTimers();
-		const module = new SshKeyModule();
+		const module = new SshKeyModule(i18n);
 		const preview = module.generate();
 
 		vi.advanceTimersByTime(TEN_MINUTES - 1000);
@@ -72,7 +80,7 @@ describe("SshKeyModule", () => {
 	});
 
 	it("converts pasted text with its passphrase, and holds the key for the draft", async () => {
-		const module = new SshKeyModule();
+		const module = new SshKeyModule(i18n);
 
 		const result = await module.import({ kind: "text", text: ENCRYPTED_OPENSSH }, ENCRYPTED_PASSPHRASE, null);
 		expect(result.status).toBe("success");
@@ -82,14 +90,14 @@ describe("SshKeyModule", () => {
 	});
 
 	it("asks the passphrase of an encrypted key, then converts it from its pending token", async () => {
-		const module = new SshKeyModule();
+		const module = new SshKeyModule(i18n);
 
 		const asked = await module.import({ kind: "text", text: ENCRYPTED_OPENSSH }, null, null);
 		expect(asked.status).toBe("passphrase-required");
 		if (asked.status !== "passphrase-required") return;
 
 		const wrong = await module.import({ kind: "pending", token: asked.token }, "wrong", null);
-		expect(wrong).toEqual({ status: "error", message: "Wrong passphrase" });
+		expect(wrong).toEqual({ status: "error", message: appMessage("sshWrongPassphrase") });
 
 		// A wrong passphrase keeps the key pending
 		const right = await module.import({ kind: "pending", token: asked.token }, ENCRYPTED_PASSPHRASE, null);
@@ -100,14 +108,14 @@ describe("SshKeyModule", () => {
 		// The pending text is gone once converted
 		expect(await module.import({ kind: "pending", token: asked.token }, ENCRYPTED_PASSPHRASE, null)).toEqual({
 			status: "error",
-			message: "The key expired, import it again",
+			message: appMessage("sshImportExpired"),
 		});
 	});
 
 	it("reports a cancelled file dialog without any key", async () => {
 		showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
 
-		expect(await new SshKeyModule().import({ kind: "file" }, null, null)).toEqual({ status: "cancelled" });
+		expect(await new SshKeyModule(i18n).import({ kind: "file" }, null, null)).toEqual({ status: "cancelled" });
 	});
 
 	it("converts a key file chosen in the dialog, and refuses a file that is too large", async () => {
@@ -119,10 +127,10 @@ describe("SshKeyModule", () => {
 			fs.writeFileSync(largeFile, "x".repeat(70 * 1024));
 
 			showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [largeFile] });
-			expect(await new SshKeyModule().import({ kind: "file" }, null, null)).toEqual({ status: "error", message: "This is too large to be an SSH key" });
+			expect(await new SshKeyModule(i18n).import({ kind: "file" }, null, null)).toEqual({ status: "error", message: appMessage("sshKeyTooLarge") });
 
 			showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [keyFile] });
-			const asked = await new SshKeyModule().import({ kind: "file" }, null, null);
+			const asked = await new SshKeyModule(i18n).import({ kind: "file" }, null, null);
 			expect(asked.status).toBe("passphrase-required");
 		} finally {
 			fs.rmSync(dir, { recursive: true, force: true });
@@ -130,9 +138,9 @@ describe("SshKeyModule", () => {
 	});
 
 	it("refuses text that is not a key, and holds nothing", async () => {
-		const module = new SshKeyModule();
+		const module = new SshKeyModule(i18n);
 		const result = await module.import({ kind: "text", text: "hello" }, null, null);
 
-		expect(result).toEqual({ status: "error", message: "Not a private key: OpenSSH, PEM or PKCS#8 format expected" });
+		expect(result).toEqual({ status: "error", message: appMessage("sshInvalidFormat") });
 	});
 });

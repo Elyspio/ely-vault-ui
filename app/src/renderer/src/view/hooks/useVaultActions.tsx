@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from "@mui/material";
 import LockPersonRounded from "@mui/icons-material/LockPersonRounded";
+import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "@store";
 import { webContainer } from "@core/di/web.container";
 import { VaultService } from "@services/vault.service";
@@ -8,6 +9,7 @@ import { showToast } from "@modules/ui/ui.reducer";
 import { ipcErrorMessage, isRepromptRequired } from "@core/utils/ipc.utils";
 import { useDialogFocus } from "@hooks/useDialogFocus";
 import type { CopyRef, SecretRef } from "@shared/types/vault.types";
+import { i18n } from "@/config/i18n";
 
 type RequestReprompt = () => Promise<boolean>;
 
@@ -17,6 +19,7 @@ export const RepromptContext = createContext<RequestReprompt>(() => Promise.reso
  * Asks the master password again for items flagged "reprompt"; the main process checks it and unlocks them for a few minutes
  */
 export function RepromptProvider({ children }: Readonly<{ children: ReactNode }>) {
+	const { t } = useTranslation(["actions", "common"]);
 	const [open, setOpen] = useState(false);
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState(false);
@@ -64,18 +67,18 @@ export function RepromptProvider({ children }: Readonly<{ children: ReactNode }>
 				>
 					<DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 						<LockPersonRounded fontSize="small" color="primary" />
-						Protected item
+						{t("reprompt.title")}
 					</DialogTitle>
 					<DialogContent>
 						<Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
-							Enter your master password to access this secret.
+							{t("reprompt.description")}
 						</Typography>
 						<TextField
 							inputRef={passwordRef}
 							fullWidth
 							size="small"
 							type="password"
-							label="Master password"
+							label={t("reprompt.passwordLabel")}
 							value={password}
 							error={error}
 							onChange={(event) => {
@@ -85,16 +88,16 @@ export function RepromptProvider({ children }: Readonly<{ children: ReactNode }>
 						/>
 						{error && (
 							<Alert severity="error" variant="outlined" sx={{ mt: 2, py: 0 }}>
-								Incorrect password
+								{t("reprompt.incorrectPassword")}
 							</Alert>
 						)}
 					</DialogContent>
 					<DialogActions sx={{ px: 3, pb: 2 }}>
 						<Button onClick={() => close(false)} color="inherit">
-							Cancel
+							{t("common:cancel")}
 						</Button>
 						<Button type="submit" variant="contained" disabled={!password || pending}>
-							Confirm
+							{t("common:confirm")}
 						</Button>
 					</DialogActions>
 				</form>
@@ -133,7 +136,7 @@ export function useVaultActions() {
 					await service.copy(itemId, ref);
 					return true;
 				});
-				if (done) dispatch(showToast(clearSeconds ? `${label} copied · cleared in ${clearSeconds} s` : `${label} copied`));
+				if (done) dispatch(showToast(clearSeconds ? i18n.t("actions:copy.copiedCleared", { label, seconds: clearSeconds }) : i18n.t("actions:copy.copied", { label })));
 			},
 			reveal(itemId: string, ref: SecretRef) {
 				return withReprompt(() => service.secret(itemId, ref));

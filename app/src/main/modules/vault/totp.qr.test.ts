@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import { describe, expect, it } from "vite-plus/test";
 import { decodeTotpQr } from "./totp.qr";
+import { appMessage } from "@shared/i18n/message";
 
 /** RGBA image of a QR code: dark modules black, a quiet zone around, each module drawn `scale` pixels wide */
 function renderQr(text: string, scale = 4, margin = 4) {
@@ -41,7 +42,7 @@ describe("decodeTotpQr", () => {
 		const { rgba, width, height } = renderQr("https://example.com");
 		const result = decodeTotpQr(rgba, width, height);
 
-		expect(result).toEqual({ status: "error", message: "This QR code is not a TOTP secret" });
+		expect(result).toEqual({ status: "error", message: appMessage("qrNotTotp") });
 		expect(JSON.stringify(result)).not.toContain("example.com");
 	});
 
@@ -56,7 +57,7 @@ describe("decodeTotpQr", () => {
 		const height = 80;
 		const rgba = new Uint8ClampedArray(width * height * 4).fill(255);
 
-		expect(decodeTotpQr(rgba, width, height)).toEqual({ status: "error", message: "No QR code found in the image" });
+		expect(decodeTotpQr(rgba, width, height)).toEqual({ status: "error", message: appMessage("qrNotFound") });
 	});
 
 	it("refuses a buffer that does not match the size", () => {

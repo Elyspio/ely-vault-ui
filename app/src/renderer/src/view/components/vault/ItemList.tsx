@@ -15,6 +15,7 @@ import { useFilterLabel } from "./useFilterLabel";
 import { usePrimaryCopy } from "./usePrimaryCopy";
 import { EmptyTrashButton } from "./trash/EmptyTrashButton";
 import { formatDateTime } from "@view/utils/date.utils";
+import { useTranslation } from "react-i18next";
 
 export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInputElement | null> }>) {
 	const dispatch = useAppDispatch();
@@ -25,6 +26,7 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 	const editing = useAppSelector((state) => state.vault.editor !== null);
 	const filterLabel = useFilterLabel();
 	const copyPrimary = usePrimaryCopy();
+	const { t } = useTranslation("vault");
 	const listRef = useRef<HTMLDivElement>(null);
 
 	// Keep a visible selection: the first result when searching
@@ -73,7 +75,7 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 					inputRef={searchRef}
 					fullWidth
 					size="small"
-					placeholder={`Search ${filterLabel.toLowerCase()}`}
+					placeholder={t("list.search", { filter: filterLabel.toLowerCase() })}
 					value={query}
 					onChange={(event) => dispatch(setQuery(event.target.value))}
 					onKeyDown={onKeyDown}
@@ -96,7 +98,7 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 				/>
 				<Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mt: 1.25, px: 0.5 }}>
 					<Typography sx={{ fontSize: "0.72rem", color: "var(--text-faint)" }}>
-						{filterLabel} · {items.length} item{items.length > 1 ? "s" : ""}
+						{filterLabel} · {t("list.itemCount", { count: items.length })}
 					</Typography>
 					<EmptyTrashButton />
 				</Box>
@@ -106,7 +108,7 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 				{items.length === 0 ? (
 					<Box sx={{ textAlign: "center", color: "var(--text-faint)", mt: 8 }}>
 						<SearchOffRounded sx={{ fontSize: 36, mb: 1 }} />
-						<Typography variant="body2">{query ? `No results for "${query}"` : "No items"}</Typography>
+						<Typography variant="body2">{query ? t("list.noResults", { query }) : t("list.noItems")}</Typography>
 					</Box>
 				) : (
 					items.map((item) => (
@@ -127,8 +129,9 @@ export function ItemList({ searchRef }: Readonly<{ searchRef: RefObject<HTMLInpu
 type RowProps = { item: VaultItem; selected: boolean; onSelect: () => void; onActivate?: () => void };
 
 function ItemRow({ item, selected, onSelect, onActivate }: Readonly<RowProps>) {
+	const { t } = useTranslation("vault");
 	// Deleted items show when they were deleted instead of their secondary line
-	const subtitle = item.deletedDate ? `Deleted ${formatDateTime(item.deletedDate)}` : getItemSubtitle(item);
+	const subtitle = item.deletedDate ? t("list.deleted", { date: formatDateTime(item.deletedDate) }) : getItemSubtitle(item);
 
 	return (
 		<Box

@@ -1,4 +1,5 @@
 import { injectable } from "inversify";
+import { translateMessages } from "@core/utils/message.utils";
 import type { LoginRequest } from "@shared/types/vault.types";
 
 @injectable()
@@ -8,7 +9,7 @@ export class SessionService {
 	}
 
 	public login(request: LoginRequest) {
-		return window.preload.ipc.send.session.login(request);
+		return window.preload.ipc.send.session.login(request).then(translateMessages);
 	}
 
 	public cancelLogin() {
@@ -16,7 +17,7 @@ export class SessionService {
 	}
 
 	public unlock(password: string) {
-		return window.preload.ipc.send.session.unlock(password);
+		return window.preload.ipc.send.session.unlock(password).then(translateMessages);
 	}
 
 	public lock() {
@@ -33,7 +34,7 @@ export class SessionService {
 
 	/** Without password, the one of the unlock that offered Windows Hello is used */
 	public enableHello(password: string | null) {
-		return window.preload.ipc.send.session.hello.enable(password);
+		return window.preload.ipc.send.session.hello.enable(password).then(translateMessages);
 	}
 
 	public helloOffer() {
@@ -49,6 +50,6 @@ export class SessionService {
 	}
 
 	public helloUnlock() {
-		return window.preload.ipc.send.session.hello.unlock();
+		return window.preload.ipc.send.session.hello.unlock().then(translateMessages);
 	}
 }

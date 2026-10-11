@@ -21,10 +21,12 @@ import { HelloOfferDialog } from "@components/auth/HelloOfferDialog";
 import { PanelResizeHandle } from "./PanelResizeHandle";
 import { saveConfig } from "@modules/config/config.async.actions";
 import { clampPanelLayout, defaultAppConfig, type PanelLayout } from "@shared/config/app.config";
+import { useTranslation } from "react-i18next";
 
 export function VaultScreen() {
 	const dispatch = useAppDispatch();
 	const actions = useVaultActions();
+	const { t } = useTranslation("vault");
 	const searchRef = useRef<HTMLInputElement>(null);
 	const screenRef = useRef<HTMLDivElement>(null);
 	const config = useAppSelector((state) => state.config.current);
@@ -86,7 +88,7 @@ export function VaultScreen() {
 				combo: "ctrl+shift+c",
 				handler: () => {
 					const item = selected();
-					if (item?.login?.hasPassword) void actions.copy(item.id, { kind: "password" }, "Password");
+					if (item?.login?.hasPassword) void actions.copy(item.id, { kind: "password" }, t("copied.password"));
 				},
 				allowInInput: true,
 			},
@@ -94,7 +96,7 @@ export function VaultScreen() {
 				combo: "ctrl+shift+u",
 				handler: () => {
 					const item = selected();
-					if (item?.login?.username) void actions.copy(item.id, { kind: "username" }, "Username");
+					if (item?.login?.username) void actions.copy(item.id, { kind: "username" }, t("copied.username"));
 				},
 				allowInInput: true,
 			},
@@ -102,7 +104,7 @@ export function VaultScreen() {
 				combo: "ctrl+shift+o",
 				handler: () => {
 					const item = selected();
-					if (item?.login?.hasTotp) void actions.copy(item.id, { kind: "totp" }, "Code");
+					if (item?.login?.hasTotp) void actions.copy(item.id, { kind: "totp" }, t("copied.code"));
 				},
 				allowInInput: true,
 			},
@@ -177,14 +179,14 @@ export function VaultScreen() {
 			<ItemList searchRef={searchRef} />
 			<ItemDetail />
 			<PanelResizeHandle
-				label="Resize the sidebar"
+				label={t("screen.resizeSidebar")}
 				left={layout.sidebarWidth}
 				width={layout.sidebarWidth}
 				onResize={resize("sidebarWidth")}
 				onReset={reset("sidebarWidth")}
 			/>
 			<PanelResizeHandle
-				label="Resize the item list"
+				label={t("screen.resizeList")}
 				left={layout.sidebarWidth + layout.listWidth}
 				width={layout.listWidth}
 				onResize={resize("listWidth")}

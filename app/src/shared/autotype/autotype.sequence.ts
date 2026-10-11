@@ -3,6 +3,8 @@
  * Placeholders are case-insensitive, {{} and {}} type a literal brace.
  */
 
+import { appMessage } from "../i18n/message";
+
 export type AutoTypeField = "username" | "password" | "totp";
 export type AutoTypeKey = "tab" | "enter";
 
@@ -58,7 +60,7 @@ export function parseAutoTypeSequence(sequence: string): AutoTypeToken[] {
 		}
 
 		if (CONTROL_CHARACTERS.test(sequence[index])) {
-			throw new AutoTypeSequenceError(`Control character at position ${index + 1}: use {TAB} or {ENTER}`, index + 1);
+			throw new AutoTypeSequenceError(appMessage("sequenceControlCharacter", { position: index + 1 }), index + 1);
 		}
 
 		if (sequence[index] !== "{") {
@@ -68,7 +70,7 @@ export function parseAutoTypeSequence(sequence: string): AutoTypeToken[] {
 		}
 
 		const end = sequence.indexOf("}", index + 1);
-		if (end === -1) throw new AutoTypeSequenceError(`Unclosed brace at position ${index + 1}`, index + 1);
+		if (end === -1) throw new AutoTypeSequenceError(appMessage("sequenceUnclosedBrace", { position: index + 1 }), index + 1);
 
 		const content = sequence.slice(index + 1, end).trim();
 		flushText();
@@ -88,11 +90,11 @@ function parsePlaceholder(content: string, position: number): AutoTypeToken {
 	const delay = /^DELAY\s+(\d+)$/.exec(upper);
 	if (delay) {
 		const ms = Number(delay[1]);
-		if (ms > MAX_AUTOTYPE_DELAY_MS) throw new AutoTypeSequenceError(`Delay too long: {${content}} (${MAX_AUTOTYPE_DELAY_MS} ms at most)`, position);
+		if (ms > MAX_AUTOTYPE_DELAY_MS) throw new AutoTypeSequenceError(appMessage("sequenceDelayTooLong", { code: `{${content}}`, max: MAX_AUTOTYPE_DELAY_MS }), position);
 		return { kind: "delay", ms };
 	}
 
-	throw new AutoTypeSequenceError(`Code inconnu : {${content}}`, position);
+	throw new AutoTypeSequenceError(appMessage("sequenceUnknownCode", { code: `{${content}}` }), position);
 }
 
 /**

@@ -30,6 +30,7 @@ import type {
 	WriteOutcome,
 	WriteResult,
 } from "@shared/types/vault.types";
+import { appMessage } from "@shared/i18n/message";
 
 /** How long a successful master password reprompt unlocks protected items */
 const REPROMPT_GRACE_MS = 5 * 60 * 1000;
@@ -39,7 +40,8 @@ const SETTLE_ATTEMPTS = 10;
 const SETTLE_DELAY_MS = 150;
 
 /** Shown when the SSH key of a draft is no longer held (expired, or the vault was locked) */
-const SSH_KEY_EXPIRED = "The SSH key expired, generate or import it again";
+const SSH_KEY_EXPIRED = appMessage("sshKeyExpired");
+const VAULT_LOCKED = appMessage("vaultLocked");
 
 /** Whether a reloaded snapshot already shows a successful write (`done`: ids written) */
 type Settled = (snapshot: VaultSnapshot, done: string[]) => boolean;
@@ -109,12 +111,12 @@ export class VaultModule extends LogModule {
 	@log("info")
 	public async login(request: LoginRequest): Promise<LoginResult> {
 		const serverUrl = normalizeServerUrl(request.serverUrl);
-		if (!serverUrl) return { status: "error", message: "Invalid server address (https:// required)" };
+		if (!serverUrl) return { status: "error", message: appMessage("invalidServerAddress") };
 
 		// The CLI only says "certificate error": check first, so the user can review and approve the certificate
 		const certificate = await this.certificateModule.check(serverUrl);
 		if (certificate.status === "untrusted") return { status: "untrusted-certificate", certificate: certificate.certificate };
-		if (certificate.status === "unreachable") return { status: "error", message: `Server unreachable: ${certificate.message}` };
+		if (certificate.status === "unreachable") return { status: "error", message: appMessage("serverUnreachableDetail", { detail: certificate.message }) };
 
 		// Login, logout and server config write the CLI data file: the server must be down
 		await this.bwServeModule.stop();
@@ -128,7 +130,7 @@ export class VaultModule extends LogModule {
 			if (request.sso) await this.bwCliModule.loginSso();
 			else await this.bwCliModule.login(request.email.trim(), request.password, request.twoFactor);
 		} catch (error) {
-			if (error instanceof Error && error.name === "AbortError") return { status: "error", message: "SSO login cancelled or expired" };
+			if (error instanceof Error && error.name === "AbortError") return { status: "error", message: appMessage("ssoCancelled") };
 			const message = errorMessage(error);
 			// CLI message only: the password goes through the environment, never in arguments or output
 			this.logger.warn("Login failed", message);
@@ -366,7 +368,7 @@ export class VaultModule extends LogModule {
 
 	private getItem(itemId: string) {
 		const item = this.items.get(itemId);
-		if (!item) throw new BwError(this.snapshot ? "Item not found" : "The vault is locked");
+		if (!item) throw new BwError(this.snapshot ? appMessage("itemNotFound") : VAULT_LOCKED);
 		return item;
 	}
 
@@ -377,7 +379,7 @@ export class VaultModule extends LogModule {
 	}
 
 	private ensureGeneration(generation: number) {
-		if (generation !== this.generation) throw new BwError("The vault is locked");
+		if (generation !== this.generation) throw new BwError(VAULT_LOCKED);
 	}
 
 	/**
@@ -553,7 +555,7 @@ export class VaultModule extends LogModule {
 	@log("info")
 	public async restoreItem(itemId: string): Promise<WriteResult> {
 		return this.write(async () => {
-			if (!this.trash.has(itemId)) return { status: "error", message: "Item not found in the trash" };
+			if (!this.trash.has(itemId)) return { status: "error", message: appMessage("itemNotInTrash") };
 
 			await this.bwServeModule.request("POST", `/restore/item/${encodeURIComponent(itemId)}`);
 			return { status: "success", id: itemId };
@@ -568,8 +570,8 @@ export class VaultModule extends LogModule {
 		return this.write(
 			async () => {
 				const ids = [...new Set(itemIds)];
-				if (ids.length === 0) return { status: "error", message: "No item selected" };
-				if (ids.some((id) => !this.trash.has(id))) return { status: "error", message: "Item not found in the trash" };
+				if (ids.length === 0) return { status: "error", message: appMessage("noItemSelected") };
+				if (ids.some((id) => !this.trash.has(id))) return { status: "error", message: appMessage("itemNotInTrash") };
 				for (const id of ids) this.ensureRepromptSatisfied(this.trash.get(id)!);
 
 				return this.runSequence(
@@ -608,7 +610,7 @@ export class VaultModule extends LogModule {
 		return this.write(
 			async () => {
 				this.getItem(itemId);
-				if (folderId !== null && !this.folders.some((folder) => folder.id === folderId)) return { status: "error", message: "Folder not found" };
+				if (folderId !== null && !this.folders.some((folder) => folder.id === folderId)) return { status: "error", message: appMessage("folderNotFound") };
 
 				const fresh = await this.fetchItem(itemId);
 				await this.bwServeModule.request("PUT", `/object/item/${encodeURIComponent(itemId)}`, { ...fresh, folderId });
@@ -625,11 +627,11 @@ export class VaultModule extends LogModule {
 	public async createFolder(name: string): Promise<WriteResult> {
 		return this.write(async () => {
 			const segments = folderSegments(name);
-			if (segments.length === 0) return { status: "error", message: "The folder name is empty" };
+			if (segments.length === 0) return { status: "error", message: appMessage("folderNameEmpty") };
 
 			const normalized = joinFolderSegments(segments);
 			const exists = this.folders.some((folder) => folder.id !== null && joinFolderSegments(folderSegments(folder.name)) === normalized);
-			if (exists) return { status: "error", message: "A folder with this name already exists" };
+			if (exists) return { status: "error", message: appMessage("folderExists") };
 
 			const created = await this.bwServeModule.request<BwFolder>("POST", "/object/folder", { name: normalized });
 			return { status: "success", id: created.id };
@@ -709,7 +711,7 @@ function errorMessage(error: unknown) {
  * Errors that reach the renderer as errors instead of the outcome of a write: reprompt and locked vault
  */
 function isFatalWriteError(message: string) {
-	return message === "REPROMPT_REQUIRED" || message === "The vault is locked";
+	return message === "REPROMPT_REQUIRED" || message === VAULT_LOCKED;
 }
 
 function isTwoFactorError(message: string) {
@@ -718,10 +720,10 @@ function isTwoFactorError(message: string) {
 }
 
 function translateError(message: string) {
-	if (/username or password is incorrect/i.test(message)) return "Incorrect email address or password";
-	if (/decryption operation failed|invalid master password/i.test(message)) return "Incorrect master password";
-	if (/two[- ]?step token is invalid|invalid.*code/i.test(message)) return "Invalid verification code";
-	if (/fetch failed|ECONNREFUSED|ENOTFOUND|getaddrinfo/i.test(message)) return "Server unreachable";
-	if (/certificate|self[- ]signed|UNABLE_TO_VERIFY/i.test(message)) return "Server certificate not recognized: approve its authority in the settings";
+	if (/username or password is incorrect/i.test(message)) return appMessage("incorrectCredentials");
+	if (/decryption operation failed|invalid master password/i.test(message)) return appMessage("incorrectMasterPassword");
+	if (/two[- ]?step token is invalid|invalid.*code/i.test(message)) return appMessage("invalidVerificationCode");
+	if (/fetch failed|ECONNREFUSED|ENOTFOUND|getaddrinfo/i.test(message)) return appMessage("serverUnreachable");
+	if (/certificate|self[- ]signed|UNABLE_TO_VERIFY/i.test(message)) return appMessage("certificateNotRecognized");
 	return message;
 }

@@ -5,6 +5,7 @@ import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import KeyboardArrowUpRounded from "@mui/icons-material/KeyboardArrowUpRounded";
 import KeyboardArrowDownRounded from "@mui/icons-material/KeyboardArrowDownRounded";
 import QrCode2Rounded from "@mui/icons-material/QrCode2Rounded";
+import { useTranslation } from "react-i18next";
 import { useVaultActions } from "@hooks/useVaultActions";
 import { webContainer } from "@core/di/web.container";
 import { VaultService } from "@services/vault.service";
@@ -22,28 +23,31 @@ type Props = {
 	item: VaultItem | null;
 };
 
-/** Match type options: the "default" value stands for null (account default, base domain) */
-const matchOptions: { value: string; label: string; match: UriMatchType | null }[] = [
-	{ value: "default", label: "Default", match: null },
-	{ value: String(UriMatchType.Domain), label: "Base domain", match: UriMatchType.Domain },
-	{ value: String(UriMatchType.Host), label: "Host", match: UriMatchType.Host },
-	{ value: String(UriMatchType.StartsWith), label: "Starts with", match: UriMatchType.StartsWith },
-	{ value: String(UriMatchType.Exact), label: "Exact", match: UriMatchType.Exact },
-	{ value: String(UriMatchType.RegularExpression), label: "Regular expression", match: UriMatchType.RegularExpression },
-	{ value: String(UriMatchType.Never), label: "Never", match: UriMatchType.Never },
+type MatchLabel = "default" | "domain" | "host" | "startsWith" | "exact" | "regularExpression" | "never";
+
+/** Match type options: the "default" value stands for null (account default, base domain); labels in `editor:login.match` */
+const matchOptions: { value: string; label: MatchLabel; match: UriMatchType | null }[] = [
+	{ value: "default", label: "default", match: null },
+	{ value: String(UriMatchType.Domain), label: "domain", match: UriMatchType.Domain },
+	{ value: String(UriMatchType.Host), label: "host", match: UriMatchType.Host },
+	{ value: String(UriMatchType.StartsWith), label: "startsWith", match: UriMatchType.StartsWith },
+	{ value: String(UriMatchType.Exact), label: "exact", match: UriMatchType.Exact },
+	{ value: String(UriMatchType.RegularExpression), label: "regularExpression", match: UriMatchType.RegularExpression },
+	{ value: String(UriMatchType.Never), label: "never", match: UriMatchType.Never },
 ];
 
 /**
  * Login values: username, password and TOTP secrets (write-only), websites
  */
 export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
+	const { t } = useTranslation("editor");
 	const actions = useVaultActions();
 	const login: Login = draft.login ?? { username: null, uris: [] };
 
 	const patch = (changes: Partial<Login>) => setDraft((current) => ({ ...current, login: { ...(current.login ?? { username: null, uris: [] }), ...changes } }));
 	const setUris = (uris: DraftUri[]) => patch({ uris });
 
-	const totpError = login.totp?.kind === "set" && !isValidTotp(login.totp.value) ? "Not a valid TOTP secret" : null;
+	const totpError = login.totp?.kind === "set" && !isValidTotp(login.totp.value) ? t("login.totpInvalid") : null;
 	const [qrError, setQrError] = useState<string | null>(null);
 	const [readingQr, setReadingQr] = useState(false);
 
@@ -66,11 +70,18 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 	};
 
 	return (
-		<EditorSection title="Login">
+		<EditorSection title={t("login.title")}>
 			<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-				<TextField label="Username" size="small" fullWidth autoComplete="off" value={login.username ?? ""} onChange={(event) => patch({ username: event.target.value })} />
+				<TextField
+					label={t("login.username")}
+					size="small"
+					fullWidth
+					autoComplete="off"
+					value={login.username ?? ""}
+					onChange={(event) => patch({ username: event.target.value })}
+				/>
 				<SecretInput
-					label="Password"
+					label={t("login.password")}
 					value={login.password}
 					onChange={(password) => patch({ password })}
 					stored={item?.login?.hasPassword ?? false}
@@ -78,7 +89,7 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 					generate
 				/>
 				<SecretInput
-					label="TOTP secret"
+					label={t("login.totp")}
 					value={login.totp}
 					onChange={(totp: SecretChange | undefined) => {
 						setQrError(null);
@@ -86,13 +97,13 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 					}}
 					stored={item?.login?.hasTotp ?? false}
 					error={qrError ?? totpError}
-					helperText="Base32 secret, otpauth://totp uri or steam:// secret"
+					helperText={t("login.totpHelper")}
 				/>
 				<Box>
-					<Tooltip title="Copy a screenshot of the QR code first, then read it">
+					<Tooltip title={t("login.readQrHint")}>
 						<span>
 							<Button size="small" startIcon={<QrCode2Rounded />} disabled={readingQr} onClick={() => void readQr()}>
-								Read QR from clipboard
+								{t("login.readQr")}
 							</Button>
 						</span>
 					</Tooltip>
@@ -100,7 +111,7 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 			</Box>
 
 			<Typography variant="overline" component="div" sx={{ color: "var(--text-faint)", mt: 3, mb: 1 }}>
-				Websites
+				{t("login.websites")}
 			</Typography>
 			<Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
 				{login.uris.map((uri, index) => (
@@ -108,7 +119,7 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 						<TextField
 							size="small"
 							placeholder="https://"
-							aria-label={`Website ${index + 1}`}
+							aria-label={t("login.website", { index: index + 1 })}
 							value={uri.uri}
 							onChange={(event) => setUris(login.uris.map((current, i) => (i === index ? { ...current, uri: event.target.value } : current)))}
 							sx={{ flex: "1 1 180px", minWidth: 0 }}
@@ -118,7 +129,7 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 							<TextField
 								select
 								size="small"
-								aria-label="Match type"
+								aria-label={t("login.matchType")}
 								value={uri.match === null ? "default" : String(uri.match)}
 								onChange={(event) => {
 									const option = matchOptions.find((candidate) => candidate.value === event.target.value);
@@ -128,25 +139,25 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 							>
 								{matchOptions.map((option) => (
 									<MenuItem key={option.value} value={option.value}>
-										{option.label}
+										{t(`login.match.${option.label}`)}
 									</MenuItem>
 								))}
 							</TextField>
-							<Tooltip title="Move up">
+							<Tooltip title={t("row.moveUp")}>
 								<span>
 									<IconButton size="small" disabled={index === 0} onClick={() => setUris(move(login.uris, index, index - 1))}>
 										<KeyboardArrowUpRounded />
 									</IconButton>
 								</span>
 							</Tooltip>
-							<Tooltip title="Move down">
+							<Tooltip title={t("row.moveDown")}>
 								<span>
 									<IconButton size="small" disabled={index === login.uris.length - 1} onClick={() => setUris(move(login.uris, index, index + 1))}>
 										<KeyboardArrowDownRounded />
 									</IconButton>
 								</span>
 							</Tooltip>
-							<Tooltip title="Remove">
+							<Tooltip title={t("row.remove")}>
 								<IconButton size="small" onClick={() => setUris(login.uris.filter((_, i) => i !== index))}>
 									<DeleteOutlineRounded />
 								</IconButton>
@@ -156,7 +167,7 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 				))}
 				<Box>
 					<Button size="small" startIcon={<AddRounded />} onClick={() => setUris([...login.uris, { uri: "", match: null }])}>
-						Add website
+						{t("login.addWebsite")}
 					</Button>
 				</Box>
 			</Box>

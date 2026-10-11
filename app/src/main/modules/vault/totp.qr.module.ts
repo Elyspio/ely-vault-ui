@@ -3,6 +3,7 @@ import { injectable } from "inversify";
 import { LogModule } from "../log.module";
 import { decodeTotpQr } from "./totp.qr";
 import type { TotpQrResult } from "@shared/types/vault.types";
+import { appMessage } from "@shared/i18n/message";
 
 /** Larger clipboard images are refused: a screenshot of a QR code never needs that much */
 const MAX_SIDE = 4096;
@@ -24,11 +25,11 @@ export class TotpQrModule extends LogModule {
 	 */
 	public async readFromClipboard(): Promise<TotpQrResult> {
 		const image = await readClipboardImage();
-		if (!image || image.isEmpty()) return { status: "error", message: "Copy a screenshot of the QR code first" };
+		if (!image || image.isEmpty()) return { status: "error", message: appMessage("qrScreenshotRequired") };
 
 		const { width, height } = image.getSize();
-		if (width <= 0 || height <= 0) return { status: "error", message: "Copy a screenshot of the QR code first" };
-		if (Math.max(width, height) > MAX_SIDE) return { status: "error", message: "This image is too large to contain a QR code" };
+		if (width <= 0 || height <= 0) return { status: "error", message: appMessage("qrScreenshotRequired") };
+		if (Math.max(width, height) > MAX_SIDE) return { status: "error", message: appMessage("qrImageTooLarge") };
 
 		const scale = Math.min(1, DECODE_SIDE / Math.max(width, height));
 		const scaled = scale < 1 ? image.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: "good" }) : image;

@@ -4,6 +4,7 @@ import { showToast } from "@modules/ui/ui.reducer";
 import { createFolder, createItem, deleteFolder, deleteItem, moveItem, purgeItems, renameFolder, restoreItem, setFavorite, updateItem } from "@modules/vault/vault.write.actions";
 import type { ItemDraft, WriteOutcome, WriteResult } from "@shared/types/vault.types";
 import { RepromptContext } from "./useVaultActions";
+import { i18n } from "@/config/i18n";
 
 /**
  * Write operations with the master password reprompt and the feedback toasts.
@@ -22,7 +23,7 @@ export function useVaultWrites() {
 		async function run(start: () => Promise<{ payload: unknown; meta: { requestStatus: "fulfilled" | "rejected" } }>): Promise<WriteOutcome | null> {
 			const action = await start();
 			if (action.meta.requestStatus === "rejected") {
-				const message = typeof action.payload === "string" ? action.payload : "Unknown error";
+				const message = typeof action.payload === "string" ? action.payload : i18n.t("common:unknownError");
 				if (message === "REPROMPT_REQUIRED") return (await requestReprompt()) ? run(start) : null;
 				dispatch(showToast(message, "error"));
 				return null;
@@ -36,8 +37,9 @@ export function useVaultWrites() {
 		/** Errors of the write and of the reload that follows */
 		function report({ outcome, refreshError }: WriteResult) {
 			if (outcome.status === "error") dispatch(showToast(outcome.message, "error"));
-			else if (outcome.status === "partial") dispatch(showToast(`Stopped after ${outcome.done.length} change(s): ${outcome.failed.message}`, "error"));
-			else if (refreshError) dispatch(showToast(`Saved, but the vault could not be reloaded: ${refreshError}`, "error"));
+			else if (outcome.status === "partial")
+				dispatch(showToast(i18n.t("actions:writes.stoppedAfter", { count: outcome.done.length, message: outcome.failed.message }), "error"));
+			else if (refreshError) dispatch(showToast(i18n.t("actions:writes.savedNotReloaded", { error: refreshError }), "error"));
 		}
 
 		return {
@@ -47,17 +49,18 @@ export function useVaultWrites() {
 			/** Moves to the trash, with an "Undo" toast */
 			async deleteItem(itemId: string, name: string) {
 				const outcome = await run(() => dispatch(deleteItem(itemId)));
-				if (outcome?.status === "success") dispatch(showToast(`"${name}" moved to the trash`, "info", { label: "Undo", kind: "restore-item", itemId }));
+				if (outcome?.status === "success")
+					dispatch(showToast(i18n.t("actions:writes.movedToTrash", { name }), "info", { label: i18n.t("actions:writes.undo"), kind: "restore-item", itemId }));
 				return outcome;
 			},
 			async restoreItem(itemId: string) {
 				const outcome = await run(() => dispatch(restoreItem(itemId)));
-				if (outcome?.status === "success") dispatch(showToast("Item restored"));
+				if (outcome?.status === "success") dispatch(showToast(i18n.t("actions:writes.itemRestored")));
 				return outcome;
 			},
 			async purgeItems(itemIds: string[]) {
 				const outcome = await run(() => dispatch(purgeItems(itemIds)));
-				if (outcome?.status === "success") dispatch(showToast(itemIds.length > 1 ? `${itemIds.length} items permanently deleted` : "Item permanently deleted"));
+				if (outcome?.status === "success") dispatch(showToast(i18n.t("actions:writes.purged", { count: itemIds.length })));
 				return outcome;
 			},
 			setFavorite: (itemId: string, favorite: boolean) => run(() => dispatch(setFavorite({ itemId, favorite }))),

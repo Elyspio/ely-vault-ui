@@ -14,6 +14,7 @@ import { ItemIcon } from "../ItemIcon";
 import { FieldCard, FieldRow } from "../fields/FieldRow";
 import { IdentityFields } from "../IdentityFields";
 import { PurgeConfirmDialog } from "./PurgeConfirmDialog";
+import { useTranslation } from "react-i18next";
 
 /**
  * Read-only view of a deleted item. It renders only non-secret values: no copy, no auto-type, no open, no reveal.
@@ -21,6 +22,7 @@ import { PurgeConfirmDialog } from "./PurgeConfirmDialog";
 export function TrashItemDetail({ item }: Readonly<{ item: VaultItem }>) {
 	const dispatch = useAppDispatch();
 	const writes = useVaultWrites();
+	const { t } = useTranslation(["vault", "common"]);
 	const snapshot = useAppSelector((state) => state.vault.snapshot);
 	const folder = snapshot?.folders.find((f) => f.id === item.folderId);
 	const [confirming, setConfirming] = useState(false);
@@ -60,26 +62,26 @@ export function TrashItemDetail({ item }: Readonly<{ item: VaultItem }>) {
 						{folder && <Chip size="small" icon={<FolderRounded />} label={folder.name} variant="outlined" sx={{ mt: 0.75, borderColor: "var(--border-subtle)" }} />}
 					</Box>
 					<Button variant="contained" size="small" startIcon={<RestoreFromTrashRounded />} disabled={busy} onClick={() => void restore()}>
-						Restore
+						{t("common:restore")}
 					</Button>
 					<Button variant="outlined" color="error" size="small" startIcon={<DeleteForeverRounded />} disabled={busy} onClick={() => setConfirming(true)}>
-						Delete permanently
+						{t("trash.deletePermanently")}
 					</Button>
 				</Box>
 
 				<Alert severity="info" variant="outlined" sx={{ mb: 2.5, borderColor: "var(--border-subtle)" }}>
-					Deleted on {formatDateTime(item.deletedDate ?? item.revisionDate)}. Items are permanently deleted by the server after 30 days.
+					{t("trash.deletedOn", { date: formatDateTime(item.deletedDate ?? item.revisionDate) })}
 				</Alert>
 
 				{item.type === CipherType.Login && item.login && (
 					<>
 						{item.login.username && (
 							<FieldCard>
-								<FieldRow label="Username">{item.login.username}</FieldRow>
+								<FieldRow label={t("fields.username")}>{item.login.username}</FieldRow>
 							</FieldCard>
 						)}
 						{item.login.uris.length > 0 && (
-							<FieldCard title={item.login.uris.length > 1 ? "Websites" : "Website"}>
+							<FieldCard title={t("fields.websites", { count: item.login.uris.length })}>
 								{item.login.uris.map((uri, index) => (
 									<FieldRow key={index} label={uri.host ?? "URL"}>
 										<Box component="span" sx={{ color: "var(--text-muted)" }}>
@@ -94,14 +96,16 @@ export function TrashItemDetail({ item }: Readonly<{ item: VaultItem }>) {
 
 				{item.type === CipherType.Card && item.card && (
 					<FieldCard>
-						{item.card.cardholderName && <FieldRow label="Cardholder">{item.card.cardholderName}</FieldRow>}
-						{item.card.hasNumber && <FieldRow label="Number">{item.card.numberLast4 ? `•••• •••• •••• ${item.card.numberLast4}` : "Hidden"}</FieldRow>}
+						{item.card.cardholderName && <FieldRow label={t("fields.cardholder")}>{item.card.cardholderName}</FieldRow>}
+						{item.card.hasNumber && (
+							<FieldRow label={t("fields.number")}>{item.card.numberLast4 ? `•••• •••• •••• ${item.card.numberLast4}` : t("fields.hidden")}</FieldRow>
+						)}
 						{(item.card.expMonth || item.card.expYear) && (
-							<FieldRow label="Expiration" mono>
+							<FieldRow label={t("fields.expiration")} mono>
 								{item.card.expMonth?.padStart(2, "0") ?? "--"} / {item.card.expYear ?? "----"}
 							</FieldRow>
 						)}
-						{item.card.brand && <FieldRow label="Brand">{item.card.brand}</FieldRow>}
+						{item.card.brand && <FieldRow label={t("fields.brand")}>{item.card.brand}</FieldRow>}
 					</FieldCard>
 				)}
 
@@ -110,12 +114,12 @@ export function TrashItemDetail({ item }: Readonly<{ item: VaultItem }>) {
 				{item.type === CipherType.SshKey && item.sshKey && (
 					<FieldCard>
 						{item.sshKey.publicKey && (
-							<FieldRow label="Public key" mono>
+							<FieldRow label={t("fields.publicKey")} mono>
 								{item.sshKey.publicKey}
 							</FieldRow>
 						)}
 						{item.sshKey.keyFingerprint && (
-							<FieldRow label="Fingerprint" mono>
+							<FieldRow label={t("fields.fingerprint")} mono>
 								{item.sshKey.keyFingerprint}
 							</FieldRow>
 						)}
@@ -123,7 +127,7 @@ export function TrashItemDetail({ item }: Readonly<{ item: VaultItem }>) {
 				)}
 
 				{item.notes && (
-					<FieldCard title="Notes">
+					<FieldCard title={t("fields.notes")}>
 						<FieldRow label="" multiline>
 							{item.notes}
 						</FieldRow>
@@ -131,29 +135,29 @@ export function TrashItemDetail({ item }: Readonly<{ item: VaultItem }>) {
 				)}
 
 				{item.fields.length > 0 && (
-					<FieldCard title="Custom fields">
+					<FieldCard title={t("fields.customFields")}>
 						{item.fields.map((field, index) => {
-							const label = field.name || `Champ ${index + 1}`;
+							const label = field.name || t("fields.fieldFallback", { number: index + 1 });
 							// Hidden values are secrets: only the name is shown
 							if (field.type === FieldType.Hidden)
 								return (
 									<FieldRow key={index} label={label}>
 										<Box component="span" sx={{ color: "var(--text-faint)" }}>
-											Hidden value
+											{t("fields.hiddenValue")}
 										</Box>
 									</FieldRow>
 								);
 							if (field.type === FieldType.Boolean)
 								return (
 									<FieldRow key={index} label={label}>
-										{field.value === "true" ? "Oui" : "Non"}
+										{field.value === "true" ? t("fields.yes") : t("fields.no")}
 									</FieldRow>
 								);
 							if (field.type === FieldType.Linked)
 								return (
 									<FieldRow key={index} label={label}>
 										<Box component="span" sx={{ color: "var(--text-muted)" }}>
-											Linked field
+											{t("fields.linkedField")}
 										</Box>
 									</FieldRow>
 								);
@@ -173,9 +177,9 @@ export function TrashItemDetail({ item }: Readonly<{ item: VaultItem }>) {
 
 			<PurgeConfirmDialog
 				open={confirming}
-				title="Delete permanently?"
-				message={`Permanently delete "${item.name}"? This cannot be undone.`}
-				confirmLabel="Delete permanently"
+				title={t("trash.deletePermanentlyTitle")}
+				message={t("trash.deletePermanentlyMessage", { name: item.name })}
+				confirmLabel={t("trash.deletePermanently")}
 				onConfirm={() => void purge()}
 				onClose={() => setConfirming(false)}
 			/>

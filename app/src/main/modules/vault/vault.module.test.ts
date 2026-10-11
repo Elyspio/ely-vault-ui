@@ -10,6 +10,11 @@ import type { CertificateModule } from "../security/certificate.module";
 import { CipherType, FieldType, type ItemDraft } from "@shared/types/vault.types";
 import { SshKeyModule } from "./ssh.key.module";
 import loginFixture from "./fixtures/login-passkey.json";
+import { appMessage } from "@shared/i18n/message";
+import type { I18nModule } from "../i18n/i18n.module";
+
+/** Native dialog texts: their key is enough here */
+const i18n = { t: async (key: string) => key } as unknown as I18nModule;
 
 // The Electron APIs do not exist outside the application: the module only uses `net` at runtime, not in these tests
 vi.mock("electron", () => ({
@@ -18,6 +23,9 @@ vi.mock("electron", () => ({
 }));
 
 // Logs go to winston and the app folder: the module only needs a logger object here
+// Native dialog texts come from the configuration: not needed here
+vi.mock("../i18n/i18n.module", () => ({ I18nModule: class {} }));
+
 vi.mock("../log.module", () => ({
 	LogModule: class {
 		public logger = {
@@ -321,7 +329,7 @@ async function setup(seed?: (serve: FakeBwServe) => void): Promise<Harness> {
 
 	const clipboard = { copy: vi.fn(async () => undefined), clearIfOwned: vi.fn(async () => undefined) };
 	const ipc = { sendToMainWindow: vi.fn() };
-	const sshKeys = new SshKeyModule();
+	const sshKeys = new SshKeyModule(i18n);
 	const module = new VaultModule(
 		{} as unknown as BwCliModule,
 		serve as unknown as BwServeModule,
@@ -427,7 +435,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.updateItem("plain-1", PLAIN_REVISION, draftOf(plainItem("plain-1"), { name: "   " }));
 
-			expect(result.outcome).toEqual({ status: "error", message: "The name is required" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("nameRequired") });
 			expect(serve.callsTo("PUT", "/object/item/plain-1")).toHaveLength(0);
 		});
 
@@ -464,7 +472,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.createItem(newLoginDraft(""));
 
-			expect(result.outcome).toEqual({ status: "error", message: "The name is required" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("nameRequired") });
 			expect(serve.callsTo("POST", "/object/item")).toHaveLength(0);
 		});
 
@@ -486,7 +494,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.createItem(newSshKeyDraft("Deploy", { token: "unknown" }));
 
-			expect(result.outcome).toEqual({ status: "error", message: "The SSH key expired, generate or import it again" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("sshKeyExpired") });
 			expect(serve.callsTo("POST", "/object/item")).toHaveLength(0);
 		});
 
@@ -495,7 +503,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.createItem(newSshKeyDraft("Deploy"));
 
-			expect(result.outcome).toEqual({ status: "error", message: "An SSH key is required: generate, import or paste one" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("sshKeyRequired") });
 			expect(serve.callsTo("POST", "/object/item")).toHaveLength(0);
 		});
 	});
@@ -510,7 +518,7 @@ describe("VaultModule writes", () => {
 			await module.lock();
 			gate.open();
 
-			await expect(pending).rejects.toThrow("The vault is locked");
+			await expect(pending).rejects.toThrow(appMessage("vaultLocked"));
 			expect(module.isUnlocked).toBe(false);
 		});
 
@@ -523,7 +531,7 @@ describe("VaultModule writes", () => {
 			await module.lock();
 			gate.open();
 
-			await expect(pending).rejects.toThrow("The vault is locked");
+			await expect(pending).rejects.toThrow(appMessage("vaultLocked"));
 			expect(module.isUnlocked).toBe(false);
 		});
 
@@ -616,7 +624,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.restoreItem("plain-1");
 
-			expect(result.outcome).toEqual({ status: "error", message: "Item not found in the trash" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("itemNotInTrash") });
 			expect(serve.callsTo("POST", "/restore/item/plain-1")).toHaveLength(0);
 		});
 
@@ -637,7 +645,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.purgeItems([]);
 
-			expect(result.outcome).toEqual({ status: "error", message: "No item selected" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("noItemSelected") });
 			expect(serve.writes()).toHaveLength(0);
 		});
 
@@ -646,7 +654,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.purgeItems(["trash-1", "plain-1"]);
 
-			expect(result.outcome).toEqual({ status: "error", message: "Item not found in the trash" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("itemNotInTrash") });
 			expect(serve.writes()).toHaveLength(0);
 		});
 
@@ -725,7 +733,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.moveItem("plain-1", "f-unknown");
 
-			expect(result.outcome).toEqual({ status: "error", message: "Folder not found" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("folderNotFound") });
 			expect(serve.writes()).toHaveLength(0);
 		});
 	});
@@ -736,7 +744,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.createFolder("  Work / ");
 
-			expect(result.outcome).toEqual({ status: "error", message: "A folder with this name already exists" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("folderExists") });
 			expect(serve.writes()).toHaveLength(0);
 		});
 
@@ -752,7 +760,7 @@ describe("VaultModule writes", () => {
 		it("refuses an empty folder name", async () => {
 			const { module, serve } = await unlockedSetup();
 
-			expect((await module.createFolder(" / ")).outcome).toEqual({ status: "error", message: "The folder name is empty" });
+			expect((await module.createFolder(" / ")).outcome).toEqual({ status: "error", message: appMessage("folderNameEmpty") });
 			expect(serve.writes()).toHaveLength(0);
 		});
 
@@ -796,7 +804,7 @@ describe("VaultModule writes", () => {
 
 			const result = await module.deleteFolder("f-personal");
 
-			expect(result.outcome).toEqual({ status: "error", message: "Move or delete its items first" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("folderHasItems") });
 			expect(serve.callsTo("DELETE", "/object/folder/f-personal")).toHaveLength(0);
 		});
 
@@ -815,7 +823,7 @@ describe("VaultModule writes", () => {
 			// f-work also holds an active item, so the sub folder check is tested on f-proj (holds only "2026")
 			const result = await module.deleteFolder("f-proj");
 
-			expect(result.outcome).toEqual({ status: "error", message: "Delete its sub folders first" });
+			expect(result.outcome).toEqual({ status: "error", message: appMessage("folderHasSubFolders") });
 			expect(serve.writes()).toHaveLength(0);
 		});
 	});
@@ -834,8 +842,8 @@ describe("VaultModule writes", () => {
 		it("refuses to read or copy a secret of a trashed item", async () => {
 			const { module, clipboard } = await unlockedSetup();
 
-			await expect(module.getSecret("trash-2", { kind: "password" })).rejects.toThrow("Item not found");
-			await expect(module.copy("trash-2", { kind: "password" })).rejects.toThrow("Item not found");
+			await expect(module.getSecret("trash-2", { kind: "password" })).rejects.toThrow(appMessage("itemNotFound"));
+			await expect(module.copy("trash-2", { kind: "password" })).rejects.toThrow(appMessage("itemNotFound"));
 			expect(clipboard.copy).not.toHaveBeenCalled();
 		});
 	});

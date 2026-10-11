@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Switch, TextField, Typography } from "@mui/material";
 import FingerprintRounded from "@mui/icons-material/FingerprintRounded";
 import { webContainer } from "@core/di/web.container";
@@ -12,6 +13,7 @@ import type { HelloUnlockStatus } from "@shared/types/vault.types";
  * Enabling it asks the master password, which the main process checks and stores encrypted.
  */
 export function HelloUnlockSetting({ render }: Readonly<{ render: (control: ReactNode) => ReactNode }>) {
+	const { t } = useTranslation(["settings", "common"]);
 	const [status, setStatus] = useState<HelloUnlockStatus | null>(null);
 	const [open, setOpen] = useState(false);
 	const [password, setPassword] = useState("");
@@ -80,14 +82,14 @@ export function HelloUnlockSetting({ render }: Readonly<{ render: (control: Reac
 					</DialogTitle>
 					<DialogContent>
 						<Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
-							Enter your master password, then confirm with Windows Hello. The password is stored encrypted for your Windows account.
+							{t("hello.description")}
 						</Typography>
 						<TextField
 							inputRef={passwordRef}
 							fullWidth
 							size="small"
 							type="password"
-							label="Master password"
+							label={t("hello.masterPassword")}
 							value={password}
 							error={error !== null}
 							onChange={(event) => {
@@ -102,9 +104,9 @@ export function HelloUnlockSetting({ render }: Readonly<{ render: (control: Reac
 						)}
 					</DialogContent>
 					<DialogActions>
-						<Button onClick={close}>Cancel</Button>
+						<Button onClick={close}>{t("common:cancel")}</Button>
 						<Button type="submit" variant="contained" disabled={!password || pending}>
-							Enable
+							{t("hello.enable")}
 						</Button>
 					</DialogActions>
 				</form>

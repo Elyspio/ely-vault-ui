@@ -25,6 +25,7 @@ import { ItemIcon } from "./ItemIcon";
 import { Kbd } from "@components/shared/Kbd";
 import { usePrimaryCopy } from "./usePrimaryCopy";
 import { canAutoType } from "@hooks/useAutoType";
+import { useTranslation } from "react-i18next";
 
 type Command = { id: string; label: string; icon: ReactNode; keywords: string; run: () => void };
 
@@ -77,6 +78,7 @@ function PaletteContent({ close, inputRef }: Readonly<{ close: () => void; input
 	const selected = useAppSelector(selectActiveSelectedItem);
 	const editing = useAppSelector((state) => state.vault.editor !== null);
 	const copyPrimary = usePrimaryCopy();
+	const { t } = useTranslation(["vault", "common"]);
 	const [query, setLocalQuery] = useState("");
 	const [index, setIndex] = useState(0);
 	const listRef = useRef<HTMLDivElement>(null);
@@ -86,24 +88,30 @@ function PaletteContent({ close, inputRef }: Readonly<{ close: () => void; input
 		const itemActions: Command[] =
 			selected && !editing
 				? [
-						{ id: "edit-item", label: "Edit item", icon: <EditRounded />, keywords: "edit modify change item", run: () => void itemCommands.edit(selected) },
+						{
+							id: "edit-item",
+							label: t("palette.commands.editItem"),
+							icon: <EditRounded />,
+							keywords: "edit modify change item",
+							run: () => void itemCommands.edit(selected),
+						},
 						{
 							id: "favorite-item",
-							label: selected.favorite ? "Remove from favorites" : "Add to favorites",
+							label: selected.favorite ? t("palette.commands.removeFavorite") : t("palette.commands.addFavorite"),
 							icon: <StarOutlineRounded />,
 							keywords: "favorite favourite star toggle",
 							run: () => void itemCommands.toggleFavorite(selected),
 						},
 						{
 							id: "move-item",
-							label: "Move to folder…",
+							label: t("palette.commands.moveItem"),
 							icon: <FolderRounded />,
 							keywords: "move folder organize item",
 							run: () => itemCommands.move(selected),
 						},
 						{
 							id: "delete-item",
-							label: "Delete item",
+							label: t("palette.commands.deleteItem"),
 							icon: <DeleteOutlineRounded />,
 							keywords: "delete remove trash item",
 							run: () => void itemCommands.remove(selected),
@@ -112,20 +120,26 @@ function PaletteContent({ close, inputRef }: Readonly<{ close: () => void; input
 				: [];
 
 		return [
-			{ id: "new-item", label: "New item", icon: <AddRounded />, keywords: "new create add item login note card identity", run: () => itemCommands.newItem() },
+			{
+				id: "new-item",
+				label: t("palette.commands.newItem"),
+				icon: <AddRounded />,
+				keywords: "new create add item login note card identity",
+				run: () => itemCommands.newItem(),
+			},
 			...itemActions,
-			{ id: "lock", label: "Lock the vault", icon: <LockRounded />, keywords: "lock", run: () => dispatch(lock()) },
-			{ id: "sync", label: "Sync", icon: <SyncRounded />, keywords: "synchroniser sync rafraichir", run: () => dispatch(syncVault()) },
+			{ id: "lock", label: t("palette.commands.lock"), icon: <LockRounded />, keywords: "lock", run: () => dispatch(lock()) },
+			{ id: "sync", label: t("palette.commands.sync"), icon: <SyncRounded />, keywords: "synchroniser sync rafraichir", run: () => dispatch(syncVault()) },
 			{
 				id: "generate",
-				label: "Generate a password",
+				label: t("palette.commands.generate"),
 				icon: <PasswordRounded />,
 				keywords: "generate generator password",
 				run: () => dispatch(setGeneratorOpen(true)),
 			},
-			{ id: "settings", label: "Settings", icon: <TuneRounded />, keywords: "settings preferences", run: () => dispatch(setSettingsOpen(true)) },
+			{ id: "settings", label: t("palette.commands.settings"), icon: <TuneRounded />, keywords: "settings preferences", run: () => dispatch(setSettingsOpen(true)) },
 		];
-	}, [dispatch, itemCommands, selected, editing]);
+	}, [dispatch, itemCommands, selected, editing, t]);
 
 	const entries = useMemo<Entry[]>(() => {
 		const matchingItems = query.trim() ? searchItems(items, { kind: "all" }, query).slice(0, MAX_ITEMS) : items.filter((i) => i.favorite).slice(0, MAX_ITEMS);
@@ -153,9 +167,9 @@ function PaletteContent({ close, inputRef }: Readonly<{ close: () => void; input
 			dispatch(setQuery(""));
 			dispatch(selectItem(item.id));
 		} else if (event.shiftKey) {
-			if (item.login?.username) void actions.copy(item.id, { kind: "username" }, "Username");
+			if (item.login?.username) void actions.copy(item.id, { kind: "username" }, t("copied.username"));
 		} else if (event.ctrlKey || event.metaKey) {
-			if (item.login?.hasTotp) void actions.copy(item.id, { kind: "totp" }, "Code");
+			if (item.login?.hasTotp) void actions.copy(item.id, { kind: "totp" }, t("copied.code"));
 		} else {
 			void copyPrimary(item);
 		}
@@ -189,7 +203,7 @@ function PaletteContent({ close, inputRef }: Readonly<{ close: () => void; input
 				<InputBase
 					inputRef={inputRef}
 					fullWidth
-					placeholder="Search an item or an action…"
+					placeholder={t("palette.placeholder")}
 					value={query}
 					onChange={(event) => {
 						setLocalQuery(event.target.value);
@@ -204,12 +218,12 @@ function PaletteContent({ close, inputRef }: Readonly<{ close: () => void; input
 			<Box ref={listRef} sx={{ maxHeight: 420, overflow: "auto", p: 0.75 }}>
 				{!query.trim() && entries.length > 0 && (
 					<Typography variant="overline" component="div" sx={{ px: 1.25, color: "var(--text-faint)" }}>
-						Favorites
+						{t("palette.favorites")}
 					</Typography>
 				)}
 				{entries.length === 0 && (
 					<Typography sx={{ p: 3, textAlign: "center", color: "var(--text-faint)", fontSize: "0.85rem" }}>
-						{query ? "No results" : "Type to search the whole vault"}
+						{query ? t("palette.noResults") : t("palette.typeToSearch")}
 					</Typography>
 				)}
 				{entries.map((entry, i) => (
@@ -248,7 +262,7 @@ function PaletteContent({ close, inputRef }: Readonly<{ close: () => void; input
 									{entry.command.icon}
 								</Box>
 								<Typography sx={{ flex: 1, fontSize: "0.88rem" }}>{entry.command.label}</Typography>
-								{i === index && <Typography sx={{ fontSize: "0.72rem", color: "var(--text-faint)" }}>Action</Typography>}
+								{i === index && <Typography sx={{ fontSize: "0.72rem", color: "var(--text-faint)" }}>{t("palette.action")}</Typography>}
 							</>
 						)}
 					</Box>
@@ -256,18 +270,25 @@ function PaletteContent({ close, inputRef }: Readonly<{ close: () => void; input
 			</Box>
 
 			<Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", px: 2, py: 1, borderTop: "1px solid var(--border-subtle)", bgcolor: "var(--surface-0)" }}>
-				<Shortcut keys={["↵"]} label="Copy" />
-				<Shortcut keys={["Shift", "↵"]} label="Username" />
-				<Shortcut keys={["Ctrl", "↵"]} label="Code TOTP" />
-				<Shortcut keys={["Alt", "↵"]} label="Show" />
-				<Shortcut keys={["Ctrl", "Shift", "V"]} label="Auto-type" />
+				<Shortcut keys={["↵"]} label={t("common:copy")} />
+				<Shortcut keys={["Shift", "↵"]} label={t("palette.shortcuts.username")} />
+				<Shortcut keys={["Ctrl", "↵"]} label={t("palette.shortcuts.totp")} />
+				<Shortcut keys={["Alt", "↵"]} label={t("palette.shortcuts.show")} />
+				<Shortcut keys={["Ctrl", "Shift", "V"]} label={t("palette.shortcuts.autoType")} />
 			</Box>
 		</>
 	);
 }
 
 function Hint({ item }: Readonly<{ item: VaultItem }>) {
-	const label = item.login?.hasPassword ? "Copy password" : item.card?.hasNumber ? "Copy number" : item.notes ? "Copy note" : "Copy";
+	const { t } = useTranslation(["vault", "common"]);
+	const label = item.login?.hasPassword
+		? t("palette.hints.copyPassword")
+		: item.card?.hasNumber
+			? t("palette.hints.copyNumber")
+			: item.notes
+				? t("palette.hints.copyNote")
+				: t("common:copy");
 	return <Typography sx={{ fontSize: "0.72rem", color: "primary.main", whiteSpace: "nowrap" }}>{label} ↵</Typography>;
 }
 

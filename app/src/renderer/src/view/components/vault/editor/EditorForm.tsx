@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Box, Button, TextField, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { store, useAppDispatch, useAppSelector } from "@store";
 import { closeEditor, openEditor, resolveNavigation, selectItem, setEditorDirty } from "@modules/vault/vault.reducer";
 import { selectModalOpen } from "@modules/ui/ui.reducer";
@@ -8,7 +9,7 @@ import { useHotkeys } from "@hooks/useHotkeys";
 import { CipherType, type ItemDraft, type VaultItem, type WriteOutcome } from "@shared/types/vault.types";
 import { draftErrors, isDraftDirty } from "@view/utils/draft.utils";
 import { Kbd } from "@components/shared/Kbd";
-import { EditorHeader, cipherTypeLabels } from "./EditorHeader";
+import { EditorHeader, cipherTypeKeys } from "./EditorHeader";
 import { LoginFields } from "./LoginFields";
 import { CardFields } from "./CardFields";
 import { IdentityFields } from "./IdentityFields";
@@ -29,6 +30,7 @@ type Props = {
  * the conflict with a concurrent change and the unsaved changes question.
  */
 export function EditorForm({ item, initial }: Readonly<Props>) {
+	const { t } = useTranslation(["editor", "common"]);
 	const dispatch = useAppDispatch();
 	const writes = useVaultWrites();
 	const pending = useAppSelector((state) => state.vault.pendingNavigation);
@@ -125,15 +127,15 @@ export function EditorForm({ item, initial }: Readonly<Props>) {
 							action={
 								<Box sx={{ display: "flex", gap: 1 }}>
 									<Button color="inherit" size="small" onClick={discard}>
-										Discard my changes
+										{t("form.discardChanges")}
 									</Button>
 									<Button color="warning" size="small" variant="outlined" disabled={saving} onClick={saveAgain}>
-										Save again
+										{t("form.saveAgain")}
 									</Button>
 								</Box>
 							}
 						>
-							This item changed elsewhere since you opened it. Saving again overwrites those changes.
+							{t("form.conflict")}
 						</Alert>
 					)}
 					{error && (
@@ -149,7 +151,7 @@ export function EditorForm({ item, initial }: Readonly<Props>) {
 					{type === CipherType.Identity && <IdentityFields draft={draft} setDraft={setDraft} />}
 					{type === CipherType.SshKey && <SshKeySection item={item} setDraft={setDraft} />}
 
-					<EditorSection title="Notes">
+					<EditorSection title={t("form.notes")}>
 						<TextField
 							multiline
 							minRows={3}
@@ -166,23 +168,23 @@ export function EditorForm({ item, initial }: Readonly<Props>) {
 
 			<Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 4, py: 1.25, borderTop: "1px solid var(--border-subtle)", bgcolor: "var(--surface-1)" }}>
 				<Typography sx={{ fontSize: "0.75rem", color: "var(--text-faint)" }}>
-					{item ? "Editing" : "New"} · {cipherTypeLabels[type]}
+					{item ? t("form.editing") : t("form.new")} · {t(`types.${cipherTypeKeys[type]}`)}
 				</Typography>
 				{/* Shortcut hints next to the buttons: inside a button's icon slot MUI would scale the keys up */}
 				<Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "auto", mr: 1, fontSize: "0.72rem", color: "var(--text-faint)" }}>
 					<Kbd>Ctrl</Kbd>
 					<Kbd>S</Kbd>
 					<Box component="span" sx={{ mr: 1 }}>
-						save
+						{t("form.saveHint")}
 					</Box>
 					<Kbd>Esc</Kbd>
-					<span>cancel</span>
+					<span>{t("form.cancelHint")}</span>
 				</Box>
 				<Button size="small" color="inherit" onClick={() => dispatch(closeEditor())}>
-					Cancel
+					{t("common:cancel")}
 				</Button>
 				<Button size="small" variant="contained" disabled={saving} onClick={() => void save()}>
-					{saving ? "Saving…" : "Save"}
+					{saving ? t("form.saving") : t("common:save")}
 				</Button>
 			</Box>
 

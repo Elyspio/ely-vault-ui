@@ -27,13 +27,16 @@ import { CipherType } from "@shared/types/vault.types";
 import { PurgeConfirmDialog } from "./trash/PurgeConfirmDialog";
 import { FolderMenu, type FolderMenuPosition } from "./folders/FolderMenu";
 import { FolderNameField } from "./folders/FolderNameField";
+import { useTranslation } from "react-i18next";
+import type { vault } from "@shared/i18n/en/vault";
 
-export const typeLabels: Record<CipherType, string> = {
-	[CipherType.Login]: "Logins",
-	[CipherType.Card]: "Cards",
-	[CipherType.Identity]: "Identities",
-	[CipherType.SecureNote]: "Notes",
-	[CipherType.SshKey]: "SSH keys",
+/** Translation keys (`vault:types.*`) of the item types, as sidebar filters */
+export const typeLabelKeys: Record<CipherType, keyof typeof vault.types> = {
+	[CipherType.Login]: "login",
+	[CipherType.Card]: "card",
+	[CipherType.Identity]: "identity",
+	[CipherType.SecureNote]: "secureNote",
+	[CipherType.SshKey]: "sshKey",
 };
 
 const typeIcons: Record<CipherType, ReactNode> = {
@@ -57,6 +60,7 @@ export function Sidebar() {
 	const counts = useAppSelector(selectCounts);
 	const account = useAppSelector((state) => state.session.current);
 	const folderCommands = useFolderCommands();
+	const { t } = useTranslation("vault");
 
 	const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 	// Inline fields and menus of the folder tree
@@ -95,8 +99,8 @@ export function Sidebar() {
 					key={node.path}
 					depth={depth}
 					initialValue={node.fullName}
-					placeholder="Rename folder"
-					helper="Sub folders follow the new name. Enter to rename, Esc to cancel."
+					placeholder={t("sidebar.renameFolder")}
+					helper={t("sidebar.renameFolderHelper")}
 					onCancel={() => setRenamingPath(null)}
 					onSubmit={async (value) => {
 						// Same path once normalized ("Work / Projects" for "Work/Projects"): nothing to write
@@ -133,11 +137,11 @@ export function Sidebar() {
 						openMenu({ top: event.clientY, left: event.clientX });
 					}}
 					trailing={
-						<Tooltip title="Rename or delete" placement="right">
+						<Tooltip title={t("sidebar.folderActionsTooltip")} placement="right">
 							<IconButton
 								className="entry-more"
 								size="small"
-								aria-label={`Actions for ${node.fullName}`}
+								aria-label={t("sidebar.folderActions", { name: node.fullName })}
 								onClick={(event) => {
 									const rect = event.currentTarget.getBoundingClientRect();
 									openMenu({ top: rect.bottom, left: rect.left });
@@ -165,18 +169,20 @@ export function Sidebar() {
 	return (
 		<Box component="nav" sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "var(--surface-0)", borderRight: "1px solid var(--border-subtle)" }}>
 			<Box sx={{ flex: 1, overflow: "auto", px: 1, py: 1.5 }}>
-				{entry({ kind: "all" }, <AppsRounded />, "All items", counts.all)}
-				{entry({ kind: "favorites" }, <StarRounded />, "Favorites", counts.favorites)}
+				{entry({ kind: "all" }, <AppsRounded />, t("filters.all"), counts.all)}
+				{entry({ kind: "favorites" }, <StarRounded />, t("filters.favorites"), counts.favorites)}
 
-				<SectionTitle>Types</SectionTitle>
-				{typeOrder.filter((type) => counts.types[type] > 0).map((type) => entry({ kind: "type", type }, typeIcons[type], typeLabels[type], counts.types[type]))}
+				<SectionTitle>{t("sidebar.types")}</SectionTitle>
+				{typeOrder
+					.filter((type) => counts.types[type] > 0)
+					.map((type) => entry({ kind: "type", type }, typeIcons[type], t(`types.${typeLabelKeys[type]}`), counts.types[type]))}
 
 				<SectionTitle
 					action={
-						<Tooltip title="New folder">
+						<Tooltip title={t("sidebar.newFolder")}>
 							<IconButton
 								size="small"
-								aria-label="New folder"
+								aria-label={t("sidebar.newFolder")}
 								onClick={() => setCreating(true)}
 								sx={{ mr: -0.5, color: "var(--text-faint)", "&:hover": { color: "text.primary" }, "& .MuiSvgIcon-root": { fontSize: 16 } }}
 							>
@@ -185,14 +191,14 @@ export function Sidebar() {
 						</Tooltip>
 					}
 				>
-					Folders
+					{t("sidebar.folders")}
 				</SectionTitle>
 				{creating && (
 					<FolderNameField
 						depth={0}
 						initialValue=""
-						placeholder="New folder"
-						helper="Use Parent/Child for a sub folder. Enter to create, Esc to cancel."
+						placeholder={t("sidebar.newFolder")}
+						helper={t("sidebar.newFolderHelper")}
 						onCancel={() => setCreating(false)}
 						onSubmit={async (value) => {
 							const outcome = await folderCommands.create(value);
@@ -205,7 +211,7 @@ export function Sidebar() {
 				{counts.noFolder > 0 && (
 					<SidebarEntry
 						icon={<FolderOffRounded />}
-						label="No folder"
+						label={t("filters.noFolder")}
 						count={counts.noFolder}
 						depth={0}
 						active={sameFilter(filter, { kind: "folder", id: null })}
@@ -213,7 +219,7 @@ export function Sidebar() {
 					/>
 				)}
 
-				{(snapshot?.organizations.length ?? 0) > 0 && <SectionTitle>Organizations</SectionTitle>}
+				{(snapshot?.organizations.length ?? 0) > 0 && <SectionTitle>{t("sidebar.organizations")}</SectionTitle>}
 				{snapshot?.organizations.map((organization) => (
 					<Box key={organization.id}>
 						{entry({ kind: "organization", id: organization.id }, <BusinessRounded />, organization.name, counts.organizations[organization.id] ?? 0)}
@@ -228,7 +234,7 @@ export function Sidebar() {
 				))}
 			</Box>
 
-			<Box sx={{ px: 1, pt: 1, borderTop: "1px solid var(--border-subtle)" }}>{entry({ kind: "trash" }, <DeleteRounded />, "Trash", counts.trash)}</Box>
+			<Box sx={{ px: 1, pt: 1, borderTop: "1px solid var(--border-subtle)" }}>{entry({ kind: "trash" }, <DeleteRounded />, t("filters.trash"), counts.trash)}</Box>
 
 			<ButtonBase
 				onClick={() => dispatch(setSettingsOpen(true))}
@@ -280,9 +286,9 @@ export function Sidebar() {
 
 			<PurgeConfirmDialog
 				open={deleteOpen}
-				title={`Delete the folder "${deleteTarget?.fullName ?? ""}"?`}
-				message="Items in the trash that are in it move to No folder."
-				confirmLabel="Delete folder"
+				title={t("sidebar.deleteFolderTitle", { name: deleteTarget?.fullName ?? "" })}
+				message={t("sidebar.deleteFolderMessage")}
+				confirmLabel={t("sidebar.deleteFolderConfirm")}
 				onConfirm={() => {
 					setDeleteOpen(false);
 					if (deleteTarget) void folderCommands.remove(deleteTarget.id, deleteTarget.fullName);

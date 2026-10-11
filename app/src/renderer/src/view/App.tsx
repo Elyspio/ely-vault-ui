@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Box, CircularProgress, StyledEngineProvider, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
 import { type ColorMode, createAppTheme } from "@/config/theme";
+import { i18n, languageOfSetting } from "@/config/i18n";
 import { store, useAppSelector } from "@store";
 import { closeEditor } from "@modules/vault/vault.reducer";
 import { Titlebar } from "@components/frame/Titlebar";
@@ -26,11 +28,18 @@ export function App() {
 	const themeSetting = useAppSelector((state) => state.config.current.display.theme);
 	const systemDark = useMediaQuery("(prefers-color-scheme: dark)", { noSsr: true });
 	const mode: ColorMode = themeSetting === "system" ? (systemDark ? "dark" : "light") : themeSetting;
-	const theme = useMemo(() => createAppTheme(mode), [mode]);
+	const languageSetting = useAppSelector((state) => state.config.current.display.language);
+	const language = languageOfSetting(languageSetting);
+	const theme = useMemo(() => createAppTheme(mode, language), [mode, language]);
 	// main.css variables of the mode (data-theme), see :root[data-theme="light"]
 	useEffect(() => {
 		document.documentElement.dataset.theme = mode;
 	}, [mode]);
+	// The interface re-renders in the new language; spell check and screen readers follow it
+	useEffect(() => {
+		if (i18n.language !== language) void i18n.changeLanguage(language);
+		document.documentElement.lang = language;
+	}, [language]);
 
 	return (
 		<StyledEngineProvider injectFirst>
@@ -52,6 +61,7 @@ export function App() {
 }
 
 function Screen() {
+	const { t } = useTranslation("auth");
 	const status = useAppSelector((state) => state.session.current?.status);
 	const fatalError = useAppSelector((state) => state.session.fatalError);
 
@@ -60,7 +70,7 @@ function Screen() {
 			<Box sx={{ height: "100%", display: "grid", placeItems: "center", p: 4 }}>
 				<Box sx={{ textAlign: "center", maxWidth: 480 }}>
 					<Typography variant="h6" gutterBottom>
-						Cannot start the Bitwarden client
+						{t("app.fatalErrorTitle")}
 					</Typography>
 					<Typography variant="body2" sx={{ color: "text.secondary" }}>
 						{fatalError}

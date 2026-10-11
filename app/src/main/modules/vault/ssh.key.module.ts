@@ -1,11 +1,13 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { type BrowserWindow, dialog } from "electron";
-import { injectable } from "inversify";
+import { inject, injectable } from "inversify";
 import { LogModule } from "../log.module";
+import { I18nModule } from "../i18n/i18n.module";
 import { log } from "@main/utils/logs.utils";
 import { convertSshKey, generateSshKey, type SshKeyMaterial } from "./ssh.keys";
 import type { SshImportResult, SshKeyPreview, SshKeySource } from "@shared/types/vault.types";
+import { appMessage } from "@shared/i18n/message";
 
 /** How long a generated, imported or pending key waits for its item to be saved */
 const TTL_MS = 10 * 60 * 1000;
@@ -25,7 +27,7 @@ export class SshKeyModule extends LogModule {
 	/** Encrypted keys waiting for their passphrase, by token: the raw text, never sent to the renderer */
 	private readonly pending = new Map<string, Entry<string>>();
 
-	public constructor() {
+	public constructor(@inject(I18nModule) private readonly i18nModule: I18nModule) {
 		super("SshKeyModule");
 	}
 
@@ -50,7 +52,7 @@ export class SshKeyModule extends LogModule {
 
 		if (source.kind === "pending") {
 			const entry = this.pending.get(source.token);
-			if (!entry) return { status: "error", message: "The key expired, import it again" };
+			if (!entry) return { status: "error", message: appMessage("sshImportExpired") };
 			text = entry.value;
 			pendingToken = source.token;
 		} else if (source.kind === "text") {
@@ -61,7 +63,7 @@ export class SshKeyModule extends LogModule {
 			text = file;
 		}
 
-		if (Buffer.byteLength(text) > MAX_KEY_BYTES) return { status: "error", message: "This is too large to be an SSH key" };
+		if (Buffer.byteLength(text) > MAX_KEY_BYTES) return { status: "error", message: appMessage("sshKeyTooLarge") };
 
 		const result = convertSshKey(text, passphrase || null);
 		if ("error" in result) {
@@ -135,15 +137,15 @@ export class SshKeyModule extends LogModule {
 	 */
 	private async readFile(window: BrowserWindow | null): Promise<string | SshImportResult> {
 		const options: Electron.OpenDialogOptions = {
-			title: "Import an SSH private key",
+			title: await this.i18nModule.t("importSshKeyTitle"),
 			properties: ["openFile"],
-			filters: [{ name: "All files", extensions: ["*"] }],
+			filters: [{ name: await this.i18nModule.t("allFilesFilter"), extensions: ["*"] }],
 		};
 		const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
 		if (result.canceled || result.filePaths.length === 0) return { status: "cancelled" };
 
 		const file = result.filePaths[0];
-		if (fs.statSync(file).size > MAX_KEY_BYTES) return { status: "error", message: "This is too large to be an SSH key" };
+		if (fs.statSync(file).size > MAX_KEY_BYTES) return { status: "error", message: appMessage("sshKeyTooLarge") };
 		return fs.readFileSync(file, "utf-8");
 	}
 }

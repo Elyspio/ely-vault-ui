@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, Box, Button, CircularProgress, Link, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "@store";
 import { cancelLogin, login } from "@modules/session/session.async.actions";
@@ -8,14 +9,16 @@ import { PasswordField } from "@components/shared/PasswordField";
 import { CertificateReview } from "./CertificateReview";
 import { TwoFactorMethod } from "@shared/types/vault.types";
 
+/** Labels are keys of auth:twoFactor.methods, translated at render */
 const twoFactorMethods = [
-	{ value: TwoFactorMethod.Authenticator, label: "Authenticator app" },
-	{ value: TwoFactorMethod.Email, label: "Code sent by email" },
-	{ value: TwoFactorMethod.Yubikey, label: "YubiKey (OTP)" },
-];
+	{ value: TwoFactorMethod.Authenticator, label: "authenticator" },
+	{ value: TwoFactorMethod.Email, label: "email" },
+	{ value: TwoFactorMethod.Yubikey, label: "yubikey" },
+] as const;
 
 export function LoginScreen() {
 	const dispatch = useAppDispatch();
+	const { t } = useTranslation(["auth", "common"]);
 	const { pending, error, twoFactorRequired, ssoRequired, untrustedCertificate } = useAppSelector((state) => state.session);
 	const previousServer = useAppSelector((state) => state.session.current?.serverUrl);
 
@@ -39,7 +42,7 @@ export function LoginScreen() {
 
 	if (untrustedCertificate) {
 		return (
-			<AuthLayout title="Certificate not recognized" subtitle="This computer does not trust the certificate presented by the server">
+			<AuthLayout title={t("certificate.title")} subtitle={t("certificate.subtitle")}>
 				<CertificateReview certificate={untrustedCertificate} request={{ serverUrl, email, password }} />
 			</AuthLayout>
 		);
@@ -47,11 +50,10 @@ export function LoginScreen() {
 
 	if (ssoRequired) {
 		return (
-			<AuthLayout title="SSO login" subtitle={`This server requires your organization's authentication for ${email}`}>
+			<AuthLayout title={t("sso.title")} subtitle={t("sso.subtitle", { email })}>
 				<Stack spacing={2}>
 					<Typography variant="body2" sx={{ color: "var(--text-muted)" }}>
-						Your organization's login page opens in the browser. Once authenticated, come back here: the master password you entered decrypts the vault on this
-						computer.
+						{t("sso.description")}
 					</Typography>
 
 					{error && (
@@ -61,12 +63,12 @@ export function LoginScreen() {
 					)}
 
 					<Button variant="contained" size="large" disabled={pending} onClick={submit} startIcon={pending ? <CircularProgress size={16} color="inherit" /> : undefined}>
-						{pending ? "Finish logging in in the browser…" : "Continue with SSO"}
+						{pending ? t("sso.pending") : t("sso.continue")}
 					</Button>
 
 					<Box sx={{ textAlign: "center" }}>
 						<Link component="button" type="button" variant="body2" underline="hover" onClick={() => void dispatch(pending ? cancelLogin() : resetSso())}>
-							{pending ? "Cancel" : "Back to login"}
+							{pending ? t("common:cancel") : t("login.backToLogin")}
 						</Link>
 					</Box>
 				</Stack>
@@ -78,11 +80,11 @@ export function LoginScreen() {
 
 	return (
 		<AuthLayout
-			title={twoFactorRequired ? "Two-step verification" : "Log in"}
-			subtitle={twoFactorRequired ? `Enter the verification code for ${email}` : "Log in to your Vaultwarden or Bitwarden server"}
+			title={twoFactorRequired ? t("twoFactor.title") : t("login.title")}
+			subtitle={twoFactorRequired ? t("twoFactor.subtitle", { email }) : t("login.subtitle")}
 			footer={
 				<Typography variant="caption" sx={{ color: "var(--text-faint)" }}>
-					The master password never leaves this computer: the vault is decrypted locally.
+					{t("login.footer")}
 				</Typography>
 			}
 		>
@@ -95,16 +97,22 @@ export function LoginScreen() {
 				<Stack spacing={2}>
 					{twoFactorRequired ? (
 						<>
-							<TextField select label="Method" size="small" value={method} onChange={(event) => setMethod(Number(event.target.value) as TwoFactorMethod)}>
+							<TextField
+								select
+								label={t("twoFactor.methodLabel")}
+								size="small"
+								value={method}
+								onChange={(event) => setMethod(Number(event.target.value) as TwoFactorMethod)}
+							>
 								{twoFactorMethods.map((m) => (
 									<MenuItem key={m.value} value={m.value}>
-										{m.label}
+										{t(`twoFactor.methods.${m.label}`)}
 									</MenuItem>
 								))}
 							</TextField>
 							<TextField
 								autoFocus
-								label="Code"
+								label={t("twoFactor.codeLabel")}
 								value={code}
 								onChange={(event) => setCode(event.target.value)}
 								slotProps={{
@@ -115,14 +123,14 @@ export function LoginScreen() {
 					) : (
 						<>
 							<TextField
-								label="Server"
+								label={t("login.serverLabel")}
 								placeholder="https://vault.example.com"
 								value={serverUrl}
 								onChange={(event) => setServerUrl(event.target.value)}
 								autoFocus={!previousServer}
 							/>
-							<TextField label="Email address" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoFocus={!!previousServer} />
-							<PasswordField label="Master password" value={password} onChange={(event) => setPassword(event.target.value)} />
+							<TextField label={t("login.emailLabel")} type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoFocus={!!previousServer} />
+							<PasswordField label={t("login.masterPasswordLabel")} value={password} onChange={(event) => setPassword(event.target.value)} />
 						</>
 					)}
 
@@ -139,7 +147,7 @@ export function LoginScreen() {
 						disabled={!canSubmit || pending}
 						startIcon={pending ? <CircularProgress size={16} color="inherit" /> : undefined}
 					>
-						{pending ? "Logging in and decrypting…" : twoFactorRequired ? "Verify" : "Log in"}
+						{pending ? t("login.pending") : twoFactorRequired ? t("twoFactor.verify") : t("login.submit")}
 					</Button>
 
 					{twoFactorRequired && method === TwoFactorMethod.Email && (
@@ -149,14 +157,14 @@ export function LoginScreen() {
 							disabled={pending}
 							onClick={() => void dispatch(login({ serverUrl, email, password, twoFactor: { method, code: "" } }))}
 						>
-							Send the code by email
+							{t("twoFactor.sendEmail")}
 						</Button>
 					)}
 
 					{twoFactorRequired && (
 						<Box sx={{ textAlign: "center" }}>
 							<Link component="button" type="button" variant="body2" underline="hover" onClick={() => dispatch(resetTwoFactor())}>
-								Back to login
+								{t("login.backToLogin")}
 							</Link>
 						</Box>
 					)}

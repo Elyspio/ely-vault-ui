@@ -1,6 +1,7 @@
 import koffi from "koffi";
 import type { AutoTypeKey } from "@shared/autotype/autotype.sequence";
 import { type AutoTypeDriver, KEY_DELAY_MS, sleep } from "./autotype.driver";
+import { appMessage } from "@shared/i18n/message";
 
 const INPUT_KEYBOARD = 1;
 const KEYEVENTF_KEYUP = 0x2;
@@ -99,6 +100,6 @@ export class WindowsAutoTypeDriver implements AutoTypeDriver {
 
 	private send(inputs: KeyboardInput[]) {
 		const sent = this.api.SendInput(inputs.length, inputs, this.api.inputSize) as number;
-		if (sent !== inputs.length) throw new Error("Typing blocked by the system");
+		if (sent !== inputs.length) throw new Error(appMessage("autoTypeBlocked"));
 	}
 }

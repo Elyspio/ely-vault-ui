@@ -5,6 +5,7 @@ import VisibilityOffRounded from "@mui/icons-material/VisibilityOffRounded";
 import ClearRounded from "@mui/icons-material/ClearRounded";
 import UndoRounded from "@mui/icons-material/UndoRounded";
 import AutorenewRounded from "@mui/icons-material/AutorenewRounded";
+import { useTranslation } from "react-i18next";
 import { store, useAppDispatch } from "@store";
 import { webContainer } from "@core/di/web.container";
 import { VaultService } from "@services/vault.service";
@@ -35,6 +36,7 @@ type Props = {
  * The text is local component state: it never reaches the store.
  */
 export function SecretInput({ label, value, onChange, stored, reveal, generate, error, helperText, autoFocus }: Readonly<Props>) {
+	const { t } = useTranslation(["editor", "common"]);
 	const dispatch = useAppDispatch();
 	// Unchanged value shown for display only: the draft keeps it unchanged until the user edits the input
 	const [revealed, setRevealed] = useState<string | null>(null);
@@ -85,8 +87,8 @@ export function SecretInput({ label, value, onChange, stored, reveal, generate, 
 	};
 
 	let placeholder: string | undefined;
-	if (cleared) placeholder = "Removed on save";
-	else if (unchanged && stored && revealed === null) placeholder = "••••••••  (unchanged)";
+	if (cleared) placeholder = t("secret.removedOnSave");
+	else if (unchanged && stored && revealed === null) placeholder = t("secret.unchanged");
 
 	return (
 		<TextField
@@ -114,14 +116,14 @@ export function SecretInput({ label, value, onChange, stored, reveal, generate, 
 					endAdornment: (
 						<InputAdornment position="end" sx={{ gap: 0.25 }}>
 							{hasValue && (reveal || value?.kind === "set") && (
-								<Tooltip title={shown ? "Hide" : "Show"}>
+								<Tooltip title={shown ? t("common:hide") : t("common:show")}>
 									<IconButton size="small" onClick={() => void toggleShown()}>
 										{shown ? <VisibilityOffRounded sx={{ fontSize: 16 }} /> : <VisibilityRounded sx={{ fontSize: 16 }} />}
 									</IconButton>
 								</Tooltip>
 							)}
 							{generate && (
-								<Tooltip title="Generate (Ctrl+G)">
+								<Tooltip title={t("secret.generate")}>
 									<span>
 										<IconButton size="small" disabled={generating} onClick={() => void generatePassword()}>
 											<AutorenewRounded sx={{ fontSize: 16 }} />
@@ -130,14 +132,14 @@ export function SecretInput({ label, value, onChange, stored, reveal, generate, 
 								</Tooltip>
 							)}
 							{stored && !unchanged && (
-								<Tooltip title="Undo">
+								<Tooltip title={t("secret.undo")}>
 									<IconButton size="small" onClick={undo}>
 										<UndoRounded sx={{ fontSize: 16 }} />
 									</IconButton>
 								</Tooltip>
 							)}
 							{hasValue && !cleared && (
-								<Tooltip title="Remove the value">
+								<Tooltip title={t("secret.remove")}>
 									<IconButton size="small" onClick={() => onChange({ kind: "clear" })}>
 										<ClearRounded sx={{ fontSize: 16 }} />
 									</IconButton>

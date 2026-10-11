@@ -2,6 +2,7 @@ import type { BwItem } from "../bitwarden/bw.types";
 import { AUTOTYPE_FIELD_NAME, AutoTypeSequenceError, type AutoTypeToken, parseAutoTypeSequence } from "@shared/autotype/autotype.sequence";
 import type { AppConfig } from "@shared/config/app.config";
 import { FieldType } from "@shared/types/vault.types";
+import { appMessage } from "@shared/i18n/message";
 
 /**
  * Tokens typed for an item: its "autotype" custom field as is, otherwise the default sequence followed by Enter if configured
@@ -17,7 +18,7 @@ export function getItemSequence(item: BwItem, config: AppConfig["autoType"]): Au
 		} catch (error) {
 			// The field may be hidden: its content never goes back to the renderer
 			if (error instanceof AutoTypeSequenceError) {
-				throw new AutoTypeSequenceError(`Invalid "${AUTOTYPE_FIELD_NAME}" sequence of the item (position ${error.position})`, error.position);
+				throw new AutoTypeSequenceError(appMessage("sequenceInvalidItem", { field: AUTOTYPE_FIELD_NAME, position: error.position }), error.position);
 			}
 			throw error;
 		}
@@ -27,7 +28,7 @@ export function getItemSequence(item: BwItem, config: AppConfig["autoType"]): Au
 		const tokens = parseAutoTypeSequence(config.defaultSequence);
 		return config.pressEnter ? [...tokens, { kind: "key", key: "enter" }] : tokens;
 	} catch (error) {
-		if (error instanceof AutoTypeSequenceError) throw new AutoTypeSequenceError(`Invalid default sequence: ${error.message}`, error.position);
+		if (error instanceof AutoTypeSequenceError) throw new AutoTypeSequenceError(appMessage("sequenceInvalidDefault", { detail: error.message }), error.position);
 		throw error;
 	}
 }

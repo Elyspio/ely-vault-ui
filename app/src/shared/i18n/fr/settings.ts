@@ -1,0 +1,134 @@
+import type { Translation } from "../i18n.types";
+import type { settings as en } from "../en/settings";
+
+export const settings: Translation<typeof en> = {
+	dialog: {
+		title: "Paramètres",
+	},
+	sections: {
+		security: { label: "Sécurité", description: "Verrouillage et presse-papiers" },
+		display: { label: "Affichage", description: "Apparence du coffre" },
+		autoType: { label: "Saisie automatique", description: "Séquence saisie dans la fenêtre précédente (Ctrl V)" },
+		updates: { label: "Mises à jour", description: "Versions publiées sur GitHub" },
+		certificates: { label: "Certificats", description: "Autorités approuvées pour votre serveur" },
+		account: { label: "Compte", description: "Serveur et connexion" },
+	},
+	durations: {
+		seconds_one: "{{count}} seconde",
+		seconds_other: "{{count}} secondes",
+		seconds_many: "{{count}} secondes",
+		minutes_one: "{{count}} minute",
+		minutes_other: "{{count}} minutes",
+		minutes_many: "{{count}} minutes",
+		hours_one: "{{count}} heure",
+		hours_other: "{{count}} heures",
+		hours_many: "{{count}} heures",
+		never: "Jamais",
+	},
+	security: {
+		autoLock: { label: "Verrouillage automatique", description: "Après une période d'inactivité de l'ordinateur" },
+		lockOnSystemLock: { label: "Verrouiller avec la session", description: "Quand l'ordinateur est verrouillé ou se met en veille" },
+		hello: { label: "Déverrouiller avec Windows Hello", description: "Visage, empreinte digitale ou code PIN au lieu du mot de passe principal" },
+		clipboard: { label: "Vider le presse-papiers", description: "Après la copie d'une valeur, si elle s'y trouve encore" },
+	},
+	display: {
+		theme: {
+			label: "Thème",
+			description: "Sombre, clair, ou identique au système d'exploitation",
+			dark: "Sombre",
+			light: "Clair",
+			system: "Système",
+		},
+		language: {
+			label: "Langue",
+			description: "Langue de l'interface, ou celle du système d'exploitation",
+			system: "Système",
+		},
+		favicons: { label: "Icônes des sites web", description: "Récupérées via le service d'icônes de votre serveur" },
+	},
+	autoType: {
+		unavailable: "Indisponible",
+		defaultSequence: {
+			label: "Séquence par défaut",
+			description: "{USERNAME} {PASSWORD} {TOTP} {TAB} {ENTER} {DELAY n}. Un champ personnalisé autotype la remplace pour un élément.",
+		},
+		pressEnter: { label: "Appuyer sur Enter", description: "Appuie sur Enter après la séquence par défaut" },
+		afterTyping: {
+			label: "Après la saisie",
+			description: "Fenêtre du coffre une fois la séquence saisie",
+			minimized: "Rester réduite",
+			restore: "Revenir au premier plan",
+			lock: "Verrouiller le coffre",
+		},
+	},
+	updates: {
+		autoCheck: {
+			label: "Mises à jour automatiques",
+			description: "Recherche une nouvelle version au démarrage puis toutes les heures, et la télécharge",
+		},
+		channel: {
+			label: "Canal",
+			description:
+				"Versions stables, aussi les bêtas, ou aussi les builds de développement : la version la plus haute l'emporte. Une version plus ancienne du nouveau canal n'est installée que sur demande",
+			stable: "Stable",
+			beta: "Bêta",
+			dev: "Dev",
+		},
+		title: {
+			checking: "Recherche de mises à jour…",
+			upToDate: "Vault est à jour",
+			noRelease: "Aucune version sur ce canal pour l'instant",
+			olderAvailable: "Version plus ancienne {{version}} disponible",
+			found: "Version {{version}} trouvée",
+			downloading: "Téléchargement de la version {{version}}",
+			downloaded: "Version {{version}} prête à être installée",
+			error: "La mise à jour a échoué",
+			current: "Version {{version}}",
+		},
+		description: {
+			downgrade: "Plus ancienne que la version installée ({{version}}) : installée seulement à votre demande",
+			downloadStarting: "Le téléchargement démarre",
+			manualDownload: "Build de développement : téléchargement manuel",
+			installedOnRestart: "Installée au redémarrage de Vault",
+			installedOnRestartOrQuit: "Installée au redémarrage ou à la fermeture de Vault",
+			installedVersion: "Version installée : {{version}}",
+		},
+		action: {
+			downgrade: "Revenir à {{version}}",
+			download: "Télécharger",
+			install: "Redémarrer et installer",
+			checking: "Recherche…",
+			check: "Rechercher",
+		},
+		lastCheck: "Dernière recherche {{when}}",
+		notChecked: "Aucune recherche depuis le démarrage",
+		nextCheck: "{{last}} · prochaine recherche {{when}}",
+		developmentBuild: "Build de développement : recherche via dev-app-update.yml, rien n'est installé",
+		allReleases: "Toutes les versions",
+	},
+	releaseNotes: {
+		title: "Notes de version · {{version}}",
+	},
+	certificates: {
+		approvedFor: "Approuvée pour {{host}}",
+		imported: "Importée",
+		expiresOn: "{{origin}} · expire le {{date}}",
+		remove: "Retirer (verrouille le coffre)",
+		removed: "« {{subject}} » retirée",
+		add: "Ajouter une autorité",
+		none: "Aucune autorité approuvée",
+		hint: "Pour un serveur derrière une PKI d'entreprise (.crt, .cer, .pem)",
+		import: "Importer…",
+		importCancelled: "Import annulé",
+		importSuccess: "Autorité importée",
+	},
+	account: {
+		syncedOn: "{{server}} · synchronisé le {{date}}",
+		logout: "Se déconnecter",
+	},
+	hello: {
+		description: "Saisissez votre mot de passe principal, puis confirmez avec Windows Hello. Le mot de passe est stocké chiffré pour votre compte Windows.",
+		masterPassword: "Mot de passe principal",
+		enable: "Activer",
+	},
+};

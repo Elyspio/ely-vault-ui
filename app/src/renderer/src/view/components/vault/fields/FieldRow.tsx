@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { alpha, Box, IconButton, Tooltip, Typography } from "@mui/material";
 import ContentCopyRounded from "@mui/icons-material/ContentCopyRounded";
+import { useTranslation } from "react-i18next";
 
 type Props = {
 	label: string;
@@ -16,6 +17,7 @@ type Props = {
  * A labelled value of an item; click anywhere on the row to copy it
  */
 export function FieldRow({ label, children, onCopy, actions, mono, multiline }: Readonly<Props>) {
+	const { t } = useTranslation();
 	return (
 		<Box
 			onClick={() => {
@@ -60,7 +62,7 @@ export function FieldRow({ label, children, onCopy, actions, mono, multiline }: 
 			>
 				{actions}
 				{onCopy && (
-					<Tooltip title="Copy">
+					<Tooltip title={t("copy")}>
 						<IconButton size="small" onClick={onCopy}>
 							<ContentCopyRounded sx={{ fontSize: 16 }} />
 						</IconButton>

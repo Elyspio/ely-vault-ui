@@ -1,5 +1,6 @@
 import { type FormEvent, type KeyboardEvent, useState } from "react";
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
 type Props = {
 	/** Answer of the last attempt (wrong passphrase, expired key) */
@@ -14,6 +15,7 @@ type Props = {
  * shortcuts (Escape closes the editor, Ctrl+S saves) do not run behind the dialog.
  */
 export function SshPassphraseDialog({ error, busy, onSubmit, onCancel }: Readonly<Props>) {
+	const { t } = useTranslation(["editor", "common"]);
 	const [passphrase, setPassphrase] = useState("");
 
 	const submit = (event: FormEvent) => {
@@ -29,17 +31,15 @@ export function SshPassphraseDialog({ error, busy, onSubmit, onCancel }: Readonl
 	return (
 		<Dialog open onClose={onCancel} maxWidth="xs" fullWidth>
 			<form onSubmit={submit}>
-				<DialogTitle>Key passphrase</DialogTitle>
+				<DialogTitle>{t("passphrase.title")}</DialogTitle>
 				<DialogContent>
-					<DialogContentText sx={{ mb: 1 }}>
-						This SSH key is encrypted. Its passphrase is used once to convert it: the vault stores the key unencrypted, like the official clients.
-					</DialogContentText>
+					<DialogContentText sx={{ mb: 1 }}>{t("passphrase.description")}</DialogContentText>
 					<TextField
 						autoFocus
 						fullWidth
 						size="small"
 						type="password"
-						label="Passphrase"
+						label={t("passphrase.label")}
 						onKeyDown={onKeyDown}
 						autoComplete="off"
 						value={passphrase}
@@ -50,10 +50,10 @@ export function SshPassphraseDialog({ error, busy, onSubmit, onCancel }: Readonl
 				</DialogContent>
 				<DialogActions>
 					<Button color="inherit" onClick={onCancel}>
-						Cancel
+						{t("common:cancel")}
 					</Button>
 					<Button type="submit" variant="contained" disabled={busy || passphrase === ""}>
-						Convert
+						{t("ssh.convert")}
 					</Button>
 				</DialogActions>
 			</form>

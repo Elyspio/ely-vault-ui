@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge, Box, Button, Divider, IconButton, Tooltip, Typography } from "@mui/material";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import SyncRounded from "@mui/icons-material/SyncRounded";
@@ -27,6 +28,7 @@ const controlSx = { width: 30, height: 28, borderRadius: 1.5, color: "var(--text
 
 export function Titlebar() {
 	const dispatch = useAppDispatch();
+	const { t } = useTranslation("auth");
 	const unlocked = useAppSelector((state) => state.session.current?.status === "unlocked");
 	const syncing = useAppSelector((state) => state.vault.syncing);
 	const lastSync = useAppSelector((state) => state.vault.snapshot?.lastSync ?? null);
@@ -88,7 +90,7 @@ export function Titlebar() {
 				>
 					<SearchRounded sx={{ fontSize: 15 }} />
 					<Box component="span" sx={{ flex: 1, textAlign: "left" }}>
-						Search and copy…
+						{t("titlebar.search")}
 					</Box>
 					<Kbd>Ctrl</Kbd>
 					<Kbd>K</Kbd>
@@ -100,12 +102,12 @@ export function Titlebar() {
 			<Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.25 }}>
 				{unlocked && (
 					<>
-						<Tooltip title="Password generator (Ctrl G)">
+						<Tooltip title={t("titlebar.generator")}>
 							<IconButton sx={controlSx} onClick={() => dispatch(setGeneratorOpen(true))}>
 								<PasswordRounded sx={{ fontSize: 17 }} />
 							</IconButton>
 						</Tooltip>
-						<Tooltip title={`Sync (F5)${lastSync ? ` · ${formatRelative(lastSync)}` : ""}`}>
+						<Tooltip title={lastSync ? t("titlebar.syncWithLast", { lastSync: formatRelative(lastSync) }) : t("titlebar.sync")}>
 							<IconButton sx={controlSx} onClick={() => dispatch(syncVault())} disabled={syncing}>
 								<SyncRounded
 									sx={{
@@ -116,7 +118,7 @@ export function Titlebar() {
 								/>
 							</IconButton>
 						</Tooltip>
-						<Tooltip title="Lock (Ctrl L)">
+						<Tooltip title={t("titlebar.lock")}>
 							<IconButton sx={controlSx} onClick={() => dispatch(lock())}>
 								<LockRounded sx={{ fontSize: 16 }} />
 							</IconButton>
@@ -125,9 +127,9 @@ export function Titlebar() {
 							title={
 								pendingUpdate
 									? pendingUpdate.downgrade && pendingUpdate.state === "available"
-										? `Older version ${pendingUpdate.latestVersion} available`
-										: `Version ${pendingUpdate.latestVersion} ready to install`
-									: "Settings (Ctrl ,)"
+										? t("titlebar.olderVersionAvailable", { version: pendingUpdate.latestVersion })
+										: t("titlebar.versionReady", { version: pendingUpdate.latestVersion })
+									: t("titlebar.settings")
 							}
 						>
 							<IconButton sx={controlSx} onClick={() => dispatch(setSettingsOpen(true))}>
@@ -145,8 +147,8 @@ export function Titlebar() {
 						<Tooltip
 							title={
 								pendingUpdate.downgrade && pendingUpdate.state === "available"
-									? `Older than the installed version (${pendingUpdate.currentVersion})`
-									: "Restarts the application"
+									? t("titlebar.olderThanInstalled", { version: pendingUpdate.currentVersion })
+									: t("titlebar.restarts")
 							}
 						>
 							<Box component="span" sx={noDrag}>
@@ -158,7 +160,9 @@ export function Titlebar() {
 									onClick={() => dispatch(pendingUpdate.state === "downloaded" ? installUpdate() : downloadUpdate())}
 									sx={{ height: 26, fontSize: "0.75rem", py: 0 }}
 								>
-									{pendingUpdate.state === "downloaded" ? `Update to ${pendingUpdate.latestVersion}` : `Go back to ${pendingUpdate.latestVersion}`}
+									{pendingUpdate.state === "downloaded"
+										? t("titlebar.updateTo", { version: pendingUpdate.latestVersion })
+										: t("titlebar.goBackTo", { version: pendingUpdate.latestVersion })}
 								</Button>
 							</Box>
 						</Tooltip>

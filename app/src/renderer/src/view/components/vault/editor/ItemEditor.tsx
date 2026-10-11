@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { store, useAppDispatch, useAppSelector } from "@store";
 import { closeEditor, setEditorDirty } from "@modules/vault/vault.reducer";
 import { showToast } from "@modules/ui/ui.reducer";
@@ -76,6 +77,7 @@ function CreateItem({ type }: Readonly<{ type: CipherType }>) {
 
 /** The item was removed (deleted elsewhere or purged): the editor can only be closed */
 function DeletedItem() {
+	const { t } = useTranslation(["editor", "common"]);
 	const dispatch = useAppDispatch();
 
 	// Whatever the user typed cannot be saved anymore: no unsaved changes question
@@ -86,9 +88,9 @@ function DeletedItem() {
 	return (
 		<Box sx={{ height: "100%", display: "grid", placeItems: "center", bgcolor: "var(--surface-0)" }}>
 			<Box sx={{ textAlign: "center" }}>
-				<Typography sx={{ color: "var(--text-muted)", mb: 2 }}>This item was deleted elsewhere</Typography>
+				<Typography sx={{ color: "var(--text-muted)", mb: 2 }}>{t("form.deleted")}</Typography>
 				<Button size="small" variant="outlined" onClick={() => dispatch(closeEditor())}>
-					Close
+					{t("common:close")}
 				</Button>
 			</Box>
 		</Box>

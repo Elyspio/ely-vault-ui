@@ -5,6 +5,7 @@ import StickyNote2Rounded from "@mui/icons-material/StickyNote2Rounded";
 import CreditCardRounded from "@mui/icons-material/CreditCardRounded";
 import BadgeRounded from "@mui/icons-material/BadgeRounded";
 import KeyRounded from "@mui/icons-material/KeyRounded";
+import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "@store";
 import { setNewItemOpen } from "@modules/ui/ui.reducer";
 import { openEditor } from "@modules/vault/vault.reducer";
@@ -12,15 +13,17 @@ import { useHotkeys } from "@hooks/useHotkeys";
 import { CipherType } from "@shared/types/vault.types";
 import { Kbd } from "@components/shared/Kbd";
 import { useDialogFocus } from "@hooks/useDialogFocus";
+import { cipherTypeKeys } from "./editor/EditorHeader";
 
-type Option = { type: CipherType; label: string; hint: string; key: string; icon: ReactNode };
+/** Label and hint in `editor:types` / `editor:newItem.hints` (key of the type in {@link cipherTypeKeys}) */
+type Option = { type: CipherType; key: string; icon: ReactNode };
 
 const options: Option[] = [
-	{ type: CipherType.Login, label: "Login", hint: "Username, password, websites", key: "l", icon: <LoginRounded /> },
-	{ type: CipherType.SecureNote, label: "Secure note", hint: "Free text", key: "n", icon: <StickyNote2Rounded /> },
-	{ type: CipherType.Card, label: "Card", hint: "Payment card", key: "c", icon: <CreditCardRounded /> },
-	{ type: CipherType.Identity, label: "Identity", hint: "Name, address, contact", key: "i", icon: <BadgeRounded /> },
-	{ type: CipherType.SshKey, label: "SSH key", hint: "Ed25519 key generated or imported", key: "s", icon: <KeyRounded /> },
+	{ type: CipherType.Login, key: "l", icon: <LoginRounded /> },
+	{ type: CipherType.SecureNote, key: "n", icon: <StickyNote2Rounded /> },
+	{ type: CipherType.Card, key: "c", icon: <CreditCardRounded /> },
+	{ type: CipherType.Identity, key: "i", icon: <BadgeRounded /> },
+	{ type: CipherType.SshKey, key: "s", icon: <KeyRounded /> },
 ];
 
 /**
@@ -43,6 +46,7 @@ export function NewItemDialog() {
 }
 
 function TypePicker({ firstRef }: Readonly<{ firstRef: RefObject<HTMLButtonElement | null> }>) {
+	const { t } = useTranslation("editor");
 	const dispatch = useAppDispatch();
 	const [index, setIndex] = useState(0);
 
@@ -61,7 +65,7 @@ function TypePicker({ firstRef }: Readonly<{ firstRef: RefObject<HTMLButtonEleme
 
 	return (
 		<>
-			<DialogTitle>New item</DialogTitle>
+			<DialogTitle>{t("newItem.title")}</DialogTitle>
 			<DialogContent sx={{ p: 1 }}>
 				{options.map((option, i) => (
 					<Box
@@ -91,8 +95,8 @@ function TypePicker({ firstRef }: Readonly<{ firstRef: RefObject<HTMLButtonEleme
 							{option.icon}
 						</Box>
 						<Box sx={{ flex: 1, minWidth: 0 }}>
-							<Typography sx={{ fontSize: "0.88rem", fontWeight: 500 }}>{option.label}</Typography>
-							<Typography sx={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>{option.hint}</Typography>
+							<Typography sx={{ fontSize: "0.88rem", fontWeight: 500 }}>{t(`types.${cipherTypeKeys[option.type]}`)}</Typography>
+							<Typography sx={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>{t(`newItem.hints.${cipherTypeKeys[option.type]}`)}</Typography>
 						</Box>
 						<Kbd>{option.key.toUpperCase()}</Kbd>
 					</Box>

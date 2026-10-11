@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { describe, expect, it } from "vite-plus/test";
 import { convertSshKey, generateSshKey, type SshKeyError, type SshKeyMaterial } from "./ssh.keys";
+import { appMessage } from "@shared/i18n/message";
 
 /*
  * Test-only keys, generated once with ssh-keygen. They protect nothing.
@@ -151,7 +152,7 @@ describe("convertSshKey", () => {
 
 	it("refuses a wrong passphrase for an encrypted OpenSSH key", () => {
 		const error = expectError(convertSshKey(ENCRYPTED_OPENSSH, "wrong"));
-		expect(error).toEqual({ error: "wrong-passphrase", message: "Wrong passphrase" });
+		expect(error).toEqual({ error: "wrong-passphrase", message: appMessage("sshWrongPassphrase") });
 	});
 
 	it("asks the passphrase of an encrypted PKCS#8 key, then converts it with the right one", () => {
@@ -182,14 +183,14 @@ describe("convertSshKey", () => {
 		const error = expectError(convertSshKey(privateKey.export({ type: "pkcs8", format: "pem" }).toString(), null));
 
 		expect(error.error).toBe("unsupported");
-		expect(error.message).toContain("DSA");
+		expect(error.message).toBe(appMessage("sshDsaUnsupported"));
 	});
 
 	it("refuses a public key, with a message asking for the private key", () => {
 		const error = expectError(convertSshKey(PLAIN_PUBLIC, null));
 
 		expect(error.error).toBe("invalid");
-		expect(error.message).toContain("public key");
+		expect(error.message).toBe(appMessage("sshPublicKey"));
 	});
 
 	it("refuses text that is not a key, and an empty text", () => {

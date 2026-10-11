@@ -8,6 +8,7 @@ import { initConfig } from "@modules/config/config.async.actions";
 import { initUpdate } from "@modules/update/update.async.actions";
 import { showToast } from "@modules/ui/ui.reducer";
 import { ipcErrorMessage } from "@core/utils/ipc.utils";
+import { i18n } from "@/config/i18n";
 
 const createAsyncThunk = createAsyncActionGenerator("session");
 
@@ -60,7 +61,7 @@ export const importAuthority = createAsyncThunk("import-authority", async (reque
 	try {
 		const imported = await services.certificate.import();
 		if (imported.length === 0) return false;
-		dispatch(showToast(`Authority "${imported.map((c) => c.subject).join(", ")}" imported`));
+		dispatch(showToast(i18n.t("actions:session.authorityImported", { names: imported.map((c) => c.subject).join(", ") })));
 	} catch (error) {
 		return rejectWithValue(ipcErrorMessage(error));
 	}
@@ -111,7 +112,7 @@ export const logout = createAsyncThunk("logout", async (_, { extra, dispatch }) 
 
 export const initApp = createAsyncThunk("init-app", async (_, { dispatch }) => {
 	window.preload.ipc.on.session.state((state) => dispatch(sessionStateChanged(state)));
-	window.preload.ipc.on.clipboard.cleared(() => dispatch(showToast("Clipboard cleared", "info")));
+	window.preload.ipc.on.clipboard.cleared(() => dispatch(showToast(i18n.t("actions:session.clipboardCleared"), "info")));
 
 	await dispatch(initConfig());
 	void dispatch(initUpdate());

@@ -2,6 +2,8 @@
  * Local configuration, stored as JSON in the application folder. It never contains a secret:
  * the Bitwarden CLI keeps its own (encrypted) vault data in a dedicated folder.
  */
+import type { LanguageSetting } from "../i18n/i18n.languages";
+
 export type AppConfig = {
 	version: 1;
 	security: {
@@ -17,6 +19,8 @@ export type AppConfig = {
 		showFavicons: boolean;
 		/** Colors of the application: "system" follows the operating system */
 		theme: ThemeMode;
+		/** Language of the interface: "system" follows the operating system, English when its language is not supported */
+		language: LanguageSetting;
 	};
 	autoType: {
 		/** Sequence typed for the items without an "autotype" custom field */
@@ -60,6 +64,7 @@ export const defaultAppConfig: AppConfig = {
 	display: {
 		showFavicons: true,
 		theme: "dark",
+		language: "system",
 	},
 	autoType: {
 		defaultSequence: "{USERNAME}{TAB}{PASSWORD}",
