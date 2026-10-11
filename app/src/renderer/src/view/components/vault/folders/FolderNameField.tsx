@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, InputBase, Typography } from "@mui/material";
 import FolderRounded from "@mui/icons-material/FolderRounded";
+import { focusItemList } from "@hooks/useDialogFocus";
 
 type Props = {
 	/** Indentation of the row in the tree */
@@ -20,6 +21,18 @@ type Props = {
 export function FolderNameField({ depth, initialValue, placeholder, helper, onSubmit, onCancel }: Readonly<Props>) {
 	const [value, setValue] = useState(initialValue);
 	const [busy, setBusy] = useState(false);
+
+	// Closing (submit, cancel) gives the focus back to what had it before: the new folder button, or the rename menu item that is gone by then (the item list takes it)
+	useEffect(() => {
+		const previous = document.activeElement as HTMLElement | null;
+		return () => {
+			const active = document.activeElement;
+			if (!active || active === document.body) {
+				if (previous && previous !== document.body && previous.isConnected) previous.focus();
+				else focusItemList();
+			}
+		};
+	}, []);
 
 	const submit = async () => {
 		if (busy) return;

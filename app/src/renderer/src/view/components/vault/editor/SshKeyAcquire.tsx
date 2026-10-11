@@ -1,4 +1,7 @@
 import { type KeyboardEvent, useState } from "react";
+import AutoAwesomeRounded from "@mui/icons-material/AutoAwesomeRounded";
+import FileOpenRounded from "@mui/icons-material/FileOpenRounded";
+import ContentPasteRounded from "@mui/icons-material/ContentPasteRounded";
 import { Box, Button, TextField, Typography } from "@mui/material";
 import { Kbd } from "@components/shared/Kbd";
 
@@ -33,13 +36,21 @@ export function SshKeyAcquire({ busy, autoFocus, onGenerate, onImportFile, onCon
 	return (
 		<Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
 			<Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-				<Button variant="contained" autoFocus={autoFocus} disabled={busy} onClick={onGenerate}>
+				<Button size="small" variant="contained" startIcon={<AutoAwesomeRounded />} autoFocus={autoFocus} disabled={busy} onClick={onGenerate}>
 					Generate Ed25519 key
 				</Button>
-				<Button variant="outlined" color="inherit" disabled={busy} onClick={onImportFile}>
+				<Button size="small" variant="outlined" color="inherit" startIcon={<FileOpenRounded />} disabled={busy} onClick={onImportFile}>
 					Import from file…
 				</Button>
-				<Button variant="outlined" color="inherit" disabled={busy} aria-expanded={pasting} onClick={() => setPasting((open) => !open)}>
+				<Button
+					size="small"
+					variant="outlined"
+					color="inherit"
+					startIcon={<ContentPasteRounded />}
+					disabled={busy}
+					aria-expanded={pasting}
+					onClick={() => setPasting((open) => !open)}
+				>
 					Paste a private key
 				</Button>
 			</Box>
@@ -62,11 +73,13 @@ export function SshKeyAcquire({ busy, autoFocus, onGenerate, onImportFile, onCon
 						onKeyDown={onKeyDown}
 						slotProps={{ input: { className: "mono" } }}
 					/>
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-						<Button variant="contained" disabled={busy || text.trim() === ""} onClick={convert} endIcon={<Kbd>Ctrl+Enter</Kbd>}>
+					<Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+						<Button size="small" variant="contained" disabled={busy || text.trim() === ""} onClick={convert}>
 							Convert
 						</Button>
-						<Typography sx={{ fontSize: "0.75rem", color: "var(--text-faint)" }}>
+						<Kbd>Ctrl</Kbd>
+						<Kbd>Enter</Kbd>
+						<Typography sx={{ fontSize: "0.75rem", color: "var(--text-faint)", ml: 0.5 }}>
 							OpenSSH, PEM or PKCS#8. Encrypted keys ask for their passphrase. DSA and public keys are refused.
 						</Typography>
 					</Box>

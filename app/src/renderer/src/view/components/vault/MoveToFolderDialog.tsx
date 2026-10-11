@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Dialog, DialogContent, DialogTitle, InputBase, Typography } from "@mui/material";
 import FolderRounded from "@mui/icons-material/FolderRounded";
 import FolderOffRounded from "@mui/icons-material/FolderOffRounded";
@@ -9,6 +9,7 @@ import { selectItems } from "@modules/vault/vault.selectors";
 import { setMoveItemId, showToast } from "@modules/ui/ui.reducer";
 import { moveChoices, type FolderChoice } from "@modules/vault/vault.folders";
 import { useVaultWrites } from "@hooks/useVaultWrites";
+import { useDialogFocus } from "@hooks/useDialogFocus";
 import type { VaultItem } from "@shared/types/vault.types";
 
 /**
@@ -19,6 +20,8 @@ export function MoveToFolderDialog() {
 	const itemId = useAppSelector((state) => state.ui.moveItemId);
 	const item = useAppSelector((state) => (itemId ? (selectItems(state).find((candidate) => candidate.id === itemId) ?? null) : null));
 	const close = () => dispatch(setMoveItemId(null));
+	const inputRef = useRef<HTMLInputElement>(null);
+	const focus = useDialogFocus(() => inputRef.current);
 
 	// The item left the active items while the dialog was open: nothing is left to move
 	useEffect(() => {
@@ -26,14 +29,14 @@ export function MoveToFolderDialog() {
 	}, [itemId, item, dispatch]);
 
 	return (
-		<Dialog open={item !== null} onClose={close} maxWidth="xs" fullWidth>
+		<Dialog open={item !== null} onClose={close} maxWidth="xs" fullWidth slotProps={{ transition: focus }}>
 			{/* Mounted on each opening: the filter starts empty */}
-			{item && <FolderPicker item={item} close={close} />}
+			{item && <FolderPicker item={item} close={close} inputRef={inputRef} />}
 		</Dialog>
 	);
 }
 
-function FolderPicker({ item, close }: Readonly<{ item: VaultItem; close: () => void }>) {
+function FolderPicker({ item, close, inputRef }: Readonly<{ item: VaultItem; close: () => void; inputRef: RefObject<HTMLInputElement | null> }>) {
 	const dispatch = useAppDispatch();
 	const folders = useAppSelector((state) => state.vault.snapshot?.folders ?? []);
 	const writes = useVaultWrites();
@@ -78,7 +81,7 @@ function FolderPicker({ item, close }: Readonly<{ item: VaultItem; close: () => 
 			<Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mx: 2, mb: 1, px: 1.25, borderRadius: 2, bgcolor: "var(--surface-2)" }}>
 				<SearchRounded sx={{ color: "var(--text-faint)", fontSize: 18 }} />
 				<InputBase
-					autoFocus
+					inputRef={inputRef}
 					fullWidth
 					placeholder="Filter folders…"
 					value={query}

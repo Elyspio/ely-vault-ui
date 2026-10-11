@@ -6,6 +6,7 @@ import { webContainer } from "@core/di/web.container";
 import { VaultService } from "@services/vault.service";
 import { showToast } from "@modules/ui/ui.reducer";
 import { ipcErrorMessage, isRepromptRequired } from "@core/utils/ipc.utils";
+import { useDialogFocus } from "@hooks/useDialogFocus";
 import type { CopyRef, SecretRef } from "@shared/types/vault.types";
 
 type RequestReprompt = () => Promise<boolean>;
@@ -21,6 +22,8 @@ export function RepromptProvider({ children }: Readonly<{ children: ReactNode }>
 	const [error, setError] = useState(false);
 	const [pending, setPending] = useState(false);
 	const resolver = useRef<((value: boolean) => void) | null>(null);
+	const passwordRef = useRef<HTMLInputElement>(null);
+	const focus = useDialogFocus(() => passwordRef.current);
 
 	const request = useCallback<RequestReprompt>(
 		() =>
@@ -52,7 +55,7 @@ export function RepromptProvider({ children }: Readonly<{ children: ReactNode }>
 	return (
 		<RepromptContext value={request}>
 			{children}
-			<Dialog open={open} onClose={() => close(false)} maxWidth="xs" fullWidth>
+			<Dialog open={open} onClose={() => close(false)} maxWidth="xs" fullWidth slotProps={{ transition: focus }}>
 				<form
 					onSubmit={(event) => {
 						event.preventDefault();
@@ -68,7 +71,7 @@ export function RepromptProvider({ children }: Readonly<{ children: ReactNode }>
 							Enter your master password to access this secret.
 						</Typography>
 						<TextField
-							autoFocus
+							inputRef={passwordRef}
 							fullWidth
 							size="small"
 							type="password"

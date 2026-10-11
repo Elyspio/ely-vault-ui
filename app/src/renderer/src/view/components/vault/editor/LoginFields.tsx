@@ -111,44 +111,47 @@ export function LoginFields({ draft, setDraft, item }: Readonly<Props>) {
 							aria-label={`Website ${index + 1}`}
 							value={uri.uri}
 							onChange={(event) => setUris(login.uris.map((current, i) => (i === index ? { ...current, uri: event.target.value } : current)))}
-							sx={{ flex: "1 1 260px", minWidth: 0 }}
+							sx={{ flex: "1 1 180px", minWidth: 0 }}
 						/>
-						<TextField
-							select
-							size="small"
-							aria-label="Match type"
-							value={uri.match === null ? "default" : String(uri.match)}
-							onChange={(event) => {
-								const option = matchOptions.find((candidate) => candidate.value === event.target.value);
-								setUris(login.uris.map((current, i) => (i === index ? { ...current, match: option?.match ?? null } : current)));
-							}}
-							sx={{ width: 170 }}
-						>
-							{matchOptions.map((option) => (
-								<MenuItem key={option.value} value={option.value}>
-									{option.label}
-								</MenuItem>
-							))}
-						</TextField>
-						<Tooltip title="Move up">
-							<span>
-								<IconButton size="small" disabled={index === 0} onClick={() => setUris(move(login.uris, index, index - 1))}>
-									<KeyboardArrowUpRounded />
+						{/* Match type and row actions stay together when the row wraps */}
+						<Box sx={{ display: "flex", alignItems: "center", gap: 0.25, flexShrink: 0 }}>
+							<TextField
+								select
+								size="small"
+								aria-label="Match type"
+								value={uri.match === null ? "default" : String(uri.match)}
+								onChange={(event) => {
+									const option = matchOptions.find((candidate) => candidate.value === event.target.value);
+									setUris(login.uris.map((current, i) => (i === index ? { ...current, match: option?.match ?? null } : current)));
+								}}
+								sx={{ width: 140 }}
+							>
+								{matchOptions.map((option) => (
+									<MenuItem key={option.value} value={option.value}>
+										{option.label}
+									</MenuItem>
+								))}
+							</TextField>
+							<Tooltip title="Move up">
+								<span>
+									<IconButton size="small" disabled={index === 0} onClick={() => setUris(move(login.uris, index, index - 1))}>
+										<KeyboardArrowUpRounded />
+									</IconButton>
+								</span>
+							</Tooltip>
+							<Tooltip title="Move down">
+								<span>
+									<IconButton size="small" disabled={index === login.uris.length - 1} onClick={() => setUris(move(login.uris, index, index + 1))}>
+										<KeyboardArrowDownRounded />
+									</IconButton>
+								</span>
+							</Tooltip>
+							<Tooltip title="Remove">
+								<IconButton size="small" onClick={() => setUris(login.uris.filter((_, i) => i !== index))}>
+									<DeleteOutlineRounded />
 								</IconButton>
-							</span>
-						</Tooltip>
-						<Tooltip title="Move down">
-							<span>
-								<IconButton size="small" disabled={index === login.uris.length - 1} onClick={() => setUris(move(login.uris, index, index + 1))}>
-									<KeyboardArrowDownRounded />
-								</IconButton>
-							</span>
-						</Tooltip>
-						<Tooltip title="Remove">
-							<IconButton size="small" onClick={() => setUris(login.uris.filter((_, i) => i !== index))}>
-								<DeleteOutlineRounded />
-							</IconButton>
-						</Tooltip>
+							</Tooltip>
+						</Box>
 					</Box>
 				))}
 				<Box>
