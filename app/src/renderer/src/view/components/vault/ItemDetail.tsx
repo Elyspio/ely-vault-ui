@@ -109,6 +109,11 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 							</Button>
 						</Tooltip>
 					)}
+					<Tooltip title="Move to a folder (Ctrl+M)">
+						<Button variant="outlined" size="small" startIcon={<FolderRounded />} onClick={() => commands.move(item)}>
+							Move
+						</Button>
+					</Tooltip>
 					<Tooltip title="Move to the trash (Del)">
 						<Button variant="outlined" color="error" size="small" startIcon={<DeleteOutlineRounded />} onClick={() => void commands.remove(item)}>
 							Delete

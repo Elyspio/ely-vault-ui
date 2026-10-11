@@ -15,6 +15,7 @@ import { ItemDetail } from "./ItemDetail";
 import { CommandPalette } from "./CommandPalette";
 import { GeneratorDialog } from "./GeneratorDialog";
 import { NewItemDialog } from "./NewItemDialog";
+import { MoveToFolderDialog } from "./MoveToFolderDialog";
 import { SettingsDialog } from "@components/settings/SettingsDialog";
 import { PanelResizeHandle } from "./PanelResizeHandle";
 import { saveConfig } from "@modules/config/config.async.actions";
@@ -134,6 +135,13 @@ export function VaultScreen() {
 					if (item) void itemCommands.toggleFavorite(item);
 				},
 			},
+			{
+				combo: "ctrl+m",
+				handler: () => {
+					const item = selected();
+					if (item) itemCommands.move(item);
+				},
+			},
 		],
 		!dialogOpen && !editing
 	);
@@ -183,6 +191,7 @@ export function VaultScreen() {
 			/>
 			<CommandPalette />
 			<NewItemDialog />
+			<MoveToFolderDialog />
 			<GeneratorDialog />
 			<SettingsDialog />
 		</Box>

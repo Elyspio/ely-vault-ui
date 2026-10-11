@@ -403,6 +403,11 @@ export class VaultModule extends LogModule {
 					await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_DELAY_MS));
 					snapshot = await this.loadSnapshot(generation);
 				}
+				// Still not there (the server answered with stale values): a sync brings the server's state
+				if (settled && done.length > 0 && !settled(snapshot, done)) {
+					await this.bwServeModule.request<BwMessage>("POST", "/sync");
+					snapshot = await this.loadSnapshot(generation);
+				}
 				return { outcome, snapshot, refreshError: null };
 			} catch (error) {
 				return { outcome, snapshot: null, refreshError: translateError(errorMessage(error)) };
@@ -481,7 +486,9 @@ export class VaultModule extends LogModule {
 				}
 				return { status: "success", id: itemId };
 			},
-			(snapshot) => hasRevision(snapshot, itemId, revision)
+			// The folder and favorite are checked too: the server may answer with their previous values
+			(snapshot) =>
+				hasRevision(snapshot, itemId, revision) && snapshot.items.some((item) => item.id === itemId && item.folderId === draft.folderId && item.favorite === draft.favorite)
 		);
 	}
 
@@ -542,16 +549,15 @@ export class VaultModule extends LogModule {
 	 */
 	@log("info")
 	public async setFavorite(itemId: string, favorite: boolean): Promise<WriteResult> {
-		let revision: string | null = null;
 		return this.write(
 			async () => {
 				this.getItem(itemId);
 
 				const fresh = await this.fetchItem(itemId);
-				revision = (await this.bwServeModule.request<BwItem>("PUT", `/object/item/${encodeURIComponent(itemId)}`, { ...fresh, favorite })).revisionDate;
+				await this.bwServeModule.request("PUT", `/object/item/${encodeURIComponent(itemId)}`, { ...fresh, favorite });
 				return { status: "success", id: itemId };
 			},
-			(snapshot) => hasRevision(snapshot, itemId, revision)
+			(snapshot) => snapshot.items.some((item) => item.id === itemId && item.favorite === favorite)
 		);
 	}
 
@@ -560,17 +566,16 @@ export class VaultModule extends LogModule {
 	 */
 	@log("info")
 	public async moveItem(itemId: string, folderId: string | null): Promise<WriteResult> {
-		let revision: string | null = null;
 		return this.write(
 			async () => {
 				this.getItem(itemId);
 				if (folderId !== null && !this.folders.some((folder) => folder.id === folderId)) return { status: "error", message: "Folder not found" };
 
 				const fresh = await this.fetchItem(itemId);
-				revision = (await this.bwServeModule.request<BwItem>("PUT", `/object/item/${encodeURIComponent(itemId)}`, { ...fresh, folderId })).revisionDate;
+				await this.bwServeModule.request("PUT", `/object/item/${encodeURIComponent(itemId)}`, { ...fresh, folderId });
 				return { status: "success", id: itemId };
 			},
-			(snapshot) => hasRevision(snapshot, itemId, revision)
+			(snapshot) => snapshot.items.some((item) => item.id === itemId && item.folderId === folderId)
 		);
 	}
 

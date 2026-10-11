@@ -7,6 +7,7 @@ import PasswordRounded from "@mui/icons-material/PasswordRounded";
 import TuneRounded from "@mui/icons-material/TuneRounded";
 import AddRounded from "@mui/icons-material/AddRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
+import FolderRounded from "@mui/icons-material/FolderRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import StarOutlineRounded from "@mui/icons-material/StarOutlineRounded";
 import { useAppDispatch, useAppSelector } from "@store";
@@ -88,6 +89,13 @@ function PaletteContent({ close }: Readonly<{ close: () => void }>) {
 							icon: <StarOutlineRounded />,
 							keywords: "favorite favourite star toggle",
 							run: () => void itemCommands.toggleFavorite(selected),
+						},
+						{
+							id: "move-item",
+							label: "Move to folder…",
+							icon: <FolderRounded />,
+							keywords: "move folder organize item",
+							run: () => itemCommands.move(selected),
 						},
 						{
 							id: "delete-item",

@@ -1,5 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { Avatar, Box, ButtonBase, Typography } from "@mui/material";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Avatar, Box, ButtonBase, IconButton, Tooltip, Typography } from "@mui/material";
 import AppsRounded from "@mui/icons-material/AppsRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
 import LanguageRounded from "@mui/icons-material/LanguageRounded";
@@ -14,13 +14,19 @@ import FolderOffRounded from "@mui/icons-material/FolderOffRounded";
 import BusinessRounded from "@mui/icons-material/BusinessRounded";
 import CollectionsBookmarkRounded from "@mui/icons-material/CollectionsBookmarkRounded";
 import DeleteRounded from "@mui/icons-material/DeleteRounded";
+import AddRounded from "@mui/icons-material/AddRounded";
+import MoreHorizRounded from "@mui/icons-material/MoreHorizRounded";
 import { useAppDispatch, useAppSelector } from "@store";
 import { selectCounts } from "@modules/vault/vault.selectors";
 import { setFilter } from "@modules/vault/vault.reducer";
 import type { VaultFilter } from "@modules/vault/vault.search";
-import { buildFolderTree, countFolderTree, type FolderNode } from "@modules/vault/vault.folders";
-import { setSettingsOpen } from "@modules/ui/ui.reducer";
+import { buildFolderTree, countFolderTree, folderDeleteBlocker, folderRenameBlocker, normalizeFolderPath, type FolderNode } from "@modules/vault/vault.folders";
+import { setFolderPromptOpen, setSettingsOpen } from "@modules/ui/ui.reducer";
+import { useFolderCommands } from "@hooks/useFolderCommands";
 import { CipherType } from "@shared/types/vault.types";
+import { PurgeConfirmDialog } from "./trash/PurgeConfirmDialog";
+import { FolderMenu, type FolderMenuPosition } from "./folders/FolderMenu";
+import { FolderNameField } from "./folders/FolderNameField";
 
 export const typeLabels: Record<CipherType, string> = {
 	[CipherType.Login]: "Logins",
@@ -50,14 +56,30 @@ export function Sidebar() {
 	const snapshot = useAppSelector((state) => state.vault.snapshot);
 	const counts = useAppSelector(selectCounts);
 	const account = useAppSelector((state) => state.session.current);
+	const folderCommands = useFolderCommands();
 
 	const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+	// Inline fields and menus of the folder tree
+	const [creating, setCreating] = useState(false);
+	const [renamingPath, setRenamingPath] = useState<string | null>(null);
+	const [menu, setMenu] = useState<{ node: FolderNode; position: FolderMenuPosition } | null>(null);
+	const [deleteTarget, setDeleteTarget] = useState<{ id: string; fullName: string } | null>(null);
+	const [deleteOpen, setDeleteOpen] = useState(false);
+
+	// The item shortcuts wait while the folder menu or its confirmation is open (Delete must not reach the item behind)
+	useEffect(() => {
+		dispatch(setFolderPromptOpen(menu !== null || deleteOpen));
+		return () => {
+			dispatch(setFolderPromptOpen(false));
+		};
+	}, [dispatch, menu, deleteOpen]);
 
 	const entry = (target: VaultFilter, icon: ReactNode, label: string, count: number) => (
 		<SidebarEntry key={JSON.stringify(target)} icon={icon} label={label} count={count} active={sameFilter(filter, target)} onClick={() => dispatch(setFilter(target))} />
 	);
 
 	const folders = useMemo(() => buildFolderTree(snapshot?.folders ?? []), [snapshot?.folders]);
+	const activeItemsIn = (node: FolderNode) => (node.id ? (counts.folders[node.id] ?? 0) : 0);
 
 	const toggleFolder = (path: string) =>
 		setCollapsed((current) => {
@@ -67,11 +89,33 @@ export function Sidebar() {
 		});
 
 	const folderEntry = (node: FolderNode, depth: number): ReactNode => {
+		if (renamingPath === node.path) {
+			return (
+				<FolderNameField
+					key={node.path}
+					depth={depth}
+					initialValue={node.fullName}
+					placeholder="Rename folder"
+					helper="Sub folders follow the new name. Enter to rename, Esc to cancel."
+					onCancel={() => setRenamingPath(null)}
+					onSubmit={async (value) => {
+						// Same path once normalized ("Work / Projects" for "Work/Projects"): nothing to write
+						if (normalizeFolderPath(value) === node.fullName) return true;
+						const outcome = await folderCommands.rename(node.fullName, value);
+						if (outcome?.status === "success") setRenamingPath(null);
+						return outcome?.status === "success";
+					}}
+				/>
+			);
+		}
+
 		const expanded = !collapsed.has(node.path);
 		const hasChildren = node.children.length > 0;
 		const target: VaultFilter | null = node.id ? { kind: "folder", id: node.id } : null;
+		const active = target !== null && sameFilter(filter, target);
 		// Collapsed or virtual folder: the count includes the subfolders
 		const count = node.id && (expanded || !hasChildren) ? (counts.folders[node.id] ?? 0) : countFolderTree(node, counts.folders);
+		const openMenu = (position: FolderMenuPosition) => setMenu({ node, position });
 
 		return (
 			<Box key={node.path}>
@@ -82,8 +126,36 @@ export function Sidebar() {
 					depth={depth}
 					expanded={hasChildren ? expanded : undefined}
 					onToggle={() => toggleFolder(node.path)}
-					active={target !== null && sameFilter(filter, target)}
+					active={active}
 					onClick={() => (target ? dispatch(setFilter(target)) : toggleFolder(node.path))}
+					onContextMenu={(event) => {
+						event.preventDefault();
+						openMenu({ top: event.clientY, left: event.clientX });
+					}}
+					trailing={
+						<Tooltip title="Rename or delete" placement="right">
+							<IconButton
+								className="entry-more"
+								size="small"
+								aria-label={`Actions for ${node.fullName}`}
+								onClick={(event) => {
+									const rect = event.currentTarget.getBoundingClientRect();
+									openMenu({ top: rect.bottom, left: rect.left });
+								}}
+								sx={{
+									mr: 0.5,
+									p: 0.25,
+									opacity: active ? 1 : 0,
+									color: "var(--text-faint)",
+									"&:hover": { color: "text.primary", bgcolor: "transparent" },
+									"&:focus-visible": { opacity: 1 },
+									"& .MuiSvgIcon-root": { fontSize: 17 },
+								}}
+							>
+								<MoreHorizRounded />
+							</IconButton>
+						</Tooltip>
+					}
 				/>
 				{hasChildren && expanded && node.children.map((child) => folderEntry(child, depth + 1))}
 			</Box>
@@ -99,7 +171,36 @@ export function Sidebar() {
 				<SectionTitle>Types</SectionTitle>
 				{typeOrder.filter((type) => counts.types[type] > 0).map((type) => entry({ kind: "type", type }, typeIcons[type], typeLabels[type], counts.types[type]))}
 
-				{(folders.length > 0 || counts.noFolder > 0) && <SectionTitle>Folders</SectionTitle>}
+				<SectionTitle
+					action={
+						<Tooltip title="New folder">
+							<IconButton
+								size="small"
+								aria-label="New folder"
+								onClick={() => setCreating(true)}
+								sx={{ mr: -0.5, color: "var(--text-faint)", "&:hover": { color: "text.primary" }, "& .MuiSvgIcon-root": { fontSize: 16 } }}
+							>
+								<AddRounded />
+							</IconButton>
+						</Tooltip>
+					}
+				>
+					Folders
+				</SectionTitle>
+				{creating && (
+					<FolderNameField
+						depth={0}
+						initialValue=""
+						placeholder="New folder"
+						helper="Use Parent/Child for a sub folder. Enter to create, Esc to cancel."
+						onCancel={() => setCreating(false)}
+						onSubmit={async (value) => {
+							const outcome = await folderCommands.create(value);
+							if (outcome?.status === "success") setCreating(false);
+							return outcome?.status === "success";
+						}}
+					/>
+				)}
 				{folders.map((node) => folderEntry(node, 0))}
 				{counts.noFolder > 0 && (
 					<SidebarEntry
@@ -155,15 +256,51 @@ export function Sidebar() {
 					</Typography>
 				</Box>
 			</ButtonBase>
+
+			{menu && (
+				<FolderMenu
+					fullName={menu.node.fullName}
+					position={menu.position}
+					renameBlocker={folderRenameBlocker(menu.node)}
+					deleteBlocker={folderDeleteBlocker(menu.node, activeItemsIn(menu.node))}
+					onRename={() => {
+						setRenamingPath(menu.node.path);
+						setMenu(null);
+					}}
+					onDelete={() => {
+						const { id, fullName } = menu.node;
+						setMenu(null);
+						if (!id) return;
+						setDeleteTarget({ id, fullName });
+						setDeleteOpen(true);
+					}}
+					onClose={() => setMenu(null)}
+				/>
+			)}
+
+			<PurgeConfirmDialog
+				open={deleteOpen}
+				title={`Delete the folder "${deleteTarget?.fullName ?? ""}"?`}
+				message="Items in the trash that are in it move to No folder."
+				confirmLabel="Delete folder"
+				onConfirm={() => {
+					setDeleteOpen(false);
+					if (deleteTarget) void folderCommands.remove(deleteTarget.id, deleteTarget.fullName);
+				}}
+				onClose={() => setDeleteOpen(false)}
+			/>
 		</Box>
 	);
 }
 
-function SectionTitle({ children }: Readonly<{ children: string }>) {
+function SectionTitle({ children, action }: Readonly<{ children: string; action?: ReactNode }>) {
 	return (
-		<Typography variant="overline" component="div" sx={{ px: 1.25, pt: 2, pb: 0.25, color: "var(--text-faint)" }}>
-			{children}
-		</Typography>
+		<Box sx={{ display: "flex", alignItems: "center", pt: 2, pb: 0.25, pr: 0.5 }}>
+			<Typography variant="overline" component="div" sx={{ flex: 1, px: 1.25, color: "var(--text-faint)" }}>
+				{children}
+			</Typography>
+			{action}
+		</Box>
 	);
 }
 
@@ -178,58 +315,64 @@ type EntryProps = {
 	/** Defined for tree nodes with children: shows a chevron */
 	expanded?: boolean;
 	onToggle?: () => void;
+	/** Button shown at the right of the row, hidden until the row is hovered (or focused) */
+	trailing?: ReactNode;
+	onContextMenu?: (event: React.MouseEvent) => void;
 };
 
-function SidebarEntry({ icon, label, count, active, onClick, depth, expanded, onToggle }: Readonly<EntryProps>) {
+function SidebarEntry({ icon, label, count, active, onClick, depth, expanded, onToggle, trailing, onContextMenu }: Readonly<EntryProps>) {
 	const inTree = depth !== undefined;
 
 	return (
-		<ButtonBase
-			onClick={onClick}
-			sx={{
-				width: "100%",
-				display: "flex",
-				alignItems: "center",
-				gap: 1.25,
-				pl: inTree ? 0.25 + depth * 1.5 : 1.25,
-				pr: 1.25,
-				py: 0.7,
-				mb: 0.25,
-				borderRadius: 1.5,
-				justifyContent: "flex-start",
-				color: active ? "primary.main" : "text.secondary",
-				bgcolor: active ? "var(--accent-soft)" : "transparent",
-				transition: "background-color 120ms ease, color 120ms ease",
-				"&:hover": { bgcolor: active ? "var(--accent-soft)" : "var(--surface-2)", color: active ? "primary.main" : "text.primary" },
-				"& .MuiSvgIcon-root": { fontSize: 17 },
-			}}
-		>
-			{inTree && (
-				<Box
-					component="span"
-					aria-hidden
-					onClick={(event) => {
-						if (expanded === undefined) return;
-						event.stopPropagation();
-						onToggle?.();
-					}}
-					sx={{
-						display: "flex",
-						mr: -0.75,
-						borderRadius: 1,
-						visibility: expanded === undefined ? "hidden" : "visible",
-						"&:hover": { color: "text.primary" },
-						"& .MuiSvgIcon-root": { fontSize: 16, transform: expanded ? "rotate(90deg)" : "none", transition: "transform 120ms ease" },
-					}}
-				>
-					<ChevronRightRounded />
-				</Box>
-			)}
-			{icon}
-			<Typography noWrap sx={{ flex: 1, fontSize: "0.82rem", fontWeight: active ? 600 : 500, textAlign: "left" }}>
-				{label}
-			</Typography>
-			<Typography sx={{ fontSize: "0.72rem", color: active ? "primary.main" : "var(--text-faint)", fontVariantNumeric: "tabular-nums" }}>{count}</Typography>
-		</ButtonBase>
+		<Box onContextMenu={onContextMenu} sx={{ display: "flex", alignItems: "center", mb: 0.25, "&:hover .entry-more": { opacity: 1 } }}>
+			<ButtonBase
+				onClick={onClick}
+				sx={{
+					flex: 1,
+					minWidth: 0,
+					display: "flex",
+					alignItems: "center",
+					gap: 1.25,
+					pl: inTree ? 0.25 + depth * 1.5 : 1.25,
+					pr: 1.25,
+					py: 0.7,
+					borderRadius: 1.5,
+					justifyContent: "flex-start",
+					color: active ? "primary.main" : "text.secondary",
+					bgcolor: active ? "var(--accent-soft)" : "transparent",
+					transition: "background-color 120ms ease, color 120ms ease",
+					"&:hover": { bgcolor: active ? "var(--accent-soft)" : "var(--surface-2)", color: active ? "primary.main" : "text.primary" },
+					"& .MuiSvgIcon-root": { fontSize: 17 },
+				}}
+			>
+				{inTree && (
+					<Box
+						component="span"
+						aria-hidden
+						onClick={(event) => {
+							if (expanded === undefined) return;
+							event.stopPropagation();
+							onToggle?.();
+						}}
+						sx={{
+							display: "flex",
+							mr: -0.75,
+							borderRadius: 1,
+							visibility: expanded === undefined ? "hidden" : "visible",
+							"&:hover": { color: "text.primary" },
+							"& .MuiSvgIcon-root": { fontSize: 16, transform: expanded ? "rotate(90deg)" : "none", transition: "transform 120ms ease" },
+						}}
+					>
+						<ChevronRightRounded />
+					</Box>
+				)}
+				{icon}
+				<Typography noWrap sx={{ flex: 1, fontSize: "0.82rem", fontWeight: active ? 600 : 500, textAlign: "left" }}>
+					{label}
+				</Typography>
+				<Typography sx={{ fontSize: "0.72rem", color: active ? "primary.main" : "var(--text-faint)", fontVariantNumeric: "tabular-nums" }}>{count}</Typography>
+			</ButtonBase>
+			{trailing}
+		</Box>
 	);
 }
