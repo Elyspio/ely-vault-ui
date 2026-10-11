@@ -92,10 +92,12 @@ export function isDraftDirty(initial: ItemDraft, current: ItemDraft): boolean {
 }
 
 /**
- * Client-side mirror of the rules checked by the main process, to show the error before the write
+ * Client-side mirror of the rules checked by the main process, to show the error before the write.
+ * `creating`: a new SSH key item needs its key (an edit keeps the current one when none is given).
  */
-export function draftErrors(draft: ItemDraft): string | null {
+export function draftErrors(draft: ItemDraft, creating: boolean): string | null {
 	if (draft.name.trim() === "") return "The name is required";
+	if (creating && draft.type === CipherType.SshKey && !draft.sshKey) return "Generate, import or paste an SSH key first";
 
 	const totp = draft.login?.totp;
 	if (totp?.kind === "set" && !isValidTotp(totp.value)) return "The TOTP secret is not valid: use a base32 secret, an otpauth://totp uri or a steam:// secret";

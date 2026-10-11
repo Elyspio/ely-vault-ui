@@ -269,8 +269,8 @@ export type ItemDraft = {
 		code?: SecretChange;
 	};
 	identity?: Record<IdentityKey, string | null>;
-	/** Only to create a key or replace it: an unchanged key is not sent */
-	sshKey?: { privateKey: string; publicKey: string; keyFingerprint: string };
+	/** Only to create a key or replace it: token of a key generated or imported by the main process ({@link SshKeyPreview}); an unchanged key is not sent */
+	sshKey?: { token: string };
 };
 
 /**
@@ -296,5 +296,33 @@ export type WriteResult = {
 	snapshot: VaultSnapshot | null;
 	refreshError: string | null;
 };
+
+// endregion
+
+// region SSH keys
+
+/**
+ * Key generated or imported by the main process: the private key never leaves it. The token stands for it in a
+ * draft until the item is saved, and expires after a few minutes.
+ */
+export type SshKeyPreview = {
+	token: string;
+	/** SSH algorithm name, e.g. ssh-ed25519 */
+	keyType: string;
+	/** Public key in OpenSSH format, without comment */
+	publicKey: string;
+	/** SHA-256 fingerprint, as ssh-keygen shows it */
+	keyFingerprint: string;
+};
+
+/** Origin of an SSH key to import: a file chosen in a dialog, text pasted by the user, or a key waiting for its passphrase */
+export type SshKeySource = { kind: "file" } | { kind: "text"; text: string } | { kind: "pending"; token: string };
+
+export type SshImportResult =
+	| { status: "success"; key: SshKeyPreview }
+	/** Encrypted key: the passphrase is asked, then the key is imported again with `{ kind: "pending", token }` */
+	| { status: "passphrase-required"; token: string }
+	| { status: "cancelled" }
+	| { status: "error"; message: string };
 
 // endregion

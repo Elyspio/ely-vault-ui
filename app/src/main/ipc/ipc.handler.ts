@@ -8,6 +8,7 @@ import { VaultModule } from "@main/modules/vault/vault.module";
 import { WindowModule } from "@main/modules/window/window.module";
 import { LogModule } from "@main/modules/log.module";
 import { CertificateModule } from "@main/modules/security/certificate.module";
+import { SshKeyModule } from "@main/modules/vault/ssh.key.module";
 import { BwServeModule } from "@main/modules/bitwarden/bw.serve.module";
 import { AutoTypeModule } from "@main/modules/autotype/autotype.module";
 import { UpdateModule } from "@main/modules/update/update.module";
@@ -110,6 +111,12 @@ const ipcHandlers: IpcHandledEvents = {
 	},
 	async "vault:folder:delete"(_, folderId) {
 		return await mainContainer.get(VaultModule).deleteFolder(folderId);
+	},
+	async "vault:ssh:generate"() {
+		return mainContainer.get(SshKeyModule).generate();
+	},
+	async "vault:ssh:import"(event, source, passphrase) {
+		return await mainContainer.get(SshKeyModule).import(source, passphrase, BrowserWindow.fromWebContents(event.sender));
 	},
 	async "autotype:availability"() {
 		return await mainContainer.get(AutoTypeModule).getAvailability();

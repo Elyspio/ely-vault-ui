@@ -4,6 +4,7 @@ import LoginRounded from "@mui/icons-material/LoginRounded";
 import StickyNote2Rounded from "@mui/icons-material/StickyNote2Rounded";
 import CreditCardRounded from "@mui/icons-material/CreditCardRounded";
 import BadgeRounded from "@mui/icons-material/BadgeRounded";
+import KeyRounded from "@mui/icons-material/KeyRounded";
 import { useAppDispatch, useAppSelector } from "@store";
 import { setNewItemOpen } from "@modules/ui/ui.reducer";
 import { openEditor } from "@modules/vault/vault.reducer";
@@ -13,12 +14,12 @@ import { Kbd } from "@components/shared/Kbd";
 
 type Option = { type: CipherType; label: string; hint: string; key: string; icon: ReactNode };
 
-/** SSH keys are not created yet: they are not offered */
 const options: Option[] = [
 	{ type: CipherType.Login, label: "Login", hint: "Username, password, websites", key: "l", icon: <LoginRounded /> },
 	{ type: CipherType.SecureNote, label: "Secure note", hint: "Free text", key: "n", icon: <StickyNote2Rounded /> },
 	{ type: CipherType.Card, label: "Card", hint: "Payment card", key: "c", icon: <CreditCardRounded /> },
 	{ type: CipherType.Identity, label: "Identity", hint: "Name, address, contact", key: "i", icon: <BadgeRounded /> },
+	{ type: CipherType.SshKey, label: "SSH key", hint: "Ed25519 key generated or imported", key: "s", icon: <KeyRounded /> },
 ];
 
 /**

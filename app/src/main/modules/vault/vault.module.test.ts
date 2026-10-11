@@ -8,6 +8,7 @@ import type { ClipboardModule } from "../security/clipboard.module";
 import type { IpcModule } from "../ipc.module";
 import type { CertificateModule } from "../security/certificate.module";
 import { CipherType, FieldType, type ItemDraft } from "@shared/types/vault.types";
+import { SshKeyModule } from "./ssh.key.module";
 import loginFixture from "./fixtures/login-passkey.json";
 
 // The Electron APIs do not exist outside the application: the module only uses `net` at runtime, not in these tests
@@ -106,6 +107,10 @@ function draftOf(original: BwItem, overrides: Partial<ItemDraft> = {}): ItemDraf
 
 function newLoginDraft(name: string): ItemDraft {
 	return { type: CipherType.Login, name, notes: null, favorite: false, reprompt: false, folderId: null, fields: [], login: { username: "bob", uris: [] } };
+}
+
+function newSshKeyDraft(name: string, sshKey?: { token: string }): ItemDraft {
+	return { type: CipherType.SshKey, name, notes: null, favorite: false, reprompt: false, folderId: null, fields: [], sshKey };
 }
 
 function list<T>(data: T[]) {
@@ -305,6 +310,7 @@ type Harness = {
 	serve: FakeBwServe;
 	clipboard: { copy: ReturnType<typeof vi.fn>; clearIfOwned: ReturnType<typeof vi.fn> };
 	ipc: { sendToMainWindow: ReturnType<typeof vi.fn> };
+	sshKeys: SshKeyModule;
 };
 
 /** Module on top of the fake server, locked. `seed` runs after the default seed and before the unlock */
@@ -315,14 +321,16 @@ async function setup(seed?: (serve: FakeBwServe) => void): Promise<Harness> {
 
 	const clipboard = { copy: vi.fn(async () => undefined), clearIfOwned: vi.fn(async () => undefined) };
 	const ipc = { sendToMainWindow: vi.fn() };
+	const sshKeys = new SshKeyModule();
 	const module = new VaultModule(
 		{} as unknown as BwCliModule,
 		serve as unknown as BwServeModule,
 		clipboard as unknown as ClipboardModule,
 		ipc as unknown as IpcModule,
-		{} as unknown as CertificateModule
+		{} as unknown as CertificateModule,
+		sshKeys
 	);
-	return { module, serve, clipboard, ipc };
+	return { module, serve, clipboard, ipc, sshKeys };
 }
 
 /** Module unlocked like the real flow: the snapshot is loaded by unlock */
@@ -457,6 +465,37 @@ describe("VaultModule writes", () => {
 			const result = await module.createItem(newLoginDraft(""));
 
 			expect(result.outcome).toEqual({ status: "error", message: "The name is required" });
+			expect(serve.callsTo("POST", "/object/item")).toHaveLength(0);
+		});
+
+		it("creates an SSH key item with the held key, and forgets the key once saved", async () => {
+			const { module, serve, sshKeys } = await unlockedSetup();
+			const key = sshKeys.generate();
+
+			const result = await module.createItem(newSshKeyDraft("Deploy", { token: key.token }));
+
+			expect(result.outcome).toEqual({ status: "success", id: "new-1" });
+			const [post] = serve.callsTo("POST", "/object/item");
+			expect(post.body).toMatchObject({ type: CipherType.SshKey, sshKey: { publicKey: key.publicKey, keyFingerprint: key.keyFingerprint } });
+			expect((post.body as { sshKey: { privateKey: string } }).sshKey.privateKey).toMatch(/^-----BEGIN OPENSSH PRIVATE KEY-----/);
+			expect(sshKeys.peek(key.token)).toBeNull();
+		});
+
+		it("refuses an SSH key item whose key is no longer held, without creating anything", async () => {
+			const { module, serve } = await unlockedSetup();
+
+			const result = await module.createItem(newSshKeyDraft("Deploy", { token: "unknown" }));
+
+			expect(result.outcome).toEqual({ status: "error", message: "The SSH key expired, generate or import it again" });
+			expect(serve.callsTo("POST", "/object/item")).toHaveLength(0);
+		});
+
+		it("refuses an SSH key item created without any key", async () => {
+			const { module, serve } = await unlockedSetup();
+
+			const result = await module.createItem(newSshKeyDraft("Deploy"));
+
+			expect(result.outcome).toEqual({ status: "error", message: "An SSH key is required: generate, import or paste one" });
 			expect(serve.callsTo("POST", "/object/item")).toHaveLength(0);
 		});
 	});

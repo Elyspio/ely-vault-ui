@@ -10,6 +10,9 @@ import type {
 	PasswordGeneratorOptions,
 	SecretRef,
 	SessionState,
+	SshImportResult,
+	SshKeyPreview,
+	SshKeySource,
 	ItemDraft,
 	TotpCode,
 	UnlockResult,
@@ -93,6 +96,15 @@ export interface IpcHandledEvents {
 	"vault:folder:rename": (event: IpcMainInvokeEvent, path: string, newPath: string) => Promise<WriteResult>;
 	/** Deletes an empty folder (no active item, no sub folder) */
 	"vault:folder:delete": (event: IpcMainInvokeEvent, folderId: string) => Promise<WriteResult>;
+	/**
+	 * Generates an Ed25519 key; the private key stays in the main process, behind the returned token
+	 */
+	"vault:ssh:generate": (event: IpcMainInvokeEvent) => Promise<SshKeyPreview>;
+	/**
+	 * Converts a key to OpenSSH (unencrypted) in the main process: from a file chosen by the user, pasted text, or a key
+	 * waiting for its passphrase. The passphrase is only used for an encrypted key.
+	 */
+	"vault:ssh:import": (event: IpcMainInvokeEvent, source: SshKeySource, passphrase: string | null) => Promise<SshImportResult>;
 
 	"autotype:availability": (event: IpcMainInvokeEvent) => Promise<AutoTypeAvailability>;
 	/**

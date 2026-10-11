@@ -7,12 +7,15 @@ import { BwServeModule } from "../bitwarden/bw.serve.module";
 import { ClipboardModule } from "../security/clipboard.module";
 import { IpcModule } from "../ipc.module";
 import { CertificateModule } from "../security/certificate.module";
+import { SshKeyModule } from "./ssh.key.module";
+import type { SshKeyMaterial } from "./ssh.keys";
 import { log } from "@main/utils/logs.utils";
 import { BwError, type BwCollection, type BwFolder, type BwItem, type BwList, type BwMessage, type BwOrganization, type BwStatus, type BwString } from "../bitwarden/bw.types";
 import { getPlainValue, getSecretValue, getTotpPeriod, isSecretRef, sanitizeItem } from "./vault.mapper";
 import { generateEncodedSecret } from "./password.generator";
 import { applyDraft, checkFolderDelete, isConflictError, planFolderRename, validateDraft } from "./vault.writer";
 import { folderSegments, joinFolderSegments } from "@shared/vault/folder.path";
+import { CipherType } from "@shared/types/vault.types";
 import type {
 	CopyRef,
 	ItemDraft,
@@ -34,6 +37,9 @@ const REPROMPT_GRACE_MS = 5 * 60 * 1000;
 /** `bw serve` answers a write before its local cache shows it: the reload is retried until the change appears */
 const SETTLE_ATTEMPTS = 10;
 const SETTLE_DELAY_MS = 150;
+
+/** Shown when the SSH key of a draft is no longer held (expired, or the vault was locked) */
+const SSH_KEY_EXPIRED = "The SSH key expired, generate or import it again";
 
 /** Whether a reloaded snapshot already shows a successful write (`done`: ids written) */
 type Settled = (snapshot: VaultSnapshot, done: string[]) => boolean;
@@ -67,7 +73,8 @@ export class VaultModule extends LogModule {
 		@inject(BwServeModule) private readonly bwServeModule: BwServeModule,
 		@inject(ClipboardModule) private readonly clipboardModule: ClipboardModule,
 		@inject(IpcModule) private readonly ipcModule: IpcModule,
-		@inject(CertificateModule) private readonly certificateModule: CertificateModule
+		@inject(CertificateModule) private readonly certificateModule: CertificateModule,
+		@inject(SshKeyModule) private readonly sshKeyModule: SshKeyModule
 	) {
 		super("VaultModule");
 	}
@@ -207,6 +214,7 @@ export class VaultModule extends LogModule {
 		this.snapshot = null;
 		this.repromptVerifier = null;
 		this.repromptValidUntil = 0;
+		this.sshKeyModule.clear();
 	}
 
 	// endregion
@@ -436,6 +444,22 @@ export class VaultModule extends LogModule {
 	}
 
 	/**
+	 * Key of a draft: null when the draft keeps the current key, the held key when it replaces it, an error when its token is gone
+	 */
+	private draftKey(draft: ItemDraft): { key: SshKeyMaterial | null } | { status: "error"; message: string } {
+		if (draft.type !== CipherType.SshKey || !draft.sshKey) return { key: null };
+		const key = this.sshKeyModule.peek(draft.sshKey.token);
+		return key ? { key } : { status: "error", message: SSH_KEY_EXPIRED };
+	}
+
+	/**
+	 * Forgets the key of a draft once its item is saved
+	 */
+	private consumeKey(draft: ItemDraft) {
+		if (draft.type === CipherType.SshKey && draft.sshKey) this.sshKeyModule.take(draft.sshKey.token);
+	}
+
+	/**
 	 * Fresh raw item from the server (the cached copy may be older than the server's)
 	 */
 	private async fetchItem(id: string): Promise<BwItem> {
@@ -452,10 +476,14 @@ export class VaultModule extends LogModule {
 	@log("info")
 	public async createItem(draft: ItemDraft): Promise<WriteResult> {
 		return this.write(async () => {
-			const error = validateDraft(null, draft);
+			const key = this.draftKey(draft);
+			if ("status" in key) return key;
+
+			const error = validateDraft(null, draft, key.key);
 			if (error) return { status: "error", message: error };
 
-			const created = await this.bwServeModule.request<BwItem>("POST", "/object/item", applyDraft(null, draft));
+			const created = await this.bwServeModule.request<BwItem>("POST", "/object/item", applyDraft(null, draft, key.key));
+			this.consumeKey(draft);
 			return { status: "success", id: created.id };
 		}, hasItems);
 	}
@@ -473,17 +501,21 @@ export class VaultModule extends LogModule {
 				const fresh = await this.fetchItem(itemId);
 				if (fresh.revisionDate !== expectedRevision) return { status: "conflict" };
 
-				const error = validateDraft(fresh, draft);
+				const key = this.draftKey(draft);
+				if ("status" in key) return key;
+
+				const error = validateDraft(fresh, draft, key.key);
 				if (error) return { status: "error", message: error };
 
 				try {
-					revision = (await this.bwServeModule.request<BwItem>("PUT", `/object/item/${encodeURIComponent(itemId)}`, applyDraft(fresh, draft))).revisionDate;
+					revision = (await this.bwServeModule.request<BwItem>("PUT", `/object/item/${encodeURIComponent(itemId)}`, applyDraft(fresh, draft, key.key))).revisionDate;
 				} catch (writeError) {
 					if (!isConflictError(errorMessage(writeError))) throw writeError;
 					// The server has a newer copy: resync so the reload shows it
 					await this.bwServeModule.request<BwMessage>("POST", "/sync");
 					return { status: "conflict" };
 				}
+				this.consumeKey(draft);
 				return { status: "success", id: itemId };
 			},
 			// The folder and favorite are checked too: the server may answer with their previous values

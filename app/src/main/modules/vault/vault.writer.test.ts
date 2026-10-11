@@ -7,11 +7,15 @@ import orgFixture from "./fixtures/org-redacted.json";
 import cardFixture from "./fixtures/card.json";
 import sshFixture from "./fixtures/ssh-key.json";
 import noteFixture from "./fixtures/secure-note.json";
+import type { SshKeyMaterial } from "./ssh.keys";
 
 /** Fresh copy of a fixture, typed as the decrypted item returned by `bw serve` */
 function item(json: unknown): BwItem {
 	return structuredClone(json) as BwItem;
 }
+
+/** Key the main process holds for a draft (its token is what the renderer sends) */
+const NEW_KEY: SshKeyMaterial = { privateKey: "PRIVATE", publicKey: "ssh-ed25519 NEW", keyFingerprint: "SHA256:new", keyType: "ssh-ed25519" };
 
 /** Draft the renderer would send for an unchanged item: secrets are absent, hidden values are unknown */
 function draftOf(original: BwItem): ItemDraft {
@@ -72,7 +76,7 @@ const folders: BwFolder[] = [
 describe("applyDraft on edit", () => {
 	it("keeps the properties the app does not manage (passkeys, keys, history, linked fields)", () => {
 		const original = item(loginFixture);
-		const body = applyDraft(original, { ...draftOf(original), name: "GitHub work" });
+		const body = applyDraft(original, { ...draftOf(original), name: "GitHub work" }, null);
 
 		expect(body.login).toMatchObject({ fido2Credentials: original.login!.fido2Credentials, passwordRevisionDate: "2026-09-01T10:00:00.000Z" });
 		expect(body.passwordHistory).toEqual(original.passwordHistory);
@@ -91,7 +95,8 @@ describe("applyDraft on edit", () => {
 		const original = item(loginFixture);
 		const body = applyDraft(
 			original,
-			draftWith({ type: CipherType.Login, name: "  GitHub work  ", notes: "", favorite: false, reprompt: false, folderId: "3a4b5c6d-0000-4000-8000-000000000002" })
+			draftWith({ type: CipherType.Login, name: "  GitHub work  ", notes: "", favorite: false, reprompt: false, folderId: "3a4b5c6d-0000-4000-8000-000000000002" }),
+			null
 		);
 
 		expect(body).toMatchObject({ name: "GitHub work", notes: null, favorite: false, reprompt: 0, folderId: "3a4b5c6d-0000-4000-8000-000000000002" });
@@ -99,15 +104,15 @@ describe("applyDraft on edit", () => {
 
 	it("keeps the secrets when the draft does not change them", () => {
 		const original = item(loginFixture);
-		const body = applyDraft(original, draftOf(original));
+		const body = applyDraft(original, draftOf(original), null);
 
 		expect(body.login).toMatchObject({ password: "hunter2-password", totp: "JBSWY3DPEHPK3PXP" });
 	});
 
 	it("sets and clears secrets", () => {
 		const original = item(loginFixture);
-		const set = applyDraft(original, { ...draftOf(original), login: { username: "octocat", uris: [], password: { kind: "set", value: "new-pass" } } });
-		const cleared = applyDraft(original, { ...draftOf(original), login: { username: "octocat", uris: [], totp: { kind: "clear" } } });
+		const set = applyDraft(original, { ...draftOf(original), login: { username: "octocat", uris: [], password: { kind: "set", value: "new-pass" } } }, null);
+		const cleared = applyDraft(original, { ...draftOf(original), login: { username: "octocat", uris: [], totp: { kind: "clear" } } }, null);
 
 		expect(set.login).toMatchObject({ password: "new-pass", totp: "JBSWY3DPEHPK3PXP" });
 		expect(cleared.login).toMatchObject({ password: "hunter2-password", totp: null });
@@ -115,17 +120,21 @@ describe("applyDraft on edit", () => {
 
 	it("keeps the uri match and drops the empty uris", () => {
 		const original = item(loginFixture);
-		const body = applyDraft(original, {
-			...draftOf(original),
-			login: {
-				username: "octocat",
-				uris: [
-					{ uri: "  https://github.com/login ", match: 0 },
-					{ uri: "   ", match: 3 },
-					{ uri: "https://gist.github.com/", match: 3 },
-				],
+		const body = applyDraft(
+			original,
+			{
+				...draftOf(original),
+				login: {
+					username: "octocat",
+					uris: [
+						{ uri: "  https://github.com/login ", match: 0 },
+						{ uri: "   ", match: 3 },
+						{ uri: "https://gist.github.com/", match: 3 },
+					],
+				},
 			},
-		});
+			null
+		);
 
 		expect(body.login).toMatchObject({
 			uris: [
@@ -137,21 +146,25 @@ describe("applyDraft on edit", () => {
 
 	it("turns an empty username into null", () => {
 		const original = item(loginFixture);
-		const body = applyDraft(original, { ...draftOf(original), login: { username: "", uris: [] } });
+		const body = applyDraft(original, { ...draftOf(original), login: { username: "", uris: [] } }, null);
 
 		expect(body.login).toMatchObject({ username: null });
 	});
 
 	it("rebuilds the fields in draft order: reorder, remove and add", () => {
 		const original = item(loginFixture);
-		const body = applyDraft(original, {
-			...draftOf(original),
-			fields: [
-				{ originalIndex: 1, name: "Account", type: FieldType.Text, value: "octocat2" },
-				{ originalIndex: null, name: "Note", type: FieldType.Text, value: "x" },
-				{ originalIndex: 0, name: "Recovery code", type: FieldType.Hidden },
-			],
-		});
+		const body = applyDraft(
+			original,
+			{
+				...draftOf(original),
+				fields: [
+					{ originalIndex: 1, name: "Account", type: FieldType.Text, value: "octocat2" },
+					{ originalIndex: null, name: "Note", type: FieldType.Text, value: "x" },
+					{ originalIndex: 0, name: "Recovery code", type: FieldType.Hidden },
+				],
+			},
+			null
+		);
 
 		expect(body.fields).toEqual([
 			{ name: "Account", type: FieldType.Text, value: "octocat2", linkedId: null },
@@ -162,14 +175,18 @@ describe("applyDraft on edit", () => {
 
 	it("sets, clears or keeps hidden field values", () => {
 		const original = item(loginFixture);
-		const body = applyDraft(original, {
-			...draftOf(original),
-			fields: [
-				{ originalIndex: 0, name: "Recovery code", type: FieldType.Hidden, secret: { kind: "clear" } },
-				{ originalIndex: null, name: "PIN", type: FieldType.Hidden, secret: { kind: "set", value: "0000" } },
-				{ originalIndex: null, name: "Empty PIN", type: FieldType.Hidden },
-			],
-		});
+		const body = applyDraft(
+			original,
+			{
+				...draftOf(original),
+				fields: [
+					{ originalIndex: 0, name: "Recovery code", type: FieldType.Hidden, secret: { kind: "clear" } },
+					{ originalIndex: null, name: "PIN", type: FieldType.Hidden, secret: { kind: "set", value: "0000" } },
+					{ originalIndex: null, name: "Empty PIN", type: FieldType.Hidden },
+				],
+			},
+			null
+		);
 
 		expect(body.fields).toEqual([
 			{ name: "Recovery code", type: FieldType.Hidden, value: null, linkedId: null },
@@ -180,21 +197,22 @@ describe("applyDraft on edit", () => {
 
 	it("keeps a linked field value and link when its name changes", () => {
 		const original = item(loginFixture);
-		const body = applyDraft(original, {
-			...draftOf(original),
-			fields: [{ originalIndex: 2, name: "Login name", type: FieldType.Linked }],
-		});
+		const body = applyDraft(
+			original,
+			{
+				...draftOf(original),
+				fields: [{ originalIndex: 2, name: "Login name", type: FieldType.Linked }],
+			},
+			null
+		);
 
 		expect(body.fields).toEqual([{ name: "Login name", type: FieldType.Linked, value: null, linkedId: 100 }]);
 	});
 
 	it("keeps the SSH key on a name-only edit and replaces it when the draft provides one", () => {
 		const original = item(sshFixture);
-		const renamed = applyDraft(original, { ...draftOf(original), name: "Deploy key 2" });
-		const replaced = applyDraft(original, {
-			...draftOf(original),
-			sshKey: { privateKey: "PRIVATE", publicKey: "ssh-ed25519 NEW", keyFingerprint: "SHA256:new" },
-		});
+		const renamed = applyDraft(original, { ...draftOf(original), name: "Deploy key 2" }, null);
+		const replaced = applyDraft(original, draftOf(original), NEW_KEY);
 
 		expect(renamed.sshKey).toEqual(original.sshKey);
 		expect(replaced.sshKey).toEqual({ privateKey: "PRIVATE", publicKey: "ssh-ed25519 NEW", keyFingerprint: "SHA256:new" });
@@ -202,10 +220,14 @@ describe("applyDraft on edit", () => {
 
 	it("updates a card: an absent number is kept, a code is replaced", () => {
 		const original = item(cardFixture);
-		const body = applyDraft(original, {
-			...draftOf(original),
-			card: { cardholderName: "JEAN", brand: "", expMonth: "08", expYear: "2030", code: { kind: "set", value: "999" } },
-		});
+		const body = applyDraft(
+			original,
+			{
+				...draftOf(original),
+				card: { cardholderName: "JEAN", brand: "", expMonth: "08", expYear: "2030", code: { kind: "set", value: "999" } },
+			},
+			null
+		);
 
 		expect(body.card).toEqual({
 			cardholderName: "JEAN",
@@ -219,19 +241,23 @@ describe("applyDraft on edit", () => {
 
 	it("merges the identity draft over the original identity and keeps unknown keys", () => {
 		const original = item({ ...noteFixture, type: CipherType.Identity, identity: { firstName: "Jean", lastName: "Dupont", ssn: "123", extra: "kept" } });
-		const body = applyDraft(original, {
-			...draftOf(original),
-			type: CipherType.Identity,
-			login: undefined,
-			identity: { firstName: "Jeanne", lastName: "", email: "j@example.com" } as ItemDraft["identity"],
-		});
+		const body = applyDraft(
+			original,
+			{
+				...draftOf(original),
+				type: CipherType.Identity,
+				login: undefined,
+				identity: { firstName: "Jeanne", lastName: "", email: "j@example.com" } as ItemDraft["identity"],
+			},
+			null
+		);
 
 		expect(body.identity).toEqual({ firstName: "Jeanne", lastName: null, ssn: "123", extra: "kept", email: "j@example.com" });
 	});
 
 	it("keeps the original section when the draft has none for the item type", () => {
 		const original = item(cardFixture);
-		const body = applyDraft(original, { ...draftOf(original), card: undefined });
+		const body = applyDraft(original, { ...draftOf(original), card: undefined }, null);
 
 		expect(body.card).toEqual(original.card);
 	});
@@ -248,7 +274,8 @@ describe("applyDraft on create", () => {
 				favorite: true,
 				reprompt: true,
 				login: { username: "", uris: [{ uri: "https://example.com", match: null }] },
-			})
+			}),
+			null
 		);
 
 		expect(body).toEqual({
@@ -272,7 +299,7 @@ describe("applyDraft on create", () => {
 	});
 
 	it("builds a secure note with its section", () => {
-		const body = applyDraft(null, draftWith({ type: CipherType.SecureNote, name: "Note", login: undefined, notes: "Text" }));
+		const body = applyDraft(null, draftWith({ type: CipherType.SecureNote, name: "Note", login: undefined, notes: "Text" }), null);
 
 		expect(body).toMatchObject({ type: CipherType.SecureNote, notes: "Text", secureNote: { type: 0 } });
 		expect(body.login).toBeUndefined();
@@ -285,33 +312,27 @@ describe("applyDraft on create", () => {
 				type: CipherType.Card,
 				login: undefined,
 				card: { cardholderName: "JEAN", brand: "Visa", expMonth: "08", expYear: "2029", number: { kind: "set", value: "4111111111111111" } },
-			})
+			}),
+			null
 		);
 
 		expect(body.card).toEqual({ cardholderName: "JEAN", brand: "Visa", expMonth: "08", expYear: "2029", number: "4111111111111111", code: null });
 	});
 
 	it("builds an identity with empty values as null", () => {
-		const body = applyDraft(null, draftWith({ type: CipherType.Identity, login: undefined, identity: { firstName: "Jean", lastName: "" } as ItemDraft["identity"] }));
+		const body = applyDraft(null, draftWith({ type: CipherType.Identity, login: undefined, identity: { firstName: "Jean", lastName: "" } as ItemDraft["identity"] }), null);
 
 		expect(body.identity).toMatchObject({ firstName: "Jean", lastName: null, title: null, email: null });
 	});
 
 	it("builds an SSH key with its three values", () => {
-		const body = applyDraft(
-			null,
-			draftWith({
-				type: CipherType.SshKey,
-				login: undefined,
-				sshKey: { privateKey: "PRIVATE", publicKey: "ssh-ed25519 AAAA", keyFingerprint: "SHA256:abc" },
-			})
-		);
+		const body = applyDraft(null, draftWith({ type: CipherType.SshKey, login: undefined }), NEW_KEY);
 
-		expect(body.sshKey).toEqual({ privateKey: "PRIVATE", publicKey: "ssh-ed25519 AAAA", keyFingerprint: "SHA256:abc" });
+		expect(body.sshKey).toEqual({ privateKey: "PRIVATE", publicKey: "ssh-ed25519 NEW", keyFingerprint: "SHA256:new" });
 	});
 
 	it("creates new hidden fields with their secret", () => {
-		const body = applyDraft(null, draftWith({ fields: [{ originalIndex: null, name: "PIN", type: FieldType.Hidden, secret: { kind: "set", value: "1234" } }] }));
+		const body = applyDraft(null, draftWith({ fields: [{ originalIndex: null, name: "PIN", type: FieldType.Hidden, secret: { kind: "set", value: "1234" } }] }), null);
 
 		expect(body.fields).toEqual([{ name: "PIN", type: FieldType.Hidden, value: "1234", linkedId: null }]);
 	});
@@ -320,54 +341,57 @@ describe("applyDraft on create", () => {
 describe("validateDraft", () => {
 	it("accepts an unchanged item", () => {
 		const original = item(loginFixture);
-		expect(validateDraft(original, draftOf(original))).toBeNull();
+		expect(validateDraft(original, draftOf(original), null)).toBeNull();
 	});
 
 	it("refuses an empty name", () => {
-		expect(validateDraft(null, draftWith({ name: "   " }))).toBe("The name is required");
+		expect(validateDraft(null, draftWith({ name: "   " }), null)).toBe("The name is required");
 	});
 
 	it("refuses an unknown type on create", () => {
-		expect(validateDraft(null, draftWith({ type: 6 as CipherType }))).toBe("Unsupported item type");
+		expect(validateDraft(null, draftWith({ type: 6 as CipherType }), null)).toBe("Unsupported item type");
 	});
 
-	it("requires the three SSH key values on create", () => {
-		expect(validateDraft(null, draftWith({ type: CipherType.SshKey, login: undefined }))).toBe("An SSH key needs a private key, a public key and a fingerprint");
-		expect(validateDraft(null, draftWith({ type: CipherType.SshKey, login: undefined, sshKey: { privateKey: "a", publicKey: " ", keyFingerprint: "c" } }))).toBe(
-			"An SSH key needs a private key, a public key and a fingerprint"
-		);
+	it("requires a key on create, and accepts one", () => {
+		const draft = draftWith({ type: CipherType.SshKey, login: undefined });
+		expect(validateDraft(null, draft, null)).toBe("An SSH key is required: generate, import or paste one");
+		expect(validateDraft(null, draft, NEW_KEY)).toBeNull();
 	});
 
 	it("refuses to edit an item of another type than 1 to 5", () => {
 		const original = { ...item(loginFixture), type: 6 };
-		expect(validateDraft(original, draftOf(original))).toBe("This item type cannot be edited");
+		expect(validateDraft(original, draftOf(original), null)).toBe("This item type cannot be edited");
 	});
 
 	it("refuses a type change", () => {
 		const original = item(loginFixture);
-		expect(validateDraft(original, { ...draftOf(original), type: CipherType.SecureNote })).toBe("The item type cannot change");
+		expect(validateDraft(original, { ...draftOf(original), type: CipherType.SecureNote }, null)).toBe("The item type cannot change");
 	});
 
 	it("refuses to edit a deleted item", () => {
 		const original = { ...item(loginFixture), deletedDate: "2026-10-09T08:00:00.000Z" };
-		expect(validateDraft(original, draftOf(original))).toBe("Restore the item before editing it");
+		expect(validateDraft(original, draftOf(original), null)).toBe("Restore the item before editing it");
 	});
 
 	it("refuses unknown or duplicated original field indexes", () => {
 		const original = item(loginFixture);
 		const draft = draftOf(original);
 
-		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: 7, name: "x", type: FieldType.Text, value: "" }] })).toBe(
+		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: 7, name: "x", type: FieldType.Text, value: "" }] }, null)).toBe(
 			"A custom field refers to a field that does not exist"
 		);
 		expect(
-			validateDraft(original, {
-				...draft,
-				fields: [
-					{ originalIndex: 1, name: "Account", type: FieldType.Text, value: "a" },
-					{ originalIndex: 1, name: "Copy", type: FieldType.Text, value: "a" },
-				],
-			})
+			validateDraft(
+				original,
+				{
+					...draft,
+					fields: [
+						{ originalIndex: 1, name: "Account", type: FieldType.Text, value: "a" },
+						{ originalIndex: 1, name: "Copy", type: FieldType.Text, value: "a" },
+					],
+				},
+				null
+			)
 		).toBe("A custom field is listed more than once");
 	});
 
@@ -375,8 +399,10 @@ describe("validateDraft", () => {
 		const original = item(loginFixture);
 		const draft = draftOf(original);
 
-		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: null, name: "Link", type: FieldType.Linked }] })).toBe("Linked fields cannot be created");
-		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: 2, name: "Username", type: FieldType.Text, value: "" }] })).toBe("Linked fields keep their type");
+		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: null, name: "Link", type: FieldType.Linked }] }, null)).toBe("Linked fields cannot be created");
+		expect(validateDraft(original, { ...draft, fields: [{ originalIndex: 2, name: "Username", type: FieldType.Text, value: "" }] }, null)).toBe(
+			"Linked fields keep their type"
+		);
 	});
 
 	it("validates the TOTP secret", () => {
@@ -384,10 +410,10 @@ describe("validateDraft", () => {
 		const draft = draftOf(original);
 		const withTotp = (value: string) => ({ ...draft, login: { username: "octocat", uris: [], totp: { kind: "set" as const, value } } });
 
-		expect(validateDraft(original, withTotp("not a secret!"))).toBe("Invalid TOTP secret");
-		expect(validateDraft(original, withTotp("otpauth://hotp/x?secret=JBSWY3DPEHPK3PXP&counter=1"))).toBe("Invalid TOTP secret");
-		expect(validateDraft(original, withTotp("JBSWY3DPEHPK3PXP"))).toBeNull();
-		expect(validateDraft(original, { ...draft, login: { username: "octocat", uris: [], totp: { kind: "clear" } } })).toBeNull();
+		expect(validateDraft(original, withTotp("not a secret!"), null)).toBe("Invalid TOTP secret");
+		expect(validateDraft(original, withTotp("otpauth://hotp/x?secret=JBSWY3DPEHPK3PXP&counter=1"), null)).toBe("Invalid TOTP secret");
+		expect(validateDraft(original, withTotp("JBSWY3DPEHPK3PXP"), null)).toBeNull();
+		expect(validateDraft(original, { ...draft, login: { username: "octocat", uris: [], totp: { kind: "clear" } } }, null)).toBeNull();
 	});
 
 	describe("redacted organization items", () => {
@@ -396,50 +422,50 @@ describe("validateDraft", () => {
 		const draft = draftOf(original);
 
 		it("accepts the draft as is", () => {
-			expect(validateDraft(original, draft)).toBeNull();
+			expect(validateDraft(original, draft, null)).toBeNull();
 		});
 
 		it("refuses to rename a redacted hidden field", () => {
 			const fields = [...draft.fields];
 			fields[0] = { ...fields[0], name: "Pin code" };
 
-			expect(validateDraft(original, { ...draft, fields })).toMatch(/Hidden fields protected by the organization/);
+			expect(validateDraft(original, { ...draft, fields }, null)).toMatch(/Hidden fields protected by the organization/);
 		});
 
 		it("refuses to remove a redacted hidden field", () => {
-			expect(validateDraft(original, { ...draft, fields: draft.fields.filter((field) => field.originalIndex !== 3) })).toMatch(/Hidden fields protected/);
+			expect(validateDraft(original, { ...draft, fields: draft.fields.filter((field) => field.originalIndex !== 3) }, null)).toMatch(/Hidden fields protected/);
 		});
 
 		it("refuses to reorder same-named redacted fields", () => {
 			const swapped = [draft.fields[2], draft.fields[1], draft.fields[0], draft.fields[3]];
 
-			expect(validateDraft(original, { ...draft, fields: swapped })).toMatch(/Hidden fields protected/);
+			expect(validateDraft(original, { ...draft, fields: swapped }, null)).toMatch(/Hidden fields protected/);
 		});
 
 		it("allows reordering unrelated fields", () => {
 			const reordered = [draft.fields[1], draft.fields[0], draft.fields[2], draft.fields[3]];
 
-			expect(validateDraft(original, { ...draft, fields: reordered })).toBeNull();
+			expect(validateDraft(original, { ...draft, fields: reordered }, null)).toBeNull();
 		});
 
 		it("allows changing the value of a redacted field without same-named fields", () => {
 			const fields = [...draft.fields];
 			fields[3] = { ...fields[3], secret: { kind: "set", value: "new-token" } };
 
-			expect(validateDraft(original, { ...draft, fields })).toBeNull();
+			expect(validateDraft(original, { ...draft, fields }, null)).toBeNull();
 		});
 
 		it("refuses a value change on one of several same-named redacted fields", () => {
 			const fields = [...draft.fields];
 			fields[0] = { ...fields[0], secret: { kind: "set", value: "4242" } };
 
-			expect(validateDraft(original, { ...draft, fields })).toMatch(/Hidden fields protected/);
+			expect(validateDraft(original, { ...draft, fields }, null)).toMatch(/Hidden fields protected/);
 		});
 
 		it("refuses a new field named like a redacted field", () => {
 			const fields = [...draft.fields, { originalIndex: null, name: "Token", type: FieldType.Hidden }];
 
-			expect(validateDraft(original, { ...draft, fields })).toMatch(/Hidden fields protected/);
+			expect(validateDraft(original, { ...draft, fields }, null)).toMatch(/Hidden fields protected/);
 		});
 
 		it("does not apply the guard to personal items", () => {
@@ -448,7 +474,7 @@ describe("validateDraft", () => {
 			const fields = [...draftPersonal.fields];
 			fields[0] = { ...fields[0], name: "Renamed" };
 
-			expect(validateDraft(personal, { ...draftPersonal, fields })).toBeNull();
+			expect(validateDraft(personal, { ...draftPersonal, fields }, null)).toBeNull();
 		});
 	});
 });

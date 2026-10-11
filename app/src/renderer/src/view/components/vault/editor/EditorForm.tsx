@@ -12,7 +12,7 @@ import { EditorHeader } from "./EditorHeader";
 import { LoginFields } from "./LoginFields";
 import { CardFields } from "./CardFields";
 import { IdentityFields } from "./IdentityFields";
-import { SshKeyInfo } from "./SshKeyInfo";
+import { SshKeySection } from "./SshKeySection";
 import { CustomFields } from "./CustomFields";
 import { EditorSection } from "./EditorSection";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
@@ -46,7 +46,7 @@ export function EditorForm({ item, initial }: Readonly<Props>) {
 
 	const save = async () => {
 		if (savingRef.current) return;
-		const message = draftErrors(draft);
+		const message = draftErrors(draft, item === null);
 		if (message) {
 			setError(message);
 			return;
@@ -147,7 +147,7 @@ export function EditorForm({ item, initial }: Readonly<Props>) {
 					{type === CipherType.Login && <LoginFields draft={draft} setDraft={setDraft} item={item} />}
 					{type === CipherType.Card && <CardFields draft={draft} setDraft={setDraft} item={item} />}
 					{type === CipherType.Identity && <IdentityFields draft={draft} setDraft={setDraft} />}
-					{type === CipherType.SshKey && item && <SshKeyInfo item={item} />}
+					{type === CipherType.SshKey && <SshKeySection item={item} setDraft={setDraft} />}
 
 					<EditorSection title="Notes">
 						<TextField

@@ -98,18 +98,27 @@ describe("isDraftDirty", () => {
 
 describe("draftErrors", () => {
 	it("requires a name", () => {
-		expect(draftErrors({ ...itemToDraft(loginItem), name: "   " })).toBe("The name is required");
+		expect(draftErrors({ ...itemToDraft(loginItem), name: "   " }, false)).toBe("The name is required");
 	});
 
 	it("rejects an invalid TOTP and accepts a valid one", () => {
 		const draft = itemToDraft(loginItem);
-		expect(draftErrors({ ...draft, login: { ...draft.login!, totp: { kind: "set", value: "not base32!" } } })).not.toBeNull();
-		expect(draftErrors({ ...draft, login: { ...draft.login!, totp: { kind: "set", value: "JBSWY3DPEHPK3PXP" } } })).toBeNull();
-		expect(draftErrors({ ...draft, login: { ...draft.login!, totp: { kind: "clear" } } })).toBeNull();
+		expect(draftErrors({ ...draft, login: { ...draft.login!, totp: { kind: "set", value: "not base32!" } } }, false)).not.toBeNull();
+		expect(draftErrors({ ...draft, login: { ...draft.login!, totp: { kind: "set", value: "JBSWY3DPEHPK3PXP" } } }, false)).toBeNull();
+		expect(draftErrors({ ...draft, login: { ...draft.login!, totp: { kind: "clear" } } }, false)).toBeNull();
 	});
 
 	it("accepts a valid draft", () => {
-		expect(draftErrors(itemToDraft(loginItem))).toBeNull();
+		expect(draftErrors(itemToDraft(loginItem), false)).toBeNull();
+	});
+
+	it("requires a key to create an SSH key item, not to edit one", () => {
+		const sshDraft = emptyDraft(CipherType.SshKey, { folderId: null, favorite: false });
+		const named = { ...sshDraft, name: "Deploy" };
+
+		expect(draftErrors(named, true)).toBe("Generate, import or paste an SSH key first");
+		expect(draftErrors({ ...named, sshKey: { token: "t" } }, true)).toBeNull();
+		expect(draftErrors(named, false)).toBeNull();
 	});
 });
 
