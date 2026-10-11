@@ -10,6 +10,7 @@ Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1─
 - The Bitwarden CLI runs with the Electron binary in Node mode (`ELECTRON_RUN_AS_NODE`): no `bw` installation needed.
 - Its data (encrypted vault, tokens) is isolated in `%LOCALAPPDATA%/elyvault/bitwarden`, separate from a global installation.
 - Login: `bw login` (password passed through an environment variable, never as an argument), then `bw serve` on `127.0.0.1` with a random port, unlocked through `POST /unlock`.
+- After each successful unlock (master password or Windows Hello), the vault syncs before loading its snapshot. If sync fails, the CLI cache remains available for offline use.
 
 ### Write flow
 

@@ -112,5 +112,7 @@ App folder: `%LOCALAPPDATA%/elyvault` (Linux: Electron `appData`), see `MainCont
 - Before squashing any PR, publish a development prerelease with `pnpm release:dev` from a dedicated `git worktree` of the clean, pushed PR branch. Add a comment to the open PR with the release URL and validation results, then wait for the user's final approval. Do not squash/merge the PR or create a stable/beta release before that approval. Changes after validation require a new development build for approval.
 - After final approval, squash/merge the approved PR, bump the version through a `chore: release vX.Y.Z` PR as needed, and create the real release from up to date `main`. Add its URL to each merged PR included in the release (`gh pr comment <PR#> --body "Released in <release URL>"`).
 
+- After squashing/merging a PR, you MUST remove its associated worktree, fetch the latest `main`, and rebase the main worktree onto `origin/main`.
+
 - No `Co-Authored-By` trailer (nor any AI attribution line such as "Generated with Claude Code") in commit messages, PR descriptions or squash merge messages.
 - Release notes come from the squash merge commit of the PR: keep them free of these attribution lines too (pass an explicit `--body` to `gh pr merge --squash` when the branch commits carry trailers).

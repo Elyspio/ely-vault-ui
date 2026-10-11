@@ -353,6 +353,51 @@ function putRoutes(serve: FakeBwServe) {
 	return serve.calls.filter((call) => call.method === "PUT").map((call) => call.route);
 }
 
+describe("VaultModule unlock", () => {
+	it("syncs after unlocking and before loading the snapshot", async () => {
+		const { module, serve } = await setup();
+		const gate = serve.hold("POST", "/sync");
+		const pending = module.unlock(PASSWORD);
+		await vi.waitFor(() => expect(serve.callsTo("POST", "/sync")).toHaveLength(1));
+		expect(serve.callsTo("POST", "/unlock")).toHaveLength(1);
+		expect(serve.callsTo("GET", "/list/object/items")).toHaveLength(0);
+		serve.items.set("remote-item", plainItem("remote-item"));
+		gate.open();
+		expect(await pending).toEqual({ status: "success" });
+		const snapshot = await module.getSnapshot();
+		expect(snapshot.items.some((item) => item.id === "remote-item")).toBe(true);
+		expect(snapshot.lastSync).not.toBeNull();
+	});
+
+	it("loads cached items when the sync fails", async () => {
+		const { module, serve } = await setup();
+		serve.failOnce("POST", "/sync", "Server unreachable.");
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
+		expect(module.isUnlocked).toBe(true);
+		expect((await module.getSnapshot()).items.some((item) => item.id === "plain-1")).toBe(true);
+	});
+
+	it("does not sync when the password is invalid", async () => {
+		const { module, serve } = await setup();
+		expect(await module.unlock("wrong-password")).toMatchObject({ status: "error" });
+		expect(serve.callsTo("POST", "/sync")).toHaveLength(0);
+		expect(module.isUnlocked).toBe(false);
+	});
+
+	it("discards an unlock snapshot when locked during sync", async () => {
+		const { module, serve } = await setup();
+		const gate = serve.hold("POST", "/sync");
+		const pending = module.unlock(PASSWORD);
+		const rejected = expect(pending).rejects.toBeDefined();
+		await vi.waitFor(() => expect(serve.callsTo("POST", "/sync")).toHaveLength(1));
+		await module.lock();
+		gate.open();
+		await rejected;
+		expect(module.isUnlocked).toBe(false);
+		expect(module.verifyReprompt(PASSWORD)).toBe(false);
+	});
+});
+
 describe("VaultModule writes", () => {
 	describe("updateItem", () => {
 		it("sends the full item with the draft applied, keeping passkeys, history and linked fields", async () => {
