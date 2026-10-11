@@ -17,6 +17,7 @@ import { validateAutoTypeSequence } from "@shared/autotype/autotype.sequence";
 import { useAutoTypeAvailability } from "@hooks/useAutoType";
 import { formatDateTime } from "@view/utils/date.utils";
 import { CertificatesSection } from "./CertificatesSection";
+import { HelloUnlockSetting } from "./HelloUnlockSetting";
 import { UpdatesSection } from "./UpdatesSection";
 import { selectPendingUpdate } from "@modules/update/update.selectors";
 import { useDialogFocus } from "@hooks/useDialogFocus";
@@ -166,6 +167,13 @@ export function SettingsDialog() {
 										onChange={(_, checked) => update((c) => ({ ...c, security: { ...c.security, lockOnSystemLock: checked } }))}
 									/>
 								</Setting>
+								<HelloUnlockSetting
+									render={(control) => (
+										<Setting label="Unlock with Windows Hello" description="Face, fingerprint or PIN instead of the master password">
+											{control}
+										</Setting>
+									)}
+								/>
 								<Setting label="Clear the clipboard" description="After copying a value, if it is still there">
 									<Select
 										size="small"

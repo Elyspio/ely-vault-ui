@@ -55,7 +55,7 @@ Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1─
   - `totp.qr.ts` / `totp.qr.module.ts`: TOTP secret read from a screenshot in the clipboard (jsQR); only a valid TOTP value is returned.
   - `VaultModule` runs writes and syncs one after the other (promise queue) and discards a result when the session generation changed (lock, logout).
 - `update/` — `UpdateModule`: auto update from the GitHub releases (`electron-updater`): checks at startup then hourly (setting `updates.autoCheck`), downloads newer releases, installs on restart or quit; update channel `updates.channel` (`stable` / `beta` / `dev`, flow dev → beta → stable: `release.provider.ts`, a custom electron-updater provider on the GitHub releases, takes the highest version among the channel and the more stable ones) and user-confirmed downgrade when the channel's newest version is older. Locks the vault and stops `bw serve` before `quitAndInstall`. Dev builds check through `dev-app-update.yml` and never install.
-- `security/` — auto-lock, clipboard (auto-clear, excluded from Windows history/cloud clipboard), certificate review/approval of private CAs.
+- `security/` — auto-lock, clipboard (auto-clear, excluded from Windows history/cloud clipboard), certificate review/approval of private CAs, Windows Hello unlock (`hello-unlock.module.ts`: master password stored with `safeStorage`/DPAPI, released after a `UserConsentVerifier` check in `windows.hello.ts`, WinRT through koffi).
 - `autotype/` — KeePass-style auto-type: Windows `SendInput` via koffi FFI, Linux X11 via `xdotool`.
 - `config/`, `context/`, `window/`, `ipc.module.ts`, `log.module.ts`.
 
@@ -105,6 +105,7 @@ App folder: `%LOCALAPPDATA%/elyvault` (Linux: Electron `appData`), see `MainCont
 ## Git & Release Conventions
 
 - Releases: bump `version` in `package.json` through a `chore: release vX.Y.Z` PR, then run `pnpm release` on an up to date `main` (Windows, Docker/Podman, authenticated `gh`). It builds Windows locally and Linux in `deploy/release/linux.Dockerfile`, pushes the tag and creates a **draft** GitHub release with generated notes; publish it by hand. Only `x.y.z` and `x.y.z-beta.n` versions are allowed. Development builds: `pnpm release:dev` from any clean, pushed branch publishes `X.Y.Z-dev.N` as a prerelease (version injected at build time, 5 newest kept).
+- Every PR merge MUST be followed by a release: a stable or beta release (`chore: release vX.Y.Z` PR then `pnpm release`) or at least a development prerelease (`pnpm release:dev` on the updated `main`). You MUST then add a comment on the merged PR with the link to that GitHub release (`gh pr comment <PR#> --body "Released in <release URL>"`).
 
 - No `Co-Authored-By` trailer (nor any AI attribution line such as "Generated with Claude Code") in commit messages, PR descriptions or squash merge messages.
 - Release notes come from the squash merge commit of the PR: keep them free of these attribution lines too (pass an explicit `--body` to `gh pr merge --squash` when the branch commits carry trailers).

@@ -319,11 +319,18 @@ export class VaultModule extends LogModule {
 	}
 
 	public verifyReprompt(password: string): boolean {
-		if (!this.repromptVerifier) return false;
-		const hash = crypto.scryptSync(password, this.repromptVerifier.salt, 32);
-		const valid = crypto.timingSafeEqual(hash, this.repromptVerifier.hash);
+		const valid = this.checkMasterPassword(password);
 		if (valid) this.repromptValidUntil = Date.now() + REPROMPT_GRACE_MS;
 		return valid;
+	}
+
+	/**
+	 * Checks the master password of the unlocked vault, without network call
+	 */
+	public checkMasterPassword(password: string): boolean {
+		if (!this.repromptVerifier) return false;
+		const hash = crypto.scryptSync(password, this.repromptVerifier.salt, 32);
+		return crypto.timingSafeEqual(hash, this.repromptVerifier.hash);
 	}
 
 	public async generatePassword({ mode, length, special }: PasswordGeneratorOptions) {

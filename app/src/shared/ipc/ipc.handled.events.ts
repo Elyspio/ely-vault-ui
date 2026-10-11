@@ -5,6 +5,8 @@ import type { UpdateStatus } from "@shared/types/update.types";
 import type {
 	AutoTypeAvailability,
 	CopyRef,
+	HelloUnlockResult,
+	HelloUnlockStatus,
 	LoginRequest,
 	LoginResult,
 	PasswordGeneratorOptions,
@@ -49,6 +51,16 @@ export interface IpcHandledEvents {
 	"session:unlock": (event: IpcMainInvokeEvent, password: string) => Promise<UnlockResult>;
 	"session:lock": (event: IpcMainInvokeEvent) => Promise<void>;
 	"session:logout": (event: IpcMainInvokeEvent) => Promise<void>;
+	/**
+	 * Unlock with Windows Hello: availability on this computer, and whether the current account can use it
+	 */
+	"session:hello:status": (event: IpcMainInvokeEvent) => Promise<HelloUnlockStatus>;
+	/**
+	 * Enables Windows Hello unlock for the unlocked account; the master password is confirmed then stored encrypted in the main process
+	 */
+	"session:hello:enable": (event: IpcMainInvokeEvent, password: string) => Promise<HelloUnlockResult>;
+	"session:hello:disable": (event: IpcMainInvokeEvent) => Promise<void>;
+	"session:hello:unlock": (event: IpcMainInvokeEvent) => Promise<HelloUnlockResult>;
 
 	/**
 	 * Vault content, without any secret

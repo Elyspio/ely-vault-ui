@@ -24,6 +24,12 @@ export function getIpcSender() {
 			unlock: (password: string) => ipcRendererWrapper.invoke("session:unlock", password),
 			lock: () => ipcRendererWrapper.invoke("session:lock"),
 			logout: () => ipcRendererWrapper.invoke("session:logout"),
+			hello: {
+				status: () => ipcRendererWrapper.invoke("session:hello:status"),
+				enable: (password: string) => ipcRendererWrapper.invoke("session:hello:enable", password),
+				disable: () => ipcRendererWrapper.invoke("session:hello:disable"),
+				unlock: () => ipcRendererWrapper.invoke("session:hello:unlock"),
+			},
 		},
 		vault: {
 			snapshot: () => ipcRendererWrapper.invoke("vault:snapshot:get"),

@@ -8,6 +8,7 @@ import { VaultModule } from "@main/modules/vault/vault.module";
 import { WindowModule } from "@main/modules/window/window.module";
 import { LogModule } from "@main/modules/log.module";
 import { CertificateModule } from "@main/modules/security/certificate.module";
+import { HelloUnlockModule } from "@main/modules/security/hello-unlock.module";
 import { SshKeyModule } from "@main/modules/vault/ssh.key.module";
 import { TotpQrModule } from "@main/modules/vault/totp.qr.module";
 import { BwServeModule } from "@main/modules/bitwarden/bw.serve.module";
@@ -58,7 +59,20 @@ const ipcHandlers: IpcHandledEvents = {
 		await mainContainer.get(VaultModule).lock();
 	},
 	async "session:logout"() {
+		await mainContainer.get(HelloUnlockModule).disable();
 		await mainContainer.get(VaultModule).logout();
+	},
+	async "session:hello:status"() {
+		return await mainContainer.get(HelloUnlockModule).getStatus();
+	},
+	async "session:hello:enable"(_, password) {
+		return await mainContainer.get(HelloUnlockModule).enable(password);
+	},
+	async "session:hello:disable"() {
+		await mainContainer.get(HelloUnlockModule).disable();
+	},
+	async "session:hello:unlock"() {
+		return await mainContainer.get(HelloUnlockModule).unlock();
 	},
 	async "vault:snapshot:get"() {
 		return await mainContainer.get(VaultModule).getSnapshot();
