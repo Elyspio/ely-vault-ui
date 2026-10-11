@@ -9,9 +9,10 @@ import RemoveRounded from "@mui/icons-material/RemoveRounded";
 import CropSquareRounded from "@mui/icons-material/CropSquareRounded";
 import FilterNoneRounded from "@mui/icons-material/FilterNoneRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
-import { useAppDispatch, useAppSelector } from "@store";
+import { store, useAppDispatch, useAppSelector } from "@store";
 import { lock } from "@modules/session/session.async.actions";
 import { syncVault } from "@modules/vault/vault.async.actions";
+import { closeEditor } from "@modules/vault/vault.reducer";
 import { setGeneratorOpen, setPaletteOpen, setSettingsOpen } from "@modules/ui/ui.reducer";
 import { Kbd } from "@components/shared/Kbd";
 import { Logo } from "@components/shared/Logo";
@@ -34,6 +35,12 @@ export function Titlebar() {
 		void window.preload.ipc.send.app.screen.isFullScreen().then(setMaximized);
 		return window.preload.ipc.on.app.screen.toggleFullScreen(setMaximized);
 	}, []);
+
+	/** With unsaved changes, closing asks first: the unsaved changes dialog opens and the window stays open */
+	const closeWindow = () => {
+		if (store.getState().vault.editorDirty) dispatch(closeEditor());
+		else void window.preload.ipc.send.app.close();
+	};
 
 	return (
 		<Box
@@ -136,7 +143,7 @@ export function Titlebar() {
 				<IconButton sx={controlSx} onClick={() => window.preload.ipc.send.app.screen.toggleFullScreen()}>
 					{maximized ? <FilterNoneRounded sx={{ fontSize: 13 }} /> : <CropSquareRounded sx={{ fontSize: 15 }} />}
 				</IconButton>
-				<IconButton sx={{ ...controlSx, "&:hover": { color: "#fff", bgcolor: "#e81123" } }} onClick={() => window.preload.ipc.send.app.close()}>
+				<IconButton sx={{ ...controlSx, "&:hover": { color: "#fff", bgcolor: "#e81123" } }} onClick={closeWindow}>
 					<CloseRounded sx={{ fontSize: 16 }} />
 				</IconButton>
 			</Box>

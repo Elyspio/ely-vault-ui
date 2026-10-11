@@ -10,6 +10,8 @@ export function usePrimaryCopy() {
 
 	return useCallback(
 		async (item: VaultItem) => {
+			// Items of the trash are read-only: nothing is copied from them
+			if (item.deletedDate) return;
 			switch (item.type) {
 				case CipherType.Login:
 					if (item.login?.hasPassword) return actions.copy(item.id, { kind: "password" }, "Password");

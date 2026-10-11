@@ -5,14 +5,19 @@ import LockRounded from "@mui/icons-material/LockRounded";
 import SyncRounded from "@mui/icons-material/SyncRounded";
 import PasswordRounded from "@mui/icons-material/PasswordRounded";
 import TuneRounded from "@mui/icons-material/TuneRounded";
+import AddRounded from "@mui/icons-material/AddRounded";
+import EditRounded from "@mui/icons-material/EditRounded";
+import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
+import StarOutlineRounded from "@mui/icons-material/StarOutlineRounded";
 import { useAppDispatch, useAppSelector } from "@store";
-import { selectItems } from "@modules/vault/vault.selectors";
+import { selectActiveSelectedItem, selectItems } from "@modules/vault/vault.selectors";
 import { getItemSubtitle, normalize, searchItems } from "@modules/vault/vault.search";
 import { selectItem, setFilter, setQuery } from "@modules/vault/vault.reducer";
 import { setGeneratorOpen, setPaletteOpen, setSettingsOpen } from "@modules/ui/ui.reducer";
 import { lock } from "@modules/session/session.async.actions";
 import { syncVault } from "@modules/vault/vault.async.actions";
 import { useVaultActions } from "@hooks/useVaultActions";
+import { useItemCommands } from "@hooks/useItemCommands";
 import type { VaultItem } from "@shared/types/vault.types";
 import { ItemIcon } from "./ItemIcon";
 import { Kbd } from "@components/shared/Kbd";
@@ -63,13 +68,40 @@ function PaletteContent({ close }: Readonly<{ close: () => void }>) {
 	const dispatch = useAppDispatch();
 	const items = useAppSelector(selectItems);
 	const actions = useVaultActions();
+	const itemCommands = useItemCommands();
+	const selected = useAppSelector(selectActiveSelectedItem);
+	const editing = useAppSelector((state) => state.vault.editor !== null);
 	const copyPrimary = usePrimaryCopy();
 	const [query, setLocalQuery] = useState("");
 	const [index, setIndex] = useState(0);
 	const listRef = useRef<HTMLDivElement>(null);
 
-	const commands = useMemo<Command[]>(
-		() => [
+	// Item actions need a selected active item, and wait while the editor is open (same rules as the hotkeys)
+	const commands = useMemo<Command[]>(() => {
+		const itemActions: Command[] =
+			selected && !editing
+				? [
+						{ id: "edit-item", label: "Edit item", icon: <EditRounded />, keywords: "edit modify change item", run: () => void itemCommands.edit(selected) },
+						{
+							id: "favorite-item",
+							label: selected.favorite ? "Remove from favorites" : "Add to favorites",
+							icon: <StarOutlineRounded />,
+							keywords: "favorite favourite star toggle",
+							run: () => void itemCommands.toggleFavorite(selected),
+						},
+						{
+							id: "delete-item",
+							label: "Delete item",
+							icon: <DeleteOutlineRounded />,
+							keywords: "delete remove trash item",
+							run: () => void itemCommands.remove(selected),
+						},
+					]
+				: [];
+
+		return [
+			{ id: "new-item", label: "New item", icon: <AddRounded />, keywords: "new create add item login note card identity", run: () => itemCommands.newItem() },
+			...itemActions,
 			{ id: "lock", label: "Lock the vault", icon: <LockRounded />, keywords: "lock", run: () => dispatch(lock()) },
 			{ id: "sync", label: "Sync", icon: <SyncRounded />, keywords: "synchroniser sync rafraichir", run: () => dispatch(syncVault()) },
 			{
@@ -80,9 +112,8 @@ function PaletteContent({ close }: Readonly<{ close: () => void }>) {
 				run: () => dispatch(setGeneratorOpen(true)),
 			},
 			{ id: "settings", label: "Settings", icon: <TuneRounded />, keywords: "settings preferences", run: () => dispatch(setSettingsOpen(true)) },
-		],
-		[dispatch]
-	);
+		];
+	}, [dispatch, itemCommands, selected, editing]);
 
 	const entries = useMemo<Entry[]>(() => {
 		const matchingItems = query.trim() ? searchItems(items, { kind: "all" }, query).slice(0, MAX_ITEMS) : items.filter((i) => i.favorite).slice(0, MAX_ITEMS);

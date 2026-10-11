@@ -1,14 +1,18 @@
 import { Box, Button, Chip, IconButton, Tooltip, Typography } from "@mui/material";
 import OpenInNewRounded from "@mui/icons-material/OpenInNewRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
+import StarOutlineRounded from "@mui/icons-material/StarOutlineRounded";
+import EditRounded from "@mui/icons-material/EditRounded";
+import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import FolderRounded from "@mui/icons-material/FolderRounded";
 import BusinessRounded from "@mui/icons-material/BusinessRounded";
 import LockPersonRounded from "@mui/icons-material/LockPersonRounded";
 import KeyboardRounded from "@mui/icons-material/KeyboardRounded";
 import { useAppSelector } from "@store";
 import { selectSelectedItem } from "@modules/vault/vault.selectors";
-import { CipherType, FieldType, type IdentityKey, type VaultItem } from "@shared/types/vault.types";
+import { CipherType, FieldType, type VaultItem } from "@shared/types/vault.types";
 import { useVaultActions } from "@hooks/useVaultActions";
+import { isEditableItem, useItemCommands } from "@hooks/useItemCommands";
 import { canAutoType, useAutoTypeAvailability } from "@hooks/useAutoType";
 import { ItemIcon } from "./ItemIcon";
 import { FieldCard, FieldRow } from "./fields/FieldRow";
@@ -17,11 +21,20 @@ import { TotpRow } from "./fields/TotpRow";
 import { Kbd } from "@components/shared/Kbd";
 import { Logo } from "@components/shared/Logo";
 import { formatDateTime } from "@view/utils/date.utils";
+import { IdentityFields } from "./IdentityFields";
+import { TrashItemDetail } from "./trash/TrashItemDetail";
+import { ItemEditor } from "./editor/ItemEditor";
 
 export function ItemDetail() {
+	const editing = useAppSelector((state) => state.vault.editor !== null);
 	const item = useAppSelector(selectSelectedItem);
 
+	// The editor takes the whole panel, create mode included (nothing selected)
+	if (editing) return <ItemEditor />;
 	if (!item) return <EmptyDetail />;
+
+	// Deleted items get their own read-only view: no secret is ever rendered for them
+	if (item.deletedDate) return <TrashItemDetail key={item.id} item={item} />;
 
 	// Keyed by item: revealed secrets never leak from one item to the next
 	return <Detail key={item.id} item={item} />;
@@ -34,20 +47,20 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 	const organization = snapshot?.organizations.find((o) => o.id === item.organizationId);
 	const firstUri = item.login?.uris.find((u) => u.host);
 	const autoType = useAutoTypeAvailability();
+	const commands = useItemCommands();
 
 	const copyText = (value: string, label: string) => () => void actions.copy(null, { kind: "text", value }, label);
 
 	return (
 		<Box sx={{ height: "100%", overflow: "auto", bgcolor: "var(--surface-0)" }}>
 			<Box sx={{ maxWidth: 720, mx: "auto", px: 4, py: 3.5, animation: "fadeIn 150ms ease" }}>
-				<Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3.5 }}>
+				<Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
 					<ItemIcon item={item} size={52} />
 					<Box sx={{ flex: 1, minWidth: 0 }}>
 						<Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
 							<Typography variant="h5" noWrap>
 								{item.name}
 							</Typography>
-							{item.favorite && <StarRounded sx={{ fontSize: 18, color: "warning.main" }} />}
 						</Box>
 						<Box sx={{ display: "flex", gap: 0.75, mt: 0.75, flexWrap: "wrap" }}>
 							{folder && <Chip size="small" icon={<FolderRounded />} label={folder.name} variant="outlined" sx={{ borderColor: "var(--border-subtle)" }} />}
@@ -57,6 +70,18 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 							{item.reprompt && <Chip size="small" icon={<LockPersonRounded />} label="Protected by the master password" variant="outlined" color="warning" />}
 						</Box>
 					</Box>
+					<Tooltip title={item.favorite ? "Remove from favorites (Ctrl+D)" : "Add to favorites (Ctrl+D)"}>
+						<IconButton
+							size="small"
+							aria-pressed={item.favorite}
+							onClick={() => void commands.toggleFavorite(item)}
+							sx={{ color: item.favorite ? "warning.main" : "var(--text-muted)" }}
+						>
+							{item.favorite ? <StarRounded /> : <StarOutlineRounded />}
+						</IconButton>
+					</Tooltip>
+				</Box>
+				<Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 3.5 }}>
 					{canAutoType(item) && (
 						<Tooltip title={autoType?.available === false ? autoType.reason : "Types the username and password into the previous window (Ctrl+V)"}>
 							<span>
@@ -77,6 +102,18 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 							Open
 						</Button>
 					)}
+					{isEditableItem(item) && (
+						<Tooltip title="Edit (Ctrl+E)">
+							<Button variant="outlined" size="small" startIcon={<EditRounded />} onClick={() => void commands.edit(item)}>
+								Edit
+							</Button>
+						</Tooltip>
+					)}
+					<Tooltip title="Move to the trash (Del)">
+						<Button variant="outlined" color="error" size="small" startIcon={<DeleteOutlineRounded />} onClick={() => void commands.remove(item)}>
+							Delete
+						</Button>
+					</Tooltip>
 				</Box>
 
 				{item.type === CipherType.Login && item.login && (
@@ -209,39 +246,6 @@ function Detail({ item }: Readonly<{ item: VaultItem }>) {
 				</Box>
 			</Box>
 		</Box>
-	);
-}
-
-const identityRows: { label: string; keys: IdentityKey[]; separator?: string }[] = [
-	{ label: "Name", keys: ["title", "firstName", "middleName", "lastName"], separator: " " },
-	{ label: "Username", keys: ["username"] },
-	{ label: "Company", keys: ["company"] },
-	{ label: "E-mail", keys: ["email"] },
-	{ label: "Phone", keys: ["phone"] },
-	{ label: "Address", keys: ["address1", "address2", "address3"], separator: "\n" },
-	{ label: "City", keys: ["postalCode", "city"], separator: " " },
-	{ label: "State / Country", keys: ["state", "country"], separator: ", " },
-	{ label: "Social security number", keys: ["ssn"] },
-	{ label: "Passport number", keys: ["passportNumber"] },
-	{ label: "License number", keys: ["licenseNumber"] },
-];
-
-function IdentityFields({ identity, copyText }: Readonly<{ identity: Record<IdentityKey, string | null>; copyText: (value: string, label: string) => () => void }>) {
-	return (
-		<FieldCard>
-			{identityRows.map(({ label, keys, separator = "" }) => {
-				const value = keys
-					.map((key) => identity[key])
-					.filter(Boolean)
-					.join(separator);
-				if (!value) return null;
-				return (
-					<FieldRow key={label} label={label} multiline={separator === "\n"} onCopy={copyText(value, label)}>
-						{value}
-					</FieldRow>
-				);
-			})}
-		</FieldCard>
 	);
 }
 

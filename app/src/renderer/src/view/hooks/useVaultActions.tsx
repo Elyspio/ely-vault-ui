@@ -10,7 +10,7 @@ import type { CopyRef, SecretRef } from "@shared/types/vault.types";
 
 type RequestReprompt = () => Promise<boolean>;
 
-const RepromptContext = createContext<RequestReprompt>(() => Promise.resolve(false));
+export const RepromptContext = createContext<RequestReprompt>(() => Promise.resolve(false));
 
 /**
  * Asks the master password again for items flagged "reprompt"; the main process checks it and unlocks them for a few minutes

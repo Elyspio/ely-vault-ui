@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { Box, CircularProgress, StyledEngineProvider, ThemeProvider, Typography } from "@mui/material";
 import { theme } from "@/config/theme";
-import { useAppSelector } from "@store";
+import { store, useAppSelector } from "@store";
+import { closeEditor } from "@modules/vault/vault.reducer";
 import { Titlebar } from "@components/frame/Titlebar";
 import { Toaster } from "@components/shared/Toaster";
 import { LoginScreen } from "@components/auth/LoginScreen";
@@ -9,6 +11,18 @@ import { VaultScreen } from "@components/vault/VaultScreen";
 import { RepromptProvider } from "@hooks/useVaultActions";
 
 export function App() {
+	// Closing the window (Alt+F4, titlebar, system menu) with unsaved changes: the window stays open and the unsaved changes dialog opens
+	useEffect(() => {
+		const onBeforeUnload = (event: BeforeUnloadEvent) => {
+			if (!store.getState().vault.editorDirty) return;
+			event.preventDefault();
+			event.returnValue = "";
+			store.dispatch(closeEditor());
+		};
+		window.addEventListener("beforeunload", onBeforeUnload);
+		return () => window.removeEventListener("beforeunload", onBeforeUnload);
+	}, []);
+
 	return (
 		<StyledEngineProvider injectFirst>
 			<ThemeProvider theme={theme}>
