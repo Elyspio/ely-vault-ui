@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from "vite-plus/test";
-import { VaultModule } from "./vault.module";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { OfflineAccessModule, OFFLINE_ACCESS_MS, VAULT_SYNC_INTERVAL_MS } from "./offline-access.module";
+import type { MainContextModule } from "../context/main.context.module";
+import { VaultModule, isAuthenticationRejection } from "./vault.module";
 import type { BwCollection, BwFolder, BwItem, BwMessage, BwOrganization } from "../bitwarden/bw.types";
 import { BwError } from "../bitwarden/bw.types";
 import type { BwCliModule } from "../bitwarden/bw.cli.module";
@@ -43,6 +48,7 @@ vi.mock("../bitwarden/bw.serve.module", () => ({ BwServeModule: class {} }));
 vi.mock("../security/clipboard.module", () => ({ ClipboardModule: class {} }));
 vi.mock("../ipc.module", () => ({ IpcModule: class {} }));
 vi.mock("../security/certificate.module", () => ({ CertificateModule: class {} }));
+vi.mock("../context/main.context.module", () => ({ MainContextModule: class {} }));
 
 const PASSWORD = "pw";
 const SERVER = "https://vault.example";
@@ -228,6 +234,7 @@ class FakeBwServe {
 			this.lastSync = this.nextTime();
 			return message();
 		}
+		if (method === "GET" && path.startsWith("/object/totp/")) return { object: "string", data: "123456" };
 
 		if (method === "GET" && path === "/list/object/items") {
 			const trash = params.get("trash") === "true";
@@ -324,7 +331,19 @@ type Harness = {
 	clipboard: { copy: ReturnType<typeof vi.fn>; clearIfOwned: ReturnType<typeof vi.fn> };
 	ipc: { sendToMainWindow: ReturnType<typeof vi.fn> };
 	sshKeys: SshKeyModule;
+	access: OfflineAccessModule;
+	folder: string;
 };
+
+const harnesses: Harness[] = [];
+afterEach(async () => {
+	for (const harness of harnesses.splice(0)) {
+		await harness.module.shutdown();
+		fs.rmSync(harness.folder, { recursive: true, force: true });
+	}
+	vi.useRealTimers();
+	vi.restoreAllMocks();
+});
 
 /** Module on top of the fake server, locked. `seed` runs after the default seed and before the unlock */
 async function setup(seed?: (serve: FakeBwServe) => void): Promise<Harness> {
@@ -335,15 +354,20 @@ async function setup(seed?: (serve: FakeBwServe) => void): Promise<Harness> {
 	const clipboard = { copy: vi.fn(async () => undefined), clearIfOwned: vi.fn(async () => undefined) };
 	const ipc = { sendToMainWindow: vi.fn() };
 	const sshKeys = new SshKeyModule(i18n);
+	const folder = fs.mkdtempSync(path.join(os.tmpdir(), "elyvault-access-test-"));
+	const access = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
 	const module = new VaultModule(
 		{} as unknown as BwCliModule,
 		serve as unknown as BwServeModule,
 		clipboard as unknown as ClipboardModule,
 		ipc as unknown as IpcModule,
 		{} as unknown as CertificateModule,
-		sshKeys
+		sshKeys,
+		access
 	);
-	return { module, serve, clipboard, ipc, sshKeys };
+	const harness = { module, serve, clipboard, ipc, sshKeys, access, folder };
+	harnesses.push(harness);
+	return harness;
 }
 
 /** Module unlocked like the real flow: the snapshot is loaded by unlock */
@@ -382,7 +406,8 @@ describe("VaultModule unlock", () => {
 	});
 
 	it("loads cached items when the sync fails", async () => {
-		const { module, serve } = await setup();
+		const { module, serve } = await unlockedSetup();
+		await module.lock();
 		serve.failOnce("POST", "/sync?force=true", "Server unreachable.");
 		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
 		expect(module.isUnlocked).toBe(true);
@@ -408,6 +433,258 @@ describe("VaultModule unlock", () => {
 		expect(module.isUnlocked).toBe(false);
 		expect(module.verifyReprompt(PASSWORD)).toBe(false);
 	});
+});
+
+describe("24-hour offline vault access", () => {
+	it("refuses an offline unlock without ElyVault verification, retaining the encrypted cache", async () => {
+		const { module, serve } = await setup();
+		serve.failOnce("POST", "/sync?force=true", "Server unreachable.");
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "error", message: appMessage("vaultOfflineExpired") });
+		expect(module.isUnlocked).toBe(false);
+		expect(serve.status).toBe("locked");
+		expect(serve.callsTo("GET", "/list/object/items")).toHaveLength(0);
+		expect(serve.items.has("plain-1")).toBe(true);
+	});
+
+	it("expires at exactly 24 hours and accepts a successful online recovery", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, serve } = await unlockedSetup();
+		await module.lock();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		serve.failOnce("POST", "/sync?force=true", "fetch failed");
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "error", message: appMessage("vaultOfflineExpired") });
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
+		expect(module.isUnlocked).toBe(true);
+	});
+
+	it("locks an open session, clears held keys and the clipboard, and reports the recovery reason", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, clipboard, ipc, sshKeys, serve } = await unlockedSetup();
+		const key = sshKeys.generate();
+		await module.copy("plain-1", { kind: "password" });
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(module.isUnlocked).toBe(false);
+		expect(serve.status).toBe("locked");
+		expect(sshKeys.peek(key.token)).toBeNull();
+		expect(clipboard.clearIfOwned).toHaveBeenCalled();
+		expect(ipc.sendToMainWindow).toHaveBeenCalledWith("session:state", expect.objectContaining({ status: "locked", accessBlock: "offline-expired" }));
+		expect(module.verifyReprompt(PASSWORD)).toBe(false);
+	});
+
+	it("blocks secret operations and writes before the expiry timer runs", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, serve, clipboard } = await unlockedSetup();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		expect(() => module.getProtectedItem("plain-1")).toThrow(appMessage("vaultOfflineExpired"));
+		await expect(module.getSecret("plain-1", { kind: "password" })).rejects.toThrow(appMessage("vaultOfflineExpired"));
+		await expect(module.copy(null, { kind: "text", value: "cached value" })).rejects.toThrow(appMessage("vaultOfflineExpired"));
+		await expect(module.getSnapshot()).rejects.toThrow(appMessage("vaultOfflineExpired"));
+		await expect(module.createFolder("Blocked")).rejects.toThrow(appMessage("vaultOfflineExpired"));
+		expect(clipboard.copy).not.toHaveBeenCalled();
+		expect(serve.callsTo("POST", "/object/folder")).toHaveLength(0);
+	});
+
+	it("does not renew access after network failure, even when the CLI has a lastSync timestamp", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, serve, folder } = await unlockedSetup();
+		const before = fs.readFileSync(path.join(folder, "offline-access.json"), "utf8");
+		vi.setSystemTime(BASE_TIME + 60_000);
+		serve.failOnce("POST", "/sync?force=true", "HTTP 503 Service Unavailable");
+		await expect(module.sync()).rejects.toThrow("503");
+		expect(module.isUnlocked).toBe(true);
+		expect(fs.readFileSync(path.join(folder, "offline-access.json"), "utf8")).toBe(before);
+	});
+
+	it.each(["HTTP 401 Unauthorized", 'Syncing failed: {"statusCode":403}', "Syncing failed: invalid_grant", "Syncing failed: Stamp has changed"])(
+		"immediately blocks authentication rejection: %s",
+		async (error) => {
+			const { module, serve, access } = await unlockedSetup();
+			serve.failOnce("POST", "/sync?force=true", error);
+			await expect(module.sync()).rejects.toThrow(appMessage("vaultAuthenticationRequired"));
+			expect(module.isUnlocked).toBe(false);
+			expect(access.block).toBe("authentication-required");
+			expect(await module.unlock(PASSWORD)).toEqual({ status: "error", message: appMessage("vaultAuthenticationRequired") });
+		}
+	);
+
+	it("returns an authentication recovery error when rejected during unlock", async () => {
+		const { module, serve } = await unlockedSetup();
+		await module.lock();
+		serve.failOnce("POST", "/sync?force=true", "Unauthorized");
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "error", message: appMessage("vaultAuthenticationRequired") });
+	});
+
+	it("syncs every 15 minutes while unlocked and stops the schedule on lock", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, serve, ipc } = await unlockedSetup();
+		serve.remoteItems.set("remote-item", plainItem("remote-item"));
+		await vi.advanceTimersByTimeAsync(VAULT_SYNC_INTERVAL_MS);
+		expect(serve.callsTo("POST", "/sync")).toHaveLength(1);
+		expect(ipc.sendToMainWindow).toHaveBeenCalledWith(
+			"vault:snapshot",
+			expect.objectContaining({ items: expect.arrayContaining([expect.objectContaining({ id: "remote-item" })]) })
+		);
+		await module.lock();
+		await vi.advanceTimersByTimeAsync(VAULT_SYNC_INTERVAL_MS);
+		expect(serve.callsTo("POST", "/sync")).toHaveLength(1);
+	});
+
+	it("checks expiry before a resume sync", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, serve } = await unlockedSetup();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		await module.refreshAccess();
+		expect(module.isUnlocked).toBe(false);
+		expect(serve.callsTo("POST", "/sync")).toHaveLength(0);
+	});
+
+	it("locks when refreshed permissions cannot be loaded", async () => {
+		const { module, serve } = await unlockedSetup();
+		serve.failOnce("GET", "/list/object/items", "Read failed");
+		await expect(module.sync()).rejects.toThrow("Read failed");
+		expect(module.isUnlocked).toBe(false);
+		await expect(module.getSecret("plain-1", { kind: "password" })).rejects.toThrow(appMessage("vaultLocked"));
+	});
+
+	it("does not renew or publish an in-flight sync after expiry", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, serve, access, ipc } = await unlockedSetup();
+		const gate = serve.hold("POST", "/sync?force=true");
+		const pending = module.refreshAccess();
+		await Promise.resolve();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		await vi.advanceTimersByTimeAsync(1000);
+		gate.open();
+		await pending;
+		expect(access.block).toBe("offline-expired");
+		expect(module.isUnlocked).toBe(false);
+		expect(ipc.sendToMainWindow.mock.calls.some(([channel]) => channel === "vault:snapshot")).toBe(false);
+	});
+
+	it("renews the deadline after a successful sync", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, access } = await unlockedSetup();
+		vi.setSystemTime(BASE_TIME + 12 * 60 * 60_000);
+		await module.sync();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		expect(module.isUnlocked).toBe(true);
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS + 12 * 60 * 60_000);
+		expect(access.block).toBe("offline-expired");
+	});
+
+	it("discards a secret computed while locking", async () => {
+		const { module, serve } = await unlockedSetup();
+		const gate = serve.hold("GET", "/object/totp/plain-1");
+		const pending = module.getTotp("plain-1");
+		const rejected = expect(pending).rejects.toThrow(appMessage("vaultLocked"));
+		await module.lock();
+		gate.open();
+		await rejected;
+	});
+});
+
+describe("persisted offline access evidence", () => {
+	const status = { serverUrl: SERVER, userEmail: EMAIL, lastSync: null, status: "locked" as const };
+
+	it("keeps the original deadline across restarts and isolates accounts and hosts", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { access, folder } = await setup();
+		access.select(status);
+		access.verified();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS - 1);
+		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
+		restarted.select(status);
+		expect(restarted.block).toBeUndefined();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		expect(restarted.block).toBe("offline-expired");
+		restarted.select({ ...status, serverUrl: "https://another.example" });
+		expect(restarted.block).toBe("offline-expired");
+		restarted.select({ ...status, userEmail: "another@example.com" });
+		expect(restarted.block).toBe("offline-expired");
+	});
+
+	it("persists rejection across restarts and requires login followed by sync", async () => {
+		const { access, folder } = await setup();
+		access.select(status);
+		access.verified();
+		access.reject();
+		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
+		restarted.select(status);
+		expect(restarted.block).toBe("authentication-required");
+		expect(() => restarted.verified()).toThrow();
+		restarted.authenticated();
+		expect(restarted.block).toBe("offline-expired");
+		restarted.verified();
+		expect(restarted.block).toBeUndefined();
+	});
+
+	it("invalidates evidence on clock rollback, including after restart", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { access, folder } = await setup();
+		access.select(status);
+		access.verified();
+		vi.setSystemTime(BASE_TIME + 120_000);
+		access.observe();
+		vi.setSystemTime(BASE_TIME + 60_000);
+		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
+		restarted.select(status);
+		expect(restarted.block).toBe("offline-expired");
+		vi.setSystemTime(BASE_TIME + 180_000);
+		expect(restarted.block).toBe("offline-expired");
+		restarted.verified();
+		expect(restarted.block).toBeUndefined();
+	});
+
+	it.each(["broken json", "null", "{}", '{"verifiedAt":"yesterday"}'])("refuses malformed evidence: %s", async (json) => {
+		const { access, folder } = await setup();
+		fs.writeFileSync(path.join(folder, "offline-access.json"), json);
+		access.select(status);
+		expect(access.block).toBe("offline-expired");
+	});
+
+	it("rejects future verification timestamps", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { access, folder } = await setup();
+		access.select(status);
+		access.verified();
+		const file = path.join(folder, "offline-access.json");
+		const record = JSON.parse(fs.readFileSync(file, "utf8"));
+		fs.writeFileSync(file, JSON.stringify({ ...record, verifiedAt: BASE_TIME + 60_000, observedAt: BASE_TIME + 60_000 }));
+		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
+		restarted.select(status);
+		expect(restarted.block).toBe("offline-expired");
+	});
+
+	it("fails closed when verification evidence cannot be written", async () => {
+		const { access } = await setup();
+		access.select(status);
+		vi.spyOn(fs, "renameSync").mockImplementation(() => {
+			throw new Error("Disk unavailable");
+		});
+		expect(() => access.verified()).toThrow("Disk unavailable");
+		expect(access.block).toBe("offline-expired");
+		expect(() => access.reject()).toThrow("Disk unavailable");
+		expect(access.block).toBe("authentication-required");
+	});
+
+	it.each(["HTTP 503 Service Unavailable", "fetch failed", "ECONNREFUSED", "ETIMEDOUT", "certificate expired", "You do not have permission to edit this item"])(
+		"does not classify an outage or item permission as authentication rejection: %s",
+		(error) => {
+			expect(isAuthenticationRejection(error)).toBe(false);
+		}
+	);
 });
 
 describe("VaultModule writes", () => {

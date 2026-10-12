@@ -10,6 +10,9 @@ import { VaultModule } from "../vault/vault.module";
 @injectable()
 export class AutoLockModule extends LogModule {
 	private timer: NodeJS.Timeout | null = null;
+	private readonly onResume = () => {
+		void this.vaultModule.refreshAccess();
+	};
 
 	public constructor(
 		@inject(ConfigModule) private readonly configModule: ConfigModule,
@@ -29,11 +32,13 @@ export class AutoLockModule extends LogModule {
 
 		powerMonitor.on("lock-screen", lockOnSystemEvent("system locked"));
 		powerMonitor.on("suspend", lockOnSystemEvent("system suspended"));
+		powerMonitor.on("resume", this.onResume);
 
 		this.timer = setInterval(() => void this.checkIdle(), 15_000);
 	}
 
 	public stop() {
+		powerMonitor.removeListener("resume", this.onResume);
 		if (this.timer) clearInterval(this.timer);
 		this.timer = null;
 	}

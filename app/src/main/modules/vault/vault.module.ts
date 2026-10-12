@@ -31,6 +31,7 @@ import type {
 	WriteResult,
 } from "@shared/types/vault.types";
 import { appMessage } from "@shared/i18n/message";
+import { OfflineAccessModule, VAULT_SYNC_INTERVAL_MS } from "./offline-access.module";
 
 /** How long a successful master password reprompt unlocks protected items */
 const REPROMPT_GRACE_MS = 5 * 60 * 1000;
@@ -69,6 +70,10 @@ export class VaultModule extends LogModule {
 	private repromptValidUntil = 0;
 	private readonly icons = new Map<string, string | null>();
 	private serverUrl: string | null = null;
+	private accessTimer: NodeJS.Timeout | null = null;
+	private expiryTimer: NodeJS.Timeout | null = null;
+	private deadlineTimer: NodeJS.Timeout | null = null;
+	private backgroundSync: Promise<void> | null = null;
 
 	public constructor(
 		@inject(BwCliModule) private readonly bwCliModule: BwCliModule,
@@ -76,7 +81,8 @@ export class VaultModule extends LogModule {
 		@inject(ClipboardModule) private readonly clipboardModule: ClipboardModule,
 		@inject(IpcModule) private readonly ipcModule: IpcModule,
 		@inject(CertificateModule) private readonly certificateModule: CertificateModule,
-		@inject(SshKeyModule) private readonly sshKeyModule: SshKeyModule
+		@inject(SshKeyModule) private readonly sshKeyModule: SshKeyModule,
+		@inject(OfflineAccessModule) private readonly offlineAccess: OfflineAccessModule
 	) {
 		super("VaultModule");
 	}
@@ -98,6 +104,16 @@ export class VaultModule extends LogModule {
 		}
 
 		this.serverUrl = template.serverUrl;
+		this.offlineAccess.select(template);
+		if (this.snapshot && this.offlineAccess.block) {
+			await this.lock();
+			return await this.getState();
+		}
+		if (template.status === "unlocked" && !this.snapshot) {
+			// A CLI unlock alone is not an authorized ElyVault session.
+			await this.bwServeModule.request("POST", "/lock").catch(() => this.bwServeModule.stop());
+			template = { ...template, status: "locked" };
+		}
 		if (template.status !== "unlocked") this.clear();
 
 		return {
@@ -105,6 +121,7 @@ export class VaultModule extends LogModule {
 			serverUrl: template.serverUrl,
 			email: template.userEmail ?? null,
 			lastSync: template.lastSync,
+			accessBlock: template.status === "unauthenticated" ? undefined : this.offlineAccess.block,
 		};
 	}
 
@@ -129,6 +146,8 @@ export class VaultModule extends LogModule {
 
 			if (request.sso) await this.bwCliModule.loginSso();
 			else await this.bwCliModule.login(request.email.trim(), request.password, request.twoFactor);
+			this.offlineAccess.select(await this.bwCliModule.status());
+			this.offlineAccess.authenticated();
 		} catch (error) {
 			if (error instanceof Error && error.name === "AbortError") return { status: "error", message: appMessage("ssoCancelled") };
 			const message = errorMessage(error);
@@ -151,6 +170,8 @@ export class VaultModule extends LogModule {
 	@log("info")
 	public async unlock(password: string): Promise<UnlockResult> {
 		await this.bwServeModule.ensureStarted();
+		this.offlineAccess.select((await this.bwServeModule.request<BwStatus>("GET", "/status")).template);
+		if (this.offlineAccess.block === "authentication-required") return { status: "error", message: appMessage("vaultAuthenticationRequired") };
 		try {
 			await this.bwServeModule.request<BwMessage>("POST", "/unlock", { password });
 		} catch (error) {
@@ -165,25 +186,42 @@ export class VaultModule extends LogModule {
 		this.repromptVerifier = { salt, hash: crypto.scryptSync(password, salt, 32) };
 
 		const generation = this.generation;
-		await this.enqueue(async () => {
+		return await this.enqueue(async () => {
 			this.ensureGeneration(generation);
 			try {
 				// Plain sync can skip downloading when the server's account revision has not advanced.
-				await this.bwServeModule.request<BwMessage>("POST", "/sync?force=true");
+				await this.syncVerified(generation);
 			} catch (error) {
-				// Unlock still works offline with the CLI's encrypted cache.
 				this.logger.warn("Sync after unlock failed", errorMessage(error));
+				if (this.offlineAccess.block === "authentication-required") return { status: "error", message: this.accessMessage() };
+				this.ensureGeneration(generation);
+				if (this.offlineAccess.block) {
+					const message = this.accessMessage();
+					await this.lock();
+					return { status: "error", message };
+				}
 			}
-			await this.loadSnapshot(generation);
+			try {
+				await this.loadSnapshot(generation);
+			} catch (error) {
+				if (generation === this.generation) await this.lock();
+				throw error;
+			}
+			this.startAccessTimers();
+			return { status: "success" };
 		});
-		return { status: "success" };
 	}
 
 	@log("info")
 	public async lock() {
+		try {
+			this.offlineAccess.observe(true);
+		} catch {
+			this.logger.warn("Could not persist access clock before locking");
+		}
 		this.clear();
 		if (this.bwServeModule.isRunning) {
-			await this.bwServeModule.request("POST", "/lock").catch((error: unknown) => this.logger.warn("Lock failed", errorMessage(error)));
+			await this.bwServeModule.request("POST", "/lock").catch(() => this.bwServeModule.stop());
 		}
 		await this.clipboardModule.clearIfOwned();
 		this.ipcModule.sendToMainWindow("session:state", await this.getState());
@@ -210,16 +248,32 @@ export class VaultModule extends LogModule {
 	 * Locks and stops the CLI server, when the application quits
 	 */
 	public async shutdown() {
+		try {
+			this.offlineAccess.observe(true);
+		} catch {
+			this.logger.warn("Could not persist access clock before shutdown");
+		}
 		this.clear();
 		await this.clipboardModule.clearIfOwned();
 		await this.bwServeModule.stop();
 	}
 
 	public get isUnlocked() {
-		return this.snapshot !== null;
+		if (!this.snapshot) return false;
+		if (this.offlineAccess.block) {
+			void this.lock().catch((error: unknown) => this.logger.warn("Access expiry lock failed", errorMessage(error)));
+			return false;
+		}
+		return true;
 	}
 
 	private clear() {
+		if (this.accessTimer) clearInterval(this.accessTimer);
+		if (this.expiryTimer) clearInterval(this.expiryTimer);
+		if (this.deadlineTimer) clearTimeout(this.deadlineTimer);
+		this.accessTimer = null;
+		this.expiryTimer = null;
+		this.deadlineTimer = null;
 		this.generation++;
 		this.items.clear();
 		this.trash.clear();
@@ -235,15 +289,24 @@ export class VaultModule extends LogModule {
 	// region Vault
 
 	public async getSnapshot(): Promise<VaultSnapshot> {
-		return this.snapshot ?? (await this.loadSnapshot());
+		this.ensureAccess();
+		if (!this.snapshot) throw new BwError(VAULT_LOCKED);
+		return this.snapshot;
 	}
 
 	@log("info")
 	public async sync(): Promise<VaultSnapshot> {
 		return this.enqueue(async () => {
+			this.ensureAccess();
+			if (!this.snapshot) throw new BwError(VAULT_LOCKED);
 			const generation = this.generation;
-			await this.bwServeModule.request<BwMessage>("POST", "/sync");
-			return await this.loadSnapshot(generation);
+			await this.syncVerified(generation);
+			try {
+				return await this.loadSnapshot(generation);
+			} catch (error) {
+				if (generation === this.generation) await this.lock();
+				throw error;
+			}
 		});
 	}
 
@@ -251,6 +314,7 @@ export class VaultModule extends LogModule {
 	 * Reads the vault from `bw serve`. Nothing is published when the session changed while reading (lock)
 	 */
 	private async loadSnapshot(generation = this.generation): Promise<VaultSnapshot> {
+		this.ensureAccess();
 		// The CLI filters the archive state exactly: deleted items that were archived need their own request
 		const [items, deletedItems, deletedArchivedItems, folders, organizations, collections, status] = await Promise.all([
 			this.bwServeModule.request<BwList<BwItem>>("GET", "/list/object/items"),
@@ -262,6 +326,11 @@ export class VaultModule extends LogModule {
 			this.bwServeModule.request<BwStatus>("GET", "/status"),
 		]);
 		this.ensureGeneration(generation);
+		this.ensureAccess();
+		if (!this.offlineAccess.matches(status.template)) {
+			await this.lock();
+			throw new BwError(VAULT_LOCKED);
+		}
 
 		const trashItems = [...deletedItems.data, ...deletedArchivedItems.data];
 		const active = items.data.filter((item) => !item.deletedDate);
@@ -291,8 +360,11 @@ export class VaultModule extends LogModule {
 	}
 
 	public async copy(itemId: string | null, ref: CopyRef) {
+		this.ensureAccess();
+		const generation = this.generation;
 		if (ref.kind === "text") {
 			await this.clipboardModule.copy(ref.value);
+			if (generation !== this.generation || this.offlineAccess.block) await this.clipboardModule.clearIfOwned();
 			return;
 		}
 
@@ -308,14 +380,20 @@ export class VaultModule extends LogModule {
 		}
 
 		if (value === null) throw new BwError("Value not found");
+		this.ensureGeneration(generation);
+		this.ensureAccess();
 		await this.clipboardModule.copy(value);
+		if (generation !== this.generation || this.offlineAccess.block) await this.clipboardModule.clearIfOwned();
 	}
 
 	public async getTotp(itemId: string): Promise<TotpCode> {
+		const generation = this.generation;
 		const item = this.getItem(itemId);
 		this.ensureRepromptSatisfied(item);
 
 		const { data: code } = await this.bwServeModule.request<BwString>("GET", `/object/totp/${encodeURIComponent(itemId)}`);
+		this.ensureGeneration(generation);
+		this.ensureAccess();
 		const period = getTotpPeriod(item.login?.totp);
 		const remaining = period - (Math.floor(Date.now() / 1000) % period);
 
@@ -341,6 +419,7 @@ export class VaultModule extends LogModule {
 	 * Checks the master password of the unlocked vault, without network call
 	 */
 	public checkMasterPassword(password: string): boolean {
+		if (!this.isUnlocked) return false;
 		if (!this.repromptVerifier) return false;
 		const hash = crypto.scryptSync(password, this.repromptVerifier.salt, 32);
 		return crypto.timingSafeEqual(hash, this.repromptVerifier.hash);
@@ -378,6 +457,7 @@ export class VaultModule extends LogModule {
 	}
 
 	private getItem(itemId: string) {
+		this.ensureAccess();
 		const item = this.items.get(itemId);
 		if (!item) throw new BwError(this.snapshot ? appMessage("itemNotFound") : VAULT_LOCKED);
 		return item;
@@ -391,6 +471,97 @@ export class VaultModule extends LogModule {
 
 	private ensureGeneration(generation: number) {
 		if (generation !== this.generation) throw new BwError(VAULT_LOCKED);
+	}
+
+	private accessMessage() {
+		return appMessage(this.offlineAccess.block === "authentication-required" ? "vaultAuthenticationRequired" : "vaultOfflineExpired");
+	}
+
+	/** Synchronous gate also covers auto-type and requests arriving before the timer fires. */
+	private ensureAccess() {
+		if (!this.offlineAccess.block) return;
+		const message = this.accessMessage();
+		void this.lock().catch((error: unknown) => this.logger.warn("Access expiry lock failed", errorMessage(error)));
+		throw new BwError(message);
+	}
+
+	private async syncVerified(generation: number) {
+		try {
+			await this.bwServeModule.request<BwMessage>("POST", "/sync?force=true");
+			this.ensureGeneration(generation);
+			const { template } = await this.bwServeModule.request<BwStatus>("GET", "/status");
+			this.ensureGeneration(generation);
+			if (template.status === "unauthenticated") throw new BwError("You are not logged in.");
+			if (template.status !== "unlocked" || !template.lastSync || !Number.isFinite(Date.parse(template.lastSync))) throw new BwError(appMessage("vaultOfflineExpired"));
+			if (!this.offlineAccess.matches(template)) {
+				await this.lock();
+				throw new BwError(VAULT_LOCKED);
+			}
+			this.offlineAccess.verified();
+			if (this.snapshot) this.scheduleExpiry();
+		} catch (error) {
+			this.ensureGeneration(generation);
+			const status = await this.bwServeModule.request<BwStatus>("GET", "/status").catch(() => null);
+			this.ensureGeneration(generation);
+			if (isAuthenticationRejection(errorMessage(error)) || status?.template.status === "unauthenticated") {
+				return await this.rejectAuthentication();
+			}
+			throw error;
+		}
+	}
+
+	private async rejectAuthentication(): Promise<never> {
+		try {
+			this.offlineAccess.reject();
+		} finally {
+			await this.lock();
+		}
+		throw new BwError(appMessage("vaultAuthenticationRequired"));
+	}
+
+	private startAccessTimers() {
+		if (this.accessTimer) clearInterval(this.accessTimer);
+		if (this.expiryTimer) clearInterval(this.expiryTimer);
+		this.accessTimer = setInterval(() => void this.refreshAccess(), VAULT_SYNC_INTERVAL_MS);
+		this.expiryTimer = setInterval(() => {
+			try {
+				if (this.isUnlocked) this.offlineAccess.observe();
+			} catch (error) {
+				void this.lock().catch(() => undefined);
+				this.logger.warn("Access clock observation failed", errorMessage(error));
+			}
+		}, 1000);
+		this.accessTimer.unref();
+		this.expiryTimer.unref();
+		this.scheduleExpiry();
+	}
+
+	private scheduleExpiry() {
+		if (this.deadlineTimer) clearTimeout(this.deadlineTimer);
+		this.deadlineTimer = setTimeout(
+			() => {
+				if (this.offlineAccess.block) void this.lock().catch((error: unknown) => this.logger.warn("Access expiry lock failed", errorMessage(error)));
+				else this.scheduleExpiry();
+			},
+			Math.max(1, Math.ceil(this.offlineAccess.remainingMs))
+		);
+		this.deadlineTimer.unref();
+	}
+
+	/** Resume checks expiry synchronously before attempting network renewal. */
+	public refreshAccess(): Promise<void> {
+		if (!this.isUnlocked) return Promise.resolve();
+		this.backgroundSync ??= this.sync()
+			.then((snapshot) => {
+				if (this.isUnlocked && this.snapshot === snapshot) this.ipcModule.sendToMainWindow("vault:snapshot", snapshot);
+			})
+			.catch((error: unknown) => {
+				this.logger.warn("Automatic vault sync failed", errorMessage(error));
+			})
+			.finally(() => {
+				this.backgroundSync = null;
+			});
+		return this.backgroundSync;
 	}
 
 	/**
@@ -411,6 +582,8 @@ export class VaultModule extends LogModule {
 	 */
 	private async write(task: () => Promise<WriteOutcome>, settled?: Settled): Promise<WriteResult> {
 		return this.enqueue(async () => {
+			this.ensureAccess();
+			if (!this.snapshot) throw new BwError(VAULT_LOCKED);
 			const generation = this.generation;
 			let outcome: WriteOutcome;
 			try {
@@ -419,6 +592,9 @@ export class VaultModule extends LogModule {
 				// Locked during the write: the CLI error says so in its own words
 				this.ensureGeneration(generation);
 				const message = errorMessage(error);
+				if (isAuthenticationRejection(message)) {
+					return await this.rejectAuthentication();
+				}
 				if (isFatalWriteError(message)) throw error;
 				outcome = { status: "error", message: translateError(message) };
 			}
@@ -433,11 +609,12 @@ export class VaultModule extends LogModule {
 				}
 				// Still not there (the server answered with stale values): a sync brings the server's state
 				if (settled && done.length > 0 && !settled(snapshot, done)) {
-					await this.bwServeModule.request<BwMessage>("POST", "/sync");
+					await this.syncVerified(generation);
 					snapshot = await this.loadSnapshot(generation);
 				}
 				return { outcome, snapshot, refreshError: null };
 			} catch (error) {
+				if (generation === this.generation) await this.lock();
 				return { outcome, snapshot: null, refreshError: translateError(errorMessage(error)) };
 			}
 		});
@@ -455,6 +632,9 @@ export class VaultModule extends LogModule {
 				done.push(step.id);
 			} catch (error) {
 				const message = errorMessage(error);
+				if (isAuthenticationRejection(message)) {
+					return await this.rejectAuthentication();
+				}
 				if (isFatalWriteError(message)) throw error;
 				if (steps.length === 1) return { status: "error", message: translateError(message) };
 				return { status: "partial", done, failed: { id: step.id, message: translateError(message) } };
@@ -532,7 +712,7 @@ export class VaultModule extends LogModule {
 				} catch (writeError) {
 					if (!isConflictError(errorMessage(writeError))) throw writeError;
 					// The server has a newer copy: resync so the reload shows it
-					await this.bwServeModule.request<BwMessage>("POST", "/sync");
+					await this.syncVerified(this.generation);
 					return { status: "conflict" };
 				}
 				this.consumeKey(draft);
@@ -722,7 +902,14 @@ function errorMessage(error: unknown) {
  * Errors that reach the renderer as errors instead of the outcome of a write: reprompt and locked vault
  */
 function isFatalWriteError(message: string) {
-	return message === "REPROMPT_REQUIRED" || message === VAULT_LOCKED;
+	return message === "REPROMPT_REQUIRED" || message === VAULT_LOCKED || message === appMessage("vaultOfflineExpired") || message === appMessage("vaultAuthenticationRequired");
+}
+
+/** CLI errors lose their HTTP envelope: recognize explicit rejection, never generic outages. */
+export function isAuthenticationRejection(message: string) {
+	return /\b(?:HTTP\s*|status(?:Code)?["']?\s*[:=]\s*)(?:401|403)\b|\bunauthorized\b|\bunauthenticated\b|not logged in|invalid_grant|(?:invalid|expired|revoked) (?:refresh |access )?token|(?:session|token) (?:has )?expired|stamp has changed|authentication (?:failed|required)/i.test(
+		message
+	);
 }
 
 function isTwoFactorError(message: string) {

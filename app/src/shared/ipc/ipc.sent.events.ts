@@ -4,7 +4,7 @@
  * IpcSentEvents cannot use types of the Node.js or Electron libraries
  * *************************************************************************************/
 import type { IpcMainInvokeEvent } from "electron";
-import type { SessionState } from "@shared/types/vault.types";
+import type { SessionState, VaultSnapshot } from "@shared/types/vault.types";
 import type { UpdateStatus } from "@shared/types/update.types";
 
 export type IpcSentEvents = {
@@ -12,6 +12,8 @@ export type IpcSentEvents = {
 	 * The session state changed without a renderer action (auto-lock, sleep...)
 	 */
 	"session:state": (event: IpcMainInvokeEvent, state: SessionState) => void;
+	/** A background authenticated sync applied the server's current permissions. */
+	"vault:snapshot": (event: IpcMainInvokeEvent, snapshot: VaultSnapshot) => void;
 	/**
 	 * A copied value was cleared from the clipboard
 	 */

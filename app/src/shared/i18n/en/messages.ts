@@ -5,6 +5,8 @@
 export const messages = {
 	// Session
 	vaultLocked: "The vault is locked",
+	vaultOfflineExpired: "Offline access requires a successful connection to your vault server at least every 24 hours. Connect to the server and unlock to verify access.",
+	vaultAuthenticationRequired: "The server rejected your authentication. Sign out and sign in online again to verify access.",
 	invalidServerAddress: "Invalid server address (https:// required)",
 	serverUnreachable: "Server unreachable",
 	serverUnreachableDetail: "Server unreachable: {{detail}}",

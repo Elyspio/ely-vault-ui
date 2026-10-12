@@ -13,6 +13,7 @@ import { PasswordField } from "@components/shared/PasswordField";
 export function UnlockScreen() {
 	const dispatch = useAppDispatch();
 	const { t } = useTranslation("auth");
+	const { t: message } = useTranslation("messages");
 	const { pending, error } = useAppSelector((state) => state.session);
 	const account = useAppSelector((state) => state.session.current);
 	const [password, setPassword] = useState("");
@@ -76,6 +77,11 @@ export function UnlockScreen() {
 				}}
 			>
 				<Stack spacing={2}>
+					{account?.accessBlock && !error && (
+						<Alert severity="warning" variant="outlined">
+							{message(account.accessBlock === "authentication-required" ? "vaultAuthenticationRequired" : "vaultOfflineExpired")}
+						</Alert>
+					)}
 					<PasswordField autoFocus label={t("unlock.masterPasswordLabel")} value={password} onChange={(event) => setPassword(event.target.value)} />
 					{error && (
 						<Alert severity="error" variant="outlined">
