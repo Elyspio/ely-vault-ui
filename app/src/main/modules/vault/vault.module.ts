@@ -168,7 +168,8 @@ export class VaultModule extends LogModule {
 		await this.enqueue(async () => {
 			this.ensureGeneration(generation);
 			try {
-				await this.bwServeModule.request<BwMessage>("POST", "/sync");
+				// Plain sync can skip downloading when the server's account revision has not advanced.
+				await this.bwServeModule.request<BwMessage>("POST", "/sync?force=true");
 			} catch (error) {
 				// Unlock still works offline with the CLI's encrypted cache.
 				this.logger.warn("Sync after unlock failed", errorMessage(error));
