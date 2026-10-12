@@ -1,10 +1,9 @@
 /**
  * Publishes GitHub releases, read by the auto update of the application.
  *
- * `pnpm release`: publishes the version of package.json as a draft release. Run it on Windows, from an up to date `main`,
+ * `pnpm release`: publishes the version of package.json directly. Run it on Windows, from an up to date `main`,
  * with Docker or Podman and an authenticated `gh`: checks the repository, builds the Windows installer locally and the
- * Linux packages in a container, pushes the tag then creates the draft release (notes generated from the merged PRs).
- * The release is only seen by the applications once published from GitHub.
+ * Linux packages in a container, pushes the tag then publishes the release (notes generated from the merged PRs).
  *
  * `pnpm release:dev` (`release.ts dev`): publishes a development build `X.Y.Z-dev.N` from any branch, as a published
  * prerelease followed by the "Dev" update channel. The version is injected at build time (package.json is unchanged),
@@ -358,10 +357,9 @@ async function main() {
 	const previous = releasedVersions(repository.tags)[0];
 	const notesStart = previous ? ["--notes-start-tag", `v${previous}`] : [];
 	const releaseFlags = release.prerelease ? ["--prerelease", "--latest=false"] : [];
-	await run("gh", ["release", "create", release.tag, "--draft", "--verify-tag", "--title", release.tag, "--generate-notes", ...notesStart, ...releaseFlags, ...assets]);
+	await run("gh", ["release", "create", release.tag, "--verify-tag", "--title", release.tag, "--generate-notes", ...notesStart, ...releaseFlags, ...assets]);
 
-	console.log(`\nDraft release created: ${output("gh", ["release", "view", release.tag, "--json", "url", "--jq", ".url"])}`);
-	console.log("Review the notes, then publish it on GitHub: the applications only see published releases.");
+	console.log(`\nRelease published: ${output("gh", ["release", "view", release.tag, "--json", "url", "--jq", ".url"])}`);
 }
 
 /**
