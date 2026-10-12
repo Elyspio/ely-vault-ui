@@ -137,6 +137,8 @@ function message(): BwMessage {
 class FakeBwServe {
 	public readonly calls: Call[] = [];
 	public readonly items = new Map<string, BwItem>();
+	/** Remote changes with an unchanged account revision are fetched only by a forced sync. */
+	public readonly remoteItems = new Map<string, BwItem>();
 	public folders: BwFolder[] = [];
 	public status: "locked" | "unlocked" = "locked";
 	public isRunning = true;
@@ -220,6 +222,9 @@ class FakeBwServe {
 			return message();
 		}
 		if (method === "POST" && path === "/sync") {
+			if (params.get("force") === "true") {
+				for (const [id, item] of this.remoteItems) this.items.set(id, structuredClone(item));
+			}
 			this.lastSync = this.nextTime();
 			return message();
 		}
@@ -354,9 +359,16 @@ function putRoutes(serve: FakeBwServe) {
 }
 
 describe("VaultModule unlock", () => {
+	it("fetches remote changes after unlock even when the account revision has not advanced", async () => {
+		const { module, serve } = await setup();
+		serve.remoteItems.set("remote-item", plainItem("remote-item"));
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
+		expect((await module.getSnapshot()).items.some((item) => item.id === "remote-item")).toBe(true);
+	});
+
 	it("syncs after unlocking and before loading the snapshot", async () => {
 		const { module, serve } = await setup();
-		const gate = serve.hold("POST", "/sync");
+		const gate = serve.hold("POST", "/sync?force=true");
 		const pending = module.unlock(PASSWORD);
 		await vi.waitFor(() => expect(serve.callsTo("POST", "/sync")).toHaveLength(1));
 		expect(serve.callsTo("POST", "/unlock")).toHaveLength(1);
@@ -371,7 +383,7 @@ describe("VaultModule unlock", () => {
 
 	it("loads cached items when the sync fails", async () => {
 		const { module, serve } = await setup();
-		serve.failOnce("POST", "/sync", "Server unreachable.");
+		serve.failOnce("POST", "/sync?force=true", "Server unreachable.");
 		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
 		expect(module.isUnlocked).toBe(true);
 		expect((await module.getSnapshot()).items.some((item) => item.id === "plain-1")).toBe(true);
@@ -386,7 +398,7 @@ describe("VaultModule unlock", () => {
 
 	it("discards an unlock snapshot when locked during sync", async () => {
 		const { module, serve } = await setup();
-		const gate = serve.hold("POST", "/sync");
+		const gate = serve.hold("POST", "/sync?force=true");
 		const pending = module.unlock(PASSWORD);
 		const rejected = expect(pending).rejects.toBeDefined();
 		await vi.waitFor(() => expect(serve.callsTo("POST", "/sync")).toHaveLength(1));
