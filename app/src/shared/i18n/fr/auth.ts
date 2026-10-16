@@ -99,5 +99,12 @@ export const auth: Translation<typeof en> = {
 		restarts: "Redémarre l'application",
 		updateTo: "Mettre à jour vers {{version}}",
 		goBackTo: "Revenir à {{version}}",
+		server: {
+			unreachable: "Serveur du coffre injoignable ({{host}})",
+			lastSync: "Dernière synchronisation {{lastSync}}",
+			offlineLeft: "Accès hors ligne encore {{duration}}",
+			offlineExpired: "Accès hors ligne expiré",
+			retry: "Cliquer pour réessayer",
+		},
 	},
 };

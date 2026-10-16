@@ -51,6 +51,8 @@ export interface IpcHandledEvents {
 	"session:unlock": (event: IpcMainInvokeEvent, password: string) => Promise<UnlockResult>;
 	"session:lock": (event: IpcMainInvokeEvent) => Promise<void>;
 	"session:logout": (event: IpcMainInvokeEvent) => Promise<void>;
+	/** Checks again whether the vault server answers; a change comes with `session:state` */
+	"session:server:check": (event: IpcMainInvokeEvent) => Promise<void>;
 	/**
 	 * Unlock with Windows Hello: availability on this computer, and whether the current account can use it
 	 */

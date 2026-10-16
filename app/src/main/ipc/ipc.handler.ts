@@ -69,6 +69,9 @@ const ipcHandlers: IpcHandledEvents = {
 		await mainContainer.get(HelloUnlockModule).forget();
 		await mainContainer.get(VaultModule).logout();
 	},
+	async "session:server:check"() {
+		await mainContainer.get(VaultModule).probeServer();
+	},
 	async "session:hello:status"() {
 		return await mainContainer.get(HelloUnlockModule).getStatus();
 	},

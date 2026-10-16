@@ -96,5 +96,12 @@ export const auth = {
 		restarts: "Restarts the application",
 		updateTo: "Update to {{version}}",
 		goBackTo: "Go back to {{version}}",
+		server: {
+			unreachable: "Vault server unreachable ({{host}})",
+			lastSync: "Last sync {{lastSync}}",
+			offlineLeft: "Offline access for {{duration}} more",
+			offlineExpired: "Offline access expired",
+			retry: "Click to try again",
+		},
 	},
 };

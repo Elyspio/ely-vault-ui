@@ -28,6 +28,10 @@ export class SessionService {
 		return window.preload.ipc.send.session.logout();
 	}
 
+	public checkServer() {
+		return window.preload.ipc.send.session.checkServer();
+	}
+
 	public helloStatus() {
 		return window.preload.ipc.send.session.hello.status();
 	}

@@ -24,6 +24,7 @@ export function getIpcSender() {
 			unlock: (password: string) => ipcRendererWrapper.invoke("session:unlock", password),
 			lock: () => ipcRendererWrapper.invoke("session:lock"),
 			logout: () => ipcRendererWrapper.invoke("session:logout"),
+			checkServer: () => ipcRendererWrapper.invoke("session:server:check"),
 			hello: {
 				status: () => ipcRendererWrapper.invoke("session:hello:status"),
 				enable: (password: string | null) => ipcRendererWrapper.invoke("session:hello:enable", password),
