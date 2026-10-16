@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { net } from "electron";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -499,6 +500,20 @@ describe("24-hour offline vault access", () => {
 		expect(await module.unlock(PASSWORD)).toEqual({ status: "error", message: appMessage("vaultOfflineExpired") });
 		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
 		expect(module.isUnlocked).toBe(true);
+	});
+
+	it("checks the server before an unlock that needs it, and tells when it does not answer", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, serve } = await unlockedSetup();
+		await module.lock();
+		expect(await module.checkServer()).toBeNull();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		vi.mocked(net.fetch).mockRejectedValueOnce(new TypeError("fetch failed"));
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "error", message: appMessage("vaultServerUnreachable", { host: "vault.example" }) });
+		expect(net.fetch).toHaveBeenCalledWith(`${SERVER}/alive`, expect.anything());
+		expect(serve.callsTo("POST", "/unlock")).toHaveLength(0);
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
 	});
 
 	it("locks an open session, clears held keys and the clipboard, and reports the recovery reason", async () => {

@@ -39,6 +39,8 @@ const REPROMPT_GRACE_MS = 5 * 60 * 1000;
 /** `bw serve` answers a write before its local cache shows it: the reload is retried until the change appears */
 const SETTLE_ATTEMPTS = 10;
 const SETTLE_DELAY_MS = 150;
+/** Wait for the vault server before telling that it does not answer */
+const SERVER_CHECK_TIMEOUT_MS = 5000;
 
 /** Shown when the SSH key of a draft is no longer held (expired, or the vault was locked) */
 const SSH_KEY_EXPIRED = appMessage("sshKeyExpired");
@@ -177,8 +179,12 @@ export class VaultModule extends LogModule {
 	@log("info")
 	public async unlock(password: string): Promise<UnlockResult> {
 		await this.bwServeModule.ensureStarted();
-		this.offlineAccess.select((await this.bwServeModule.request<BwStatus>("GET", "/status")).template);
+		const { template } = await this.bwServeModule.request<BwStatus>("GET", "/status");
+		this.serverUrl = template.serverUrl;
+		this.offlineAccess.select(template);
 		if (this.offlineAccess.block === "authentication-required") return { status: "error", message: appMessage("vaultAuthenticationRequired") };
+		const unreachable = await this.checkServer();
+		if (unreachable) return { status: "error", message: unreachable };
 		try {
 			await this.bwServeModule.request<BwMessage>("POST", "/unlock", { password });
 		} catch (error) {
@@ -223,6 +229,21 @@ export class VaultModule extends LogModule {
 			this.startAccessTimers();
 			return { status: "success" };
 		});
+	}
+
+	/**
+	 * Once offline access expired, unlocking needs the vault server: message when it does not answer, null otherwise.
+	 * Any HTTP answer counts, only network failures (VPN off, DNS, timeout) mean unreachable.
+	 */
+	public async checkServer(): Promise<string | null> {
+		if (this.offlineAccess.block !== "offline-expired" || !this.serverUrl) return null;
+		try {
+			await net.fetch(`${this.serverUrl}/alive`, { credentials: "omit", cache: "no-store", signal: AbortSignal.timeout(SERVER_CHECK_TIMEOUT_MS) });
+			return null;
+		} catch (error) {
+			this.logger.warn("Vault server unreachable before unlocking", errorMessage(error));
+			return appMessage("vaultServerUnreachable", { host: new URL(this.serverUrl).host });
+		}
 	}
 
 	/** Whether `bw serve` still answers with an unlocked vault */

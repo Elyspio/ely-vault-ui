@@ -23,7 +23,6 @@ export function endStartupHello() {
 export function UnlockScreen() {
 	const dispatch = useAppDispatch();
 	const { t } = useTranslation("auth");
-	const { t: message } = useTranslation("messages");
 	const { pending, error } = useAppSelector((state) => state.session);
 	const account = useAppSelector((state) => state.session.current);
 	const offlineAccessMinutes = useAppSelector((state) => offlineAccessMs(state.config.current.security.offlineAccessMinutes) / 60_000);
@@ -51,7 +50,6 @@ export function UnlockScreen() {
 
 	const host = account?.serverUrl ? new URL(account.serverUrl).host : "";
 	const authRejected = account?.accessBlock === "authentication-required";
-	const accessKey = authRejected ? "vaultAuthenticationRequired" : "vaultOfflineExpired";
 	const accessHint = authRejected ? "unlock.access.authenticationRequired" : "unlock.access.offlineExpired";
 	// One sentence per line: the tooltip stays readable
 	const accessDetails = authRejected
@@ -61,8 +59,6 @@ export function UnlockScreen() {
 				t("unlock.access.offlineExpired.details.fix"),
 				t("unlock.access.offlineExpired.details.setting"),
 			];
-	// The reason is already shown by the access hint
-	const shownError = account?.accessBlock && error === message(accessKey) ? null : error;
 
 	return (
 		<AuthLayout
@@ -124,9 +120,9 @@ export function UnlockScreen() {
 						</Tooltip>
 					)}
 					<PasswordField autoFocus label={t("unlock.masterPasswordLabel")} value={password} onChange={(event) => setPassword(event.target.value)} />
-					{shownError && (
+					{error && (
 						<Alert severity="error" variant="outlined">
-							{shownError}
+							{error}
 						</Alert>
 					)}
 					<Button

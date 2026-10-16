@@ -128,6 +128,9 @@ export class HelloUnlockModule extends LogModule {
 	public async unlock(): Promise<HelloUnlockResult> {
 		const stored = this.read(await this.vaultModule.getState());
 		if (!stored?.password) return { status: "error", message: appMessage("helloNotEnabled") };
+		// No Windows Hello prompt for an unlock that cannot succeed
+		const unreachable = await this.vaultModule.checkServer();
+		if (unreachable) return { status: "error", message: unreachable };
 
 		const verification = await this.verify("Unlock ElyVault");
 		if (verification.status !== "success") return verification;
