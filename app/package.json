@@ -1,6 +1,6 @@
 {
 	"name": "elyvault",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"private": true,
 	"description": "Desktop client for a Vaultwarden / Bitwarden server, built on the official Bitwarden CLI",
 	"homepage": "https://github.com/Elyspio/ely-vault-ui",
