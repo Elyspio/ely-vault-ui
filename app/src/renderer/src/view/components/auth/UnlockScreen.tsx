@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { alpha, Alert, Avatar, Button, CircularProgress, Link, Stack, Tooltip, Typography } from "@mui/material";
+import { alpha, Alert, Button, CircularProgress, Link, Stack, Tooltip, Typography } from "@mui/material";
 import LockOpenRounded from "@mui/icons-material/LockOpenRounded";
 import FingerprintRounded from "@mui/icons-material/FingerprintRounded";
 import CloudOffRounded from "@mui/icons-material/CloudOffRounded";
@@ -11,6 +11,7 @@ import { webContainer } from "@core/di/web.container";
 import { SessionService } from "@services/session.service";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "@components/shared/PasswordField";
+import { AccountAvatar } from "@components/vault/AccountAvatar";
 
 /** Windows Hello opens by itself only on the first unlock screen after startup, not after a lock */
 let startupHello = true;
@@ -71,20 +72,7 @@ export function UnlockScreen() {
 				</>
 			}
 			avatar={
-				<Avatar
-					sx={{
-						width: 56,
-						height: 56,
-						mb: 2,
-						bgcolor: "var(--accent-soft)",
-						color: "primary.main",
-						fontWeight: 600,
-						fontSize: "1.4rem",
-						border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.25)}`,
-					}}
-				>
-					{account?.email?.[0]?.toUpperCase() ?? "?"}
-				</Avatar>
+				<AccountAvatar email={account?.email} size={56} sx={{ mb: 2, fontSize: "1.4rem", border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.25)}` }} />
 			}
 			footer={
 				<Link component="button" variant="body2" underline="hover" sx={{ color: "var(--text-muted)" }} onClick={() => dispatch(logout())}>
