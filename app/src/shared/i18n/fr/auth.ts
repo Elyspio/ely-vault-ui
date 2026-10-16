@@ -61,9 +61,21 @@ export const auth: Translation<typeof en> = {
 		withHello: "Déverrouiller avec Windows Hello",
 		logout: "Se déconnecter ou changer de compte",
 		access: {
-			offlineExpired:
-				"Sans connexion au serveur du coffre, le coffre peut être déverrouillé pendant {{duration}} après la dernière synchronisation réussie (Paramètres → Sécurité → Accès hors ligne). Connectez-vous au serveur, puis déverrouillez pour vérifier votre accès.",
-			authenticationRequired: "Le serveur a refusé votre authentification : le coffre ne peut pas être ouvert avant une reconnexion en ligne.",
+			offlineExpired: {
+				label: "Accès hors ligne expiré",
+				details: {
+					window: "Hors ligne, le coffre s’ouvre pendant {{duration}} après la dernière synchronisation.",
+					fix: "Connectez-vous au serveur, puis déverrouillez.",
+					setting: "Durée : Paramètres → Sécurité → Accès hors ligne",
+				},
+			},
+			authenticationRequired: {
+				label: "Authentification refusée",
+				details: {
+					reason: "Le serveur a refusé votre authentification.",
+					fix: "Déconnectez-vous, puis reconnectez-vous en ligne.",
+				},
+			},
 		},
 	},
 	hello: {

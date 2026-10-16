@@ -42,7 +42,17 @@ export function UnlockScreen() {
 	}, [dispatch]);
 
 	const host = account?.serverUrl ? new URL(account.serverUrl).host : "";
-	const accessKey = account?.accessBlock === "authentication-required" ? "vaultAuthenticationRequired" : "vaultOfflineExpired";
+	const authRejected = account?.accessBlock === "authentication-required";
+	const accessKey = authRejected ? "vaultAuthenticationRequired" : "vaultOfflineExpired";
+	const accessHint = authRejected ? "unlock.access.authenticationRequired" : "unlock.access.offlineExpired";
+	// One sentence per line: the tooltip stays readable
+	const accessDetails = authRejected
+		? [t("unlock.access.authenticationRequired.details.reason"), t("unlock.access.authenticationRequired.details.fix")]
+		: [
+				t("unlock.access.offlineExpired.details.window", { duration: durationText(offlineAccessMinutes) }),
+				t("unlock.access.offlineExpired.details.fix"),
+				t("unlock.access.offlineExpired.details.setting"),
+			];
 	// The reason is already shown by the access hint
 	const shownError = account?.accessBlock && error === message(accessKey) ? null : error;
 
@@ -88,9 +98,11 @@ export function UnlockScreen() {
 					{account?.accessBlock && (
 						<Tooltip
 							title={
-								account.accessBlock === "authentication-required"
-									? t("unlock.access.authenticationRequired")
-									: t("unlock.access.offlineExpired", { duration: durationText(offlineAccessMinutes) })
+								<Stack spacing={0.5} sx={{ py: 0.5 }}>
+									{accessDetails.map((line) => (
+										<span key={line}>{line}</span>
+									))}
+								</Stack>
 							}
 						>
 							<Typography
@@ -99,7 +111,7 @@ export function UnlockScreen() {
 								sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, color: "warning.main", cursor: "help" }}
 							>
 								<CloudOffRounded fontSize="small" />
-								{message(accessKey)}
+								{t(`${accessHint}.label`)}
 							</Typography>
 						</Tooltip>
 					)}
