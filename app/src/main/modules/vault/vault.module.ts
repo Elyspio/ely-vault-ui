@@ -85,6 +85,12 @@ export class VaultModule extends LogModule {
 		@inject(OfflineAccessModule) private readonly offlineAccess: OfflineAccessModule
 	) {
 		super("VaultModule");
+		// Without the master password, a crashed CLI server cannot be unlocked again: an open session locks
+		this.bwServeModule.onUnexpectedExit(() => {
+			if (!this.isUnlocked) return;
+			this.logger.warn("bw serve stopped unexpectedly: locking");
+			void this.lock().catch((error: unknown) => this.logger.warn("Lock after bw serve exit failed", errorMessage(error)));
+		});
 	}
 
 	// region Session
@@ -203,7 +209,13 @@ export class VaultModule extends LogModule {
 				}
 			}
 			try {
-				await this.loadSnapshot(generation);
+				try {
+					await this.loadSnapshot(generation);
+				} catch (error) {
+					// Offline, the CLI can crash on its failed token refresh (unhandled rejection): unlock a new server once
+					if (!(await this.reopenDeadServe(password, generation))) throw error;
+					await this.loadSnapshot(generation);
+				}
 			} catch (error) {
 				if (generation === this.generation) await this.lock();
 				throw error;
@@ -211,6 +223,27 @@ export class VaultModule extends LogModule {
 			this.startAccessTimers();
 			return { status: "success" };
 		});
+	}
+
+	/** Whether `bw serve` still answers with an unlocked vault */
+	private async serveAlive() {
+		return await this.bwServeModule
+			.request<BwStatus>("GET", "/status")
+			.then(({ template }) => template.status === "unlocked")
+			.catch(() => false);
+	}
+
+	/** Restarts and unlocks `bw serve` when it died after unlocking; false when it is still running */
+	private async reopenDeadServe(password: string, generation: number) {
+		if (generation !== this.generation || (await this.serveAlive())) return false;
+		this.logger.warn("bw serve stopped after unlocking: restarting it");
+		await this.bwServeModule.stop();
+		await this.bwServeModule.ensureStarted();
+		this.ensureGeneration(generation);
+		await this.bwServeModule.request<BwMessage>("POST", "/unlock", { password }).catch(() => undefined);
+		this.ensureGeneration(generation);
+		if (!(await this.serveAlive())) throw new BwError(VAULT_LOCKED);
+		return true;
 	}
 
 	@log("info")

@@ -72,7 +72,7 @@ const SECRETS = ["hunter2-password", "plain-secret", "JBSWY3DPEHPK3PXP", "a1b2-c
 
 type Call = { method: string; route: string; body: unknown };
 type Gate = { promise: Promise<void>; open: () => void };
-type Hook = { method: string; route: string; once: boolean; fail?: string; gate?: Gate };
+type Hook = { method: string; route: string; once: boolean; fail?: string; gate?: Gate; crash?: boolean };
 
 /** Full item as `bw serve` returns it, built from the fixture */
 function rawItem(overrides: Partial<BwItem>): BwItem {
@@ -156,8 +156,18 @@ class FakeBwServe {
 	public folders: BwFolder[] = [];
 	public status: "locked" | "unlocked" = "locked";
 	public isRunning = true;
-	public readonly ensureStarted = vi.fn(async () => undefined);
+	/** The process died: requests fail like `fetch` to a closed port until the server starts again */
+	public crashed = false;
+	public readonly ensureStarted = vi.fn(async () => {
+		if (!this.crashed) return;
+		this.crashed = false;
+		this.status = "locked";
+	});
 	public readonly stop = vi.fn(async () => undefined);
+	public exitListener: (() => void) | null = null;
+	public onUnexpectedExit(listener: () => void) {
+		this.exitListener = listener;
+	}
 	private readonly hooks: Hook[] = [];
 	private clock = 0;
 	private created = 0;
@@ -172,6 +182,11 @@ class FakeBwServe {
 	/** Next request of this route fails with the message */
 	public failOnce(method: string, route: string, message: string) {
 		this.hooks.push({ method, route, once: true, fail: message });
+	}
+
+	/** Next request of this route fails and the server process dies, like the CLI on an unhandled rejection */
+	public crashOnce(method: string, route: string, message: string) {
+		this.hooks.push({ method, route, once: true, fail: message, crash: true });
 	}
 
 	/** Holds the request of this route until the gate opens, then serves it */
@@ -199,6 +214,7 @@ class FakeBwServe {
 	public request = async (method: string, route: string, body?: unknown): Promise<unknown> => {
 		this.calls.push({ method, route, body: structuredClone(body) });
 		const path = route.split("?")[0];
+		if (this.crashed) throw new TypeError("fetch failed");
 
 		if (this.status === "locked" && !["/status", "/unlock", "/lock"].includes(path)) throw new BwError("Vault is locked.");
 
@@ -207,6 +223,7 @@ class FakeBwServe {
 			const hook = this.hooks[index];
 			if (hook.once) this.hooks.splice(index, 1);
 			if (hook.gate) await hook.gate.promise;
+			if (hook.crash) this.crashed = true;
 			if (hook.fail) throw new BwError(hook.fail);
 		}
 
@@ -420,6 +437,24 @@ describe("VaultModule unlock", () => {
 		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
 		expect(module.isUnlocked).toBe(true);
 		expect((await module.getSnapshot()).items.some((item) => item.id === "plain-1")).toBe(true);
+	});
+
+	it("unlocks offline when the CLI server crashes on its failed sync", async () => {
+		const { module, serve } = await unlockedSetup();
+		await module.lock();
+		serve.clearCalls();
+		serve.crashOnce("POST", "/sync?force=true", "Syncing failed: FetchError: getaddrinfo ENOTFOUND");
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
+		expect(serve.callsTo("POST", "/unlock")).toHaveLength(2);
+		expect(module.isUnlocked).toBe(true);
+		expect((await module.getSnapshot()).items.some((item) => item.id === "plain-1")).toBe(true);
+	});
+
+	it("locks an open session when the CLI server exits unexpectedly", async () => {
+		const { module, serve } = await unlockedSetup();
+		serve.crashed = true;
+		serve.exitListener?.();
+		await vi.waitFor(() => expect(module.isUnlocked).toBe(false));
 	});
 
 	it("does not sync when the password is invalid", async () => {
