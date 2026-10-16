@@ -39,6 +39,10 @@ const REPROMPT_GRACE_MS = 5 * 60 * 1000;
 /** `bw serve` answers a write before its local cache shows it: the reload is retried until the change appears */
 const SETTLE_ATTEMPTS = 10;
 const SETTLE_DELAY_MS = 150;
+/** Wait for the vault server before telling that it does not answer */
+const SERVER_CHECK_TIMEOUT_MS = 5000;
+/** While the vault server does not answer, it is checked again at this interval */
+export const SERVER_RETRY_MS = 30_000;
 
 /** Shown when the SSH key of a draft is no longer held (expired, or the vault was locked) */
 const SSH_KEY_EXPIRED = appMessage("sshKeyExpired");
@@ -74,6 +78,9 @@ export class VaultModule extends LogModule {
 	private expiryTimer: NodeJS.Timeout | null = null;
 	private deadlineTimer: NodeJS.Timeout | null = null;
 	private backgroundSync: Promise<void> | null = null;
+	/** Result of the last vault server check, null before the first one */
+	private serverReachable: boolean | null = null;
+	private serverRetryTimer: NodeJS.Timeout | null = null;
 
 	public constructor(
 		@inject(BwCliModule) private readonly bwCliModule: BwCliModule,
@@ -122,13 +129,19 @@ export class VaultModule extends LogModule {
 			template = { ...template, status: "locked" };
 		}
 		if (template.status !== "unlocked") this.clear();
+		const signedIn = template.status !== "unauthenticated";
+		// First state of an account: its server is checked in the background, an unreachable one comes with `session:state`
+		if (signedIn && this.serverReachable === null) void this.probeServer();
+		const remainingMs = this.offlineAccess.remainingMs;
 
 		return {
 			status: template.status,
 			serverUrl: template.serverUrl,
 			email: template.userEmail ?? null,
 			lastSync: template.lastSync,
-			accessBlock: template.status === "unauthenticated" ? undefined : this.offlineAccess.block,
+			accessBlock: signedIn ? this.offlineAccess.block : undefined,
+			serverUnreachable: signedIn && this.serverReachable === false,
+			offlineAccessUntil: remainingMs > 0 ? Date.now() + remainingMs : null,
 		};
 	}
 
@@ -177,8 +190,12 @@ export class VaultModule extends LogModule {
 	@log("info")
 	public async unlock(password: string): Promise<UnlockResult> {
 		await this.bwServeModule.ensureStarted();
-		this.offlineAccess.select((await this.bwServeModule.request<BwStatus>("GET", "/status")).template);
+		const { template } = await this.bwServeModule.request<BwStatus>("GET", "/status");
+		this.serverUrl = template.serverUrl;
+		this.offlineAccess.select(template);
 		if (this.offlineAccess.block === "authentication-required") return { status: "error", message: appMessage("vaultAuthenticationRequired") };
+		const unreachable = await this.checkServer();
+		if (unreachable) return { status: "error", message: unreachable };
 		try {
 			await this.bwServeModule.request<BwMessage>("POST", "/unlock", { password });
 		} catch (error) {
@@ -223,6 +240,55 @@ export class VaultModule extends LogModule {
 			this.startAccessTimers();
 			return { status: "success" };
 		});
+	}
+
+	/**
+	 * Once offline access expired, unlocking needs the vault server: message when it does not answer, null otherwise.
+	 * Any HTTP answer counts, only network failures (VPN off, DNS, timeout) mean unreachable.
+	 */
+	public async checkServer(): Promise<string | null> {
+		if (this.offlineAccess.block !== "offline-expired" || !this.serverUrl) return null;
+		if (await this.probeServer()) return null;
+		return appMessage("vaultServerUnreachable", { host: new URL(this.serverUrl).host });
+	}
+
+	/**
+	 * Whether the vault server answers (any HTTP answer counts, only network failures mean unreachable).
+	 * The renderer is told when it stops or starts answering; while unreachable, it is checked again every 30 seconds.
+	 */
+	public async probeServer(): Promise<boolean> {
+		if (!this.serverUrl) return true;
+		let reachable = true;
+		try {
+			await net.fetch(`${this.serverUrl}/alive`, { credentials: "omit", cache: "no-store", signal: AbortSignal.timeout(SERVER_CHECK_TIMEOUT_MS) });
+		} catch (error) {
+			reachable = false;
+			if (this.serverReachable !== false) this.logger.warn("Vault server unreachable", errorMessage(error));
+		}
+		this.setServerReachable(reachable);
+		return reachable;
+	}
+
+	private setServerReachable(reachable: boolean) {
+		const previous = this.serverReachable;
+		this.serverReachable = reachable;
+		if (reachable && this.serverRetryTimer) {
+			clearInterval(this.serverRetryTimer);
+			this.serverRetryTimer = null;
+		} else if (!reachable && !this.serverRetryTimer) {
+			this.serverRetryTimer = setInterval(() => void this.probeServer(), SERVER_RETRY_MS);
+			this.serverRetryTimer.unref();
+		}
+		if (previous !== reachable && (previous === false || !reachable)) {
+			if (previous === false) this.logger.info("Vault server reachable again");
+			void this.notifyState().catch((error: unknown) => this.logger.warn("Session state push failed", errorMessage(error)));
+		}
+	}
+
+	private forgetServerState() {
+		if (this.serverRetryTimer) clearInterval(this.serverRetryTimer);
+		this.serverRetryTimer = null;
+		this.serverReachable = null;
 	}
 
 	/** Whether `bw serve` still answers with an unlocked vault */
@@ -272,6 +338,7 @@ export class VaultModule extends LogModule {
 	public async logout() {
 		await this.bwServeModule.stop();
 		this.clear();
+		this.forgetServerState();
 		this.icons.clear();
 		await this.clipboardModule.clearIfOwned();
 		const status = await this.bwCliModule.status();
@@ -288,6 +355,7 @@ export class VaultModule extends LogModule {
 			this.logger.warn("Could not persist access clock before shutdown");
 		}
 		this.clear();
+		this.forgetServerState();
 		await this.clipboardModule.clearIfOwned();
 		await this.bwServeModule.stop();
 	}
@@ -532,6 +600,7 @@ export class VaultModule extends LogModule {
 				throw new BwError(VAULT_LOCKED);
 			}
 			this.offlineAccess.verified();
+			this.setServerReachable(true);
 			if (this.snapshot) this.scheduleExpiry();
 		} catch (error) {
 			this.ensureGeneration(generation);
@@ -540,6 +609,8 @@ export class VaultModule extends LogModule {
 			if (isAuthenticationRejection(errorMessage(error)) || status?.template.status === "unauthenticated") {
 				return await this.rejectAuthentication();
 			}
+			// Network failure or server error: the check tells which one to the renderer
+			void this.probeServer();
 			throw error;
 		}
 	}

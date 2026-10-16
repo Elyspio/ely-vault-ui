@@ -5,6 +5,7 @@ export const messages: Translation<typeof en> = {
 	// Session
 	vaultLocked: "Le coffre est verrouillé",
 	vaultOfflineExpired: "Accès hors ligne expiré : connectez-vous au serveur du coffre pour déverrouiller",
+	vaultServerUnreachable: "Serveur du coffre injoignable ({{host}}) : vérifiez votre connexion ou votre VPN, puis réessayez",
 	vaultAuthenticationRequired: "Authentification refusée : déconnectez-vous puis reconnectez-vous en ligne",
 	invalidServerAddress: "Adresse du serveur invalide (https:// requis)",
 	serverUnreachable: "Serveur injoignable",

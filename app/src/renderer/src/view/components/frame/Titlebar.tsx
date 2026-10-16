@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, Box, Button, Divider, IconButton, Tooltip, Typography } from "@mui/material";
 import SearchRounded from "@mui/icons-material/SearchRounded";
@@ -21,6 +21,7 @@ import { Logo } from "@components/shared/Logo";
 import { formatRelative } from "@view/utils/date.utils";
 import { selectPendingUpdate } from "@modules/update/update.selectors";
 import { downloadUpdate, installUpdate } from "@modules/update/update.async.actions";
+import { ServerStatusButton } from "./ServerStatusButton";
 
 const noDrag = { WebkitAppRegion: "no-drag" } as const;
 
@@ -33,7 +34,15 @@ export function Titlebar() {
 	const syncing = useAppSelector((state) => state.vault.syncing);
 	const lastSync = useAppSelector((state) => state.vault.snapshot?.lastSync ?? null);
 	const pendingUpdate = useAppSelector(selectPendingUpdate);
+	const serverUnreachable = useAppSelector((state) => state.session.current?.serverUnreachable === true);
 	const [maximized, setMaximized] = useState(false);
+	const wasUnreachable = useRef(serverUnreachable);
+
+	// Back online with the vault open: sync right away, which also renews the offline access
+	useEffect(() => {
+		if (wasUnreachable.current && !serverUnreachable && unlocked) void dispatch(syncVault());
+		wasUnreachable.current = serverUnreachable;
+	}, [serverUnreachable, unlocked, dispatch]);
 
 	useEffect(() => {
 		void window.preload.ipc.send.app.screen.isFullScreen().then(setMaximized);
@@ -107,17 +116,21 @@ export function Titlebar() {
 								<PasswordRounded sx={{ fontSize: 17 }} />
 							</IconButton>
 						</Tooltip>
-						<Tooltip title={lastSync ? t("titlebar.syncWithLast", { lastSync: formatRelative(lastSync) }) : t("titlebar.sync")}>
-							<IconButton sx={controlSx} onClick={() => dispatch(syncVault())} disabled={syncing}>
-								<SyncRounded
-									sx={{
-										fontSize: 17,
-										animation: syncing ? "spin 900ms linear infinite" : undefined,
-										"@keyframes spin": { to: { transform: "rotate(-360deg)" } },
-									}}
-								/>
-							</IconButton>
-						</Tooltip>
+						{serverUnreachable ? (
+							<ServerStatusButton sx={controlSx} />
+						) : (
+							<Tooltip title={lastSync ? t("titlebar.syncWithLast", { lastSync: formatRelative(lastSync) }) : t("titlebar.sync")}>
+								<IconButton sx={controlSx} onClick={() => dispatch(syncVault())} disabled={syncing}>
+									<SyncRounded
+										sx={{
+											fontSize: 17,
+											animation: syncing ? "spin 900ms linear infinite" : undefined,
+											"@keyframes spin": { to: { transform: "rotate(-360deg)" } },
+										}}
+									/>
+								</IconButton>
+							</Tooltip>
+						)}
 						<Tooltip title={t("titlebar.lock")}>
 							<IconButton sx={controlSx} onClick={() => dispatch(lock())}>
 								<LockRounded sx={{ fontSize: 16 }} />
@@ -125,6 +138,7 @@ export function Titlebar() {
 						</Tooltip>
 					</>
 				)}
+				{!unlocked && serverUnreachable && <ServerStatusButton sx={controlSx} />}
 				{/* Locked or logged out: the update waiting for the user is offered here too */}
 				{!unlocked && pendingUpdate && (
 					<>

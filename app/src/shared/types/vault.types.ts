@@ -46,6 +46,10 @@ export type VaultAccessBlock = "offline-expired" | "authentication-required";
 export type SessionState = AccountInfo & {
 	status: VaultStatus;
 	accessBlock?: VaultAccessBlock;
+	/** The vault server did not answer its last check */
+	serverUnreachable?: boolean;
+	/** End of the offline access (epoch ms), null when blocked or not verified */
+	offlineAccessUntil?: number | null;
 };
 
 export type LoginUri = {

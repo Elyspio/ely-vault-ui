@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { net } from "electron";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { OfflineAccessModule, OFFLINE_ACCESS_MS, VAULT_SYNC_INTERVAL_MS } from "./offline-access.module";
 import type { MainContextModule } from "../context/main.context.module";
-import { VaultModule, isAuthenticationRejection } from "./vault.module";
+import { SERVER_RETRY_MS, VaultModule, isAuthenticationRejection } from "./vault.module";
 import type { BwCollection, BwFolder, BwItem, BwMessage, BwOrganization } from "../bitwarden/bw.types";
 import { BwError } from "../bitwarden/bw.types";
 import type { BwCliModule } from "../bitwarden/bw.cli.module";
@@ -499,6 +500,41 @@ describe("24-hour offline vault access", () => {
 		expect(await module.unlock(PASSWORD)).toEqual({ status: "error", message: appMessage("vaultOfflineExpired") });
 		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
 		expect(module.isUnlocked).toBe(true);
+	});
+
+	it("checks the server before an unlock that needs it, and tells when it does not answer", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, serve } = await unlockedSetup();
+		await module.lock();
+		expect(await module.checkServer()).toBeNull();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		vi.mocked(net.fetch).mockRejectedValueOnce(new TypeError("fetch failed"));
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "error", message: appMessage("vaultServerUnreachable", { host: "vault.example" }) });
+		expect(net.fetch).toHaveBeenCalledWith(`${SERVER}/alive`, expect.anything());
+		expect(serve.callsTo("POST", "/unlock")).toHaveLength(0);
+		expect(await module.unlock(PASSWORD)).toEqual({ status: "success" });
+	});
+
+	it("tells the renderer when the server stops answering, and checks it again every 30 seconds until it answers", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { module, ipc } = await unlockedSetup();
+		vi.mocked(net.fetch).mockRejectedValue(new TypeError("fetch failed"));
+		expect(await module.probeServer()).toBe(false);
+		await vi.waitFor(() => expect(ipc.sendToMainWindow).toHaveBeenCalledWith("session:state", expect.objectContaining({ serverUnreachable: true })));
+		expect((await module.getState()).offlineAccessUntil).toBe(BASE_TIME + OFFLINE_ACCESS_MS);
+
+		vi.mocked(net.fetch).mockClear();
+		await vi.advanceTimersByTimeAsync(SERVER_RETRY_MS);
+		expect(net.fetch).toHaveBeenCalledTimes(1);
+
+		vi.mocked(net.fetch).mockReset();
+		await vi.advanceTimersByTimeAsync(SERVER_RETRY_MS);
+		await vi.waitFor(() => expect(ipc.sendToMainWindow).toHaveBeenLastCalledWith("session:state", expect.objectContaining({ serverUnreachable: false })));
+		vi.mocked(net.fetch).mockClear();
+		await vi.advanceTimersByTimeAsync(SERVER_RETRY_MS);
+		expect(net.fetch).not.toHaveBeenCalled();
 	});
 
 	it("locks an open session, clears held keys and the clipboard, and reports the recovery reason", async () => {
