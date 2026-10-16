@@ -123,25 +123,9 @@ export function Titlebar() {
 								<LockRounded sx={{ fontSize: 16 }} />
 							</IconButton>
 						</Tooltip>
-						<Tooltip
-							title={
-								pendingUpdate
-									? pendingUpdate.downgrade && pendingUpdate.state === "available"
-										? t("titlebar.olderVersionAvailable", { version: pendingUpdate.latestVersion })
-										: t("titlebar.versionReady", { version: pendingUpdate.latestVersion })
-									: t("titlebar.settings")
-							}
-						>
-							<IconButton sx={controlSx} onClick={() => dispatch(setSettingsOpen(true))}>
-								<Badge variant="dot" color="primary" invisible={!pendingUpdate}>
-									<TuneRounded sx={{ fontSize: 17 }} />
-								</Badge>
-							</IconButton>
-						</Tooltip>
-						<Divider orientation="vertical" flexItem sx={{ mx: 0.75, my: 1 }} />
 					</>
 				)}
-				{/* Locked or logged out: the settings are out of reach, the update waiting for the user is offered here */}
+				{/* Locked or logged out: the update waiting for the user is offered here too */}
 				{!unlocked && pendingUpdate && (
 					<>
 						<Tooltip
@@ -169,6 +153,22 @@ export function Titlebar() {
 						<Divider orientation="vertical" flexItem sx={{ mx: 0.75, my: 1 }} />
 					</>
 				)}
+				<Tooltip
+					title={
+						pendingUpdate
+							? pendingUpdate.downgrade && pendingUpdate.state === "available"
+								? t("titlebar.olderVersionAvailable", { version: pendingUpdate.latestVersion })
+								: t("titlebar.versionReady", { version: pendingUpdate.latestVersion })
+							: t("titlebar.settings")
+					}
+				>
+					<IconButton sx={controlSx} onClick={() => dispatch(setSettingsOpen(true))}>
+						<Badge variant="dot" color="primary" invisible={!pendingUpdate}>
+							<TuneRounded sx={{ fontSize: 17 }} />
+						</Badge>
+					</IconButton>
+				</Tooltip>
+				<Divider orientation="vertical" flexItem sx={{ mx: 0.75, my: 1 }} />
 				<IconButton sx={controlSx} onClick={() => window.preload.ipc.send.app.screen.minimize()}>
 					<RemoveRounded sx={{ fontSize: 16 }} />
 				</IconButton>

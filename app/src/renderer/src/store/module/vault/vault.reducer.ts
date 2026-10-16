@@ -73,6 +73,11 @@ const slice = createSlice({
 	name: "vault",
 	initialState,
 	reducers: {
+		backgroundSnapshot(state, action: PayloadAction<VaultSnapshot>) {
+			if (!state.snapshot) return;
+			state.snapshot = action.payload;
+			keepSelection(state);
+		},
 		setFilter(state, action: PayloadAction<VaultFilter>) {
 			guard(state, { kind: "filter", filter: action.payload });
 		},
@@ -151,5 +156,5 @@ function keepSelection(state: VaultState) {
 	if (!exists && !(state.editor?.mode === "edit" && state.editor.itemId === state.selectedId)) state.selectedId = null;
 }
 
-export const { setFilter, setQuery, selectItem, openEditor, closeEditor, setEditorDirty, resolveNavigation } = slice.actions;
+export const { backgroundSnapshot, setFilter, setQuery, selectItem, openEditor, closeEditor, setEditorDirty, resolveNavigation } = slice.actions;
 export const vaultReducer = slice.reducer;

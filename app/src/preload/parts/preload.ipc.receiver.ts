@@ -1,9 +1,12 @@
 import { ipcRendererWrapper } from "./preload.ipc.wrapper";
-import type { SessionState } from "@shared/types/vault.types";
+import type { SessionState, VaultSnapshot } from "@shared/types/vault.types";
 import type { UpdateStatus } from "@shared/types/update.types";
 
 export function getIpcReceiver() {
 	return {
+		vault: {
+			snapshot: (callback: (snapshot: VaultSnapshot) => void) => ipcRendererWrapper.on("vault:snapshot", callback),
+		},
 		session: {
 			/**
 			 * State change without a renderer action (auto-lock, sleep...)

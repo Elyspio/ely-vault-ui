@@ -41,8 +41,11 @@ export type AccountInfo = {
 	lastSync: string | null;
 };
 
+export type VaultAccessBlock = "offline-expired" | "authentication-required";
+
 export type SessionState = AccountInfo & {
 	status: VaultStatus;
+	accessBlock?: VaultAccessBlock;
 };
 
 export type LoginUri = {

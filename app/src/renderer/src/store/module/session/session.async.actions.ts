@@ -9,6 +9,7 @@ import { initUpdate } from "@modules/update/update.async.actions";
 import { showToast } from "@modules/ui/ui.reducer";
 import { ipcErrorMessage } from "@core/utils/ipc.utils";
 import { i18n } from "@/config/i18n";
+import { backgroundSnapshot } from "@modules/vault/vault.reducer";
 
 const createAsyncThunk = createAsyncActionGenerator("session");
 
@@ -112,6 +113,7 @@ export const logout = createAsyncThunk("logout", async (_, { extra, dispatch }) 
 
 export const initApp = createAsyncThunk("init-app", async (_, { dispatch }) => {
 	window.preload.ipc.on.session.state((state) => dispatch(sessionStateChanged(state)));
+	window.preload.ipc.on.vault.snapshot((snapshot) => dispatch(backgroundSnapshot(snapshot)));
 	window.preload.ipc.on.clipboard.cleared(() => dispatch(showToast(i18n.t("actions:session.clipboardCleared"), "info")));
 
 	await dispatch(initConfig());

@@ -37,9 +37,12 @@ const ipcHandlers: IpcHandledEvents = {
 		return await mainContainer.get(ConfigModule).getConfig();
 	},
 	async "config:set"(_, config) {
-		// The window bounds are owned by the main process
-		const { window, updates } = await mainContainer.get(ConfigModule).getConfig();
-		await mainContainer.get(ConfigModule).writeConfig({ ...config, window });
+		// The window bounds are owned by the main process; locked, only the display and update settings can change
+		const saved = await mainContainer.get(ConfigModule).getConfig();
+		const { window, updates } = saved;
+		const unlocked = mainContainer.get(VaultModule).isUnlocked;
+		await mainContainer.get(ConfigModule).writeConfig(unlocked ? { ...config, window } : { ...saved, display: config.display, updates: config.updates });
+		await mainContainer.get(VaultModule).onAccessLimitChanged();
 		nativeTheme.themeSource = config.display.theme;
 		await mainContainer.get(UpdateModule).onSettingsChanged(updates, config.updates);
 	},

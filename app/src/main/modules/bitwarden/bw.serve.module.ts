@@ -18,9 +18,15 @@ export class BwServeModule extends LogModule {
 	private process: ChildProcess | null = null;
 	private port: number | null = null;
 	private starting: Promise<void> | null = null;
+	private readonly exitListeners: (() => void)[] = [];
 
 	public constructor(@inject(BwCliModule) private readonly bwCliModule: BwCliModule) {
 		super("BwServeModule");
+	}
+
+	/** Called when the server exits without being stopped (e.g. a CLI crash) */
+	public onUnexpectedExit(listener: () => void) {
+		this.exitListeners.push(listener);
 	}
 
 	public get isRunning() {
@@ -49,6 +55,7 @@ export class BwServeModule extends LogModule {
 			if (this.process === child) {
 				this.process = null;
 				this.port = null;
+				for (const listener of this.exitListeners) listener();
 			}
 		});
 
@@ -80,11 +87,12 @@ export class BwServeModule extends LogModule {
 
 		await this.request("POST", "/lock").catch(() => undefined);
 
+		// Cleared first: the exit that follows is expected
+		this.process = null;
+		this.port = null;
 		const exited = new Promise((resolve) => child.once("exit", resolve));
 		child.kill();
 		await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 3000))]);
-		this.process = null;
-		this.port = null;
 	}
 
 	/**

@@ -105,6 +105,7 @@ App folder: `%LOCALAPPDATA%/elyvault` (Linux: Electron `appData`), see `MainCont
 - Make sure to run `pnpm check` and `pnpm test` before committing.
 - The CLI requires HTTPS: for a local Vaultwarden test server, follow `docs/development/local-test-server.md` and run with `NODE_EXTRA_CA_CERTS=scripts/dev/ssl/ca.pem`.
 - Commits follow Conventional Commits (`feat:`, `fix:`, …); PRs are squash-merged.
+- UI changes: before building a release or dev version, take screenshots of the candidate renders (at least two variants when the layout or wording is open) and ask the user which one renders better; build only the chosen one. With each proposal, also give the absolute path of every screenshot file (as a link), in case the harness cannot display the images.
 
 ## Git & Release Conventions
 

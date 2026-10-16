@@ -12,7 +12,7 @@ import { useAppDispatch, useAppSelector } from "@store";
 import { setSettingsOpen } from "@modules/ui/ui.reducer";
 import { saveConfig } from "@modules/config/config.async.actions";
 import { logout } from "@modules/session/session.async.actions";
-import type { AppConfig, AutoTypeAfter, ThemeMode, UpdateChannel } from "@shared/config/app.config";
+import { type AppConfig, type AutoTypeAfter, offlineAccessMs, type ThemeMode, type UpdateChannel } from "@shared/config/app.config";
 import { validateAutoTypeSequence } from "@shared/autotype/autotype.sequence";
 import { useAutoTypeAvailability } from "@hooks/useAutoType";
 import { formatDateTime } from "@view/utils/date.utils";
@@ -46,6 +46,23 @@ const clipboardOptions: Duration[] = [
 	{ value: 0, unit: "never", count: 0 },
 ];
 
+const offlineAccessOptions: Duration[] = [
+	{ value: 1, unit: "minutes", count: 1 },
+	{ value: 5, unit: "minutes", count: 5 },
+	{ value: 15, unit: "minutes", count: 15 },
+	{ value: 30, unit: "minutes", count: 30 },
+	{ value: 60, unit: "hours", count: 1 },
+	{ value: 240, unit: "hours", count: 4 },
+	{ value: 720, unit: "hours", count: 12 },
+	{ value: 1440, unit: "hours", count: 24 },
+];
+
+/** Offline access choices, with a value set by hand in the configuration file (shown in minutes) */
+function offlineAccessChoices(minutes: number): Duration[] {
+	if (offlineAccessOptions.some((o) => o.value === minutes)) return offlineAccessOptions;
+	return [...offlineAccessOptions, { value: minutes, unit: "minutes" as const, count: minutes }].sort((a, b) => a.value - b.value);
+}
+
 const channelOptions: UpdateChannel[] = ["stable", "beta", "dev"];
 
 const themeOptions: ThemeMode[] = ["dark", "light", "system"];
@@ -68,6 +85,8 @@ const sections: { key: SectionKey; icon: ReactNode }[] = [
 	{ key: "account", icon: <PersonRounded /> },
 ];
 
+const lockedSections: SectionKey[] = ["display", "updates"];
+
 export function SettingsDialog() {
 	const { t } = useTranslation(["settings", "common"]);
 	const dispatch = useAppDispatch();
@@ -79,14 +98,18 @@ export function SettingsDialog() {
 	const [confirmLogout, setConfirmLogout] = useState(false);
 	const autoType = useAutoTypeAvailability();
 	const pendingUpdate = useAppSelector(selectPendingUpdate);
-	const [active, setActive] = useState<SectionKey>("security");
+	const unlocked = account?.status === "unlocked";
+	// Locked or logged out: only the settings that do not weaken the vault protection
+	const visibleSections = unlocked ? sections : sections.filter((s) => lockedSections.includes(s.key));
+	const [selected, setActive] = useState<SectionKey>("security");
+	const active = visibleSections.some((s) => s.key === selected) ? selected : visibleSections[0].key;
 
 	// On opening (state adjusted during render): an update waiting for the user (titlebar badge) opens its section
 	const [wasOpen, setWasOpen] = useState(open);
 	if (wasOpen !== open) {
 		setWasOpen(open);
 		setConfirmLogout(false);
-		if (open) setActive(pendingUpdate ? "updates" : "security");
+		if (open) setActive(pendingUpdate ? "updates" : unlocked ? "security" : "display");
 	}
 
 	const close = () => dispatch(setSettingsOpen(false));
@@ -115,7 +138,7 @@ export function SettingsDialog() {
 					}}
 				>
 					<Typography sx={{ px: 1.25, pb: 1.5, fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>{t("dialog.title")}</Typography>
-					{sections.map((s) => (
+					{visibleSections.map((s) => (
 						<SidebarItem
 							key={s.key}
 							label={t(`sections.${s.key}.label`)}
@@ -181,6 +204,20 @@ export function SettingsDialog() {
 										sx={{ minWidth: 150 }}
 									>
 										{clipboardOptions.map((o) => (
+											<MenuItem key={o.value} value={o.value}>
+												{durationLabel(o)}
+											</MenuItem>
+										))}
+									</Select>
+								</Setting>
+								<Setting label={t("security.offlineAccess.label")} description={t("security.offlineAccess.description")}>
+									<Select
+										size="small"
+										value={offlineAccessMs(config.security.offlineAccessMinutes) / 60_000}
+										onChange={(event) => update((c) => ({ ...c, security: { ...c.security, offlineAccessMinutes: Number(event.target.value) } }))}
+										sx={{ minWidth: 150 }}
+									>
+										{offlineAccessChoices(offlineAccessMs(config.security.offlineAccessMinutes) / 60_000).map((o) => (
 											<MenuItem key={o.value} value={o.value}>
 												{durationLabel(o)}
 											</MenuItem>

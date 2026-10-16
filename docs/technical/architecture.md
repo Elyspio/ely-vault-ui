@@ -10,7 +10,7 @@ Renderer (React, MUI)  ──IPC──▶  Main process  ──HTTP 127.0.0.1─
 - The Bitwarden CLI runs with the Electron binary in Node mode (`ELECTRON_RUN_AS_NODE`): no `bw` installation needed.
 - Its data (encrypted vault, tokens) is isolated in `%LOCALAPPDATA%/elyvault/bitwarden`, separate from a global installation.
 - Login: `bw login` (password passed through an environment variable, never as an argument), then `bw serve` on `127.0.0.1` with a random port, unlocked through `POST /unlock`.
-- After each successful unlock (master password or Windows Hello), the vault forces a sync before loading its snapshot (`POST /sync?force=true`), bypassing the CLI's account revision check. If sync fails, the CLI cache remains available for offline use.
+- After each successful unlock (master password or Windows Hello), the vault forces an authenticated sync before loading its snapshot (`POST /sync?force=true`), bypassing the CLI's account revision check. If sync fails, offline access is allowed only within 24 hours (or the shorter *Offline access* setting, `security.offlineAccessMinutes`) of ElyVault's last successful verification for that account and server. Missing or invalid evidence requires online verification. Explicit authentication rejection immediately locks access until online sign-in. Main-process timers enforce the deadline, observe clock rollback, and force a sync every 15 minutes while unlocked and on resume. Background snapshots reach the renderer through `vault:snapshot` and are discarded when locked.
 
 ### Write flow
 

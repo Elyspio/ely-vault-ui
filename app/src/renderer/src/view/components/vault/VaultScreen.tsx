@@ -16,8 +16,8 @@ import { CommandPalette } from "./CommandPalette";
 import { GeneratorDialog } from "./GeneratorDialog";
 import { NewItemDialog } from "./NewItemDialog";
 import { MoveToFolderDialog } from "./MoveToFolderDialog";
-import { SettingsDialog } from "@components/settings/SettingsDialog";
 import { HelloOfferDialog } from "@components/auth/HelloOfferDialog";
+import { endStartupHello } from "@components/auth/UnlockScreen";
 import { PanelResizeHandle } from "./PanelResizeHandle";
 import { saveConfig } from "@modules/config/config.async.actions";
 import { clampPanelLayout, defaultAppConfig, type PanelLayout } from "@shared/config/app.config";
@@ -35,6 +35,8 @@ export function VaultScreen() {
 	const [screenWidth, setScreenWidth] = useState<number>();
 	// The saved widths give way to the item detail when the window is narrower than when they were set
 	const layout = clampPanelLayout(draft ?? config.layout, "listWidth", screenWidth);
+
+	useEffect(endStartupHello, []);
 
 	useEffect(() => {
 		const screen = screenRef.current;
@@ -196,7 +198,6 @@ export function VaultScreen() {
 			<NewItemDialog />
 			<MoveToFolderDialog />
 			<GeneratorDialog />
-			<SettingsDialog />
 			<HelloOfferDialog />
 		</Box>
 	);

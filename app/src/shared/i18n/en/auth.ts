@@ -57,6 +57,23 @@ export const auth = {
 		pending: "Decrypting…",
 		withHello: "Unlock with Windows Hello",
 		logout: "Log out or switch account",
+		access: {
+			offlineExpired: {
+				label: "Offline access expired",
+				details: {
+					window: "Offline, the vault opens for {{duration}} after the last sync.",
+					fix: "Connect to the server, then unlock.",
+					setting: "Duration: Settings → Security → Offline access",
+				},
+			},
+			authenticationRequired: {
+				label: "Authentication rejected",
+				details: {
+					reason: "The server rejected your authentication.",
+					fix: "Sign out, then sign in again online.",
+				},
+			},
+		},
 	},
 	hello: {
 		title: "Unlock with Windows Hello?",

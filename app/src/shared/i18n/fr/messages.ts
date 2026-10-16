@@ -4,6 +4,8 @@ import type { messages as en } from "../en/messages";
 export const messages: Translation<typeof en> = {
 	// Session
 	vaultLocked: "Le coffre est verrouillé",
+	vaultOfflineExpired: "Accès hors ligne expiré : connectez-vous au serveur du coffre pour déverrouiller",
+	vaultAuthenticationRequired: "Authentification refusée : déconnectez-vous puis reconnectez-vous en ligne",
 	invalidServerAddress: "Adresse du serveur invalide (https:// requis)",
 	serverUnreachable: "Serveur injoignable",
 	serverUnreachableDetail: "Serveur injoignable : {{detail}}",

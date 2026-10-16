@@ -52,7 +52,8 @@ export class BwCliModule extends LogModule {
 	public spawn(args: string[], extraEnv: Record<string, string> = {}, signal?: AbortSignal): ChildProcess {
 		// Authorities approved in the application (private PKI, self-signed server)
 		const trust = this.certificateModule.cliTrust();
-		return spawn(process.execPath, [...trust.args, this.bwPath, ...args], {
+		// Offline, the CLI leaves failed token refreshes unhandled: they must not kill `bw serve` while the vault is open
+		return spawn(process.execPath, ["--unhandled-rejections=warn", ...trust.args, this.bwPath, ...args], {
 			env: this.getEnv({ ...trust.env, ...extraEnv }),
 			stdio: ["ignore", "pipe", "pipe"],
 			windowsHide: true,
