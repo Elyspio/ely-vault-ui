@@ -30,6 +30,7 @@ export const settings: Translation<typeof en> = {
 		lockOnSystemLock: { label: "Verrouiller avec la session", description: "Quand l'ordinateur est verrouillé ou se met en veille" },
 		hello: { label: "Déverrouiller avec Windows Hello", description: "Visage, empreinte digitale ou code PIN au lieu du mot de passe principal" },
 		clipboard: { label: "Vider le presse-papiers", description: "Après la copie d'une valeur, si elle s'y trouve encore" },
+		offlineAccess: { label: "Accès hors ligne", description: "Durée pendant laquelle le coffre reste utilisable sans joindre le serveur (24 heures au maximum)" },
 	},
 	display: {
 		theme: {

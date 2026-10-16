@@ -35,6 +35,7 @@ All vault cryptography is delegated to the official CLI: the application impleme
 - **SSH keys**: generate an Ed25519 key or import an existing one; the private key never reaches the interface.
 - **Controlled clipboard**: automatic clearing, excluded from the Windows history (`Win V`) and the cloud clipboard.
 - **Auto-lock**: inactivity, session lock, sleep, quit.
+- **Limited offline access**: without reaching the server, the cached vault stays usable for 24 hours at most (shorter in the settings).
 - **Windows Hello unlock**: face, fingerprint or PIN instead of the master password (Windows).
 - **Master password re-entry** for protected items ("reprompt").
 - **Password generator**.

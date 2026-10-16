@@ -37,9 +37,10 @@ const ipcHandlers: IpcHandledEvents = {
 		return await mainContainer.get(ConfigModule).getConfig();
 	},
 	async "config:set"(_, config) {
-		// The window bounds and the offline access window are owned by the main process
-		const { window, updates, security } = await mainContainer.get(ConfigModule).getConfig();
-		await mainContainer.get(ConfigModule).writeConfig({ ...config, window, security: { ...config.security, offlineAccessMinutes: security.offlineAccessMinutes } });
+		// The window bounds are owned by the main process
+		const { window, updates } = await mainContainer.get(ConfigModule).getConfig();
+		await mainContainer.get(ConfigModule).writeConfig({ ...config, window });
+		await mainContainer.get(VaultModule).onAccessLimitChanged();
 		nativeTheme.themeSource = config.display.theme;
 		await mainContainer.get(UpdateModule).onSettingsChanged(updates, config.updates);
 	},

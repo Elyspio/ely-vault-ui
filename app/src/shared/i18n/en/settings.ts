@@ -25,6 +25,7 @@ export const settings = {
 		lockOnSystemLock: { label: "Lock with the session", description: "When the computer is locked or goes to sleep" },
 		hello: { label: "Unlock with Windows Hello", description: "Face, fingerprint or PIN instead of the master password" },
 		clipboard: { label: "Clear the clipboard", description: "After copying a value, if it is still there" },
+		offlineAccess: { label: "Offline access", description: "How long the vault stays usable without reaching the server (24 hours at most)" },
 	},
 	display: {
 		theme: {

@@ -33,13 +33,12 @@ export class OfflineAccessModule extends LogModule {
 		super("OfflineAccessModule");
 	}
 
-	/** Reads the configured window (capped at 24 hours); called before an account is selected */
+	/** Reads the configured window (capped at 24 hours), at startup and when the settings change */
 	public async loadLimit() {
 		const limitMs = offlineAccessMs((await this.configModule.getConfig()).security.offlineAccessMinutes);
-		if (limitMs === this.limitMs) return;
+		// The monotonic deadline moves by the same amount, keeping its clock rollback protection
+		if (this.monotonicDeadline !== null) this.monotonicDeadline += limitMs - this.limitMs;
 		this.limitMs = limitMs;
-		// A deadline computed with the previous window is recomputed on the next selection
-		this.account = null;
 	}
 
 	private get storePath() {

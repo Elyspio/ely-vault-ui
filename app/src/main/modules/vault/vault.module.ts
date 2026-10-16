@@ -549,6 +549,14 @@ export class VaultModule extends LogModule {
 		this.deadlineTimer.unref();
 	}
 
+	/** Applies a changed offline access window: an open session past the new deadline locks at once */
+	public async onAccessLimitChanged() {
+		await this.offlineAccess.loadLimit();
+		if (!this.isUnlocked) return;
+		if (this.offlineAccess.block) await this.lock();
+		else this.scheduleExpiry();
+	}
+
 	/** Resume checks expiry synchronously before attempting network renewal. */
 	public refreshAccess(): Promise<void> {
 		if (!this.isUnlocked) return Promise.resolve();

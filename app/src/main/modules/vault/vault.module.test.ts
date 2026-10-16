@@ -690,6 +690,26 @@ describe("persisted offline access evidence", () => {
 		expect(restarted.block).toBe("offline-expired");
 	});
 
+	it("applies a window changed in the settings to the current lease, within 24 hours", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { folder } = await setup();
+		const config = { minutes: 60 };
+		const configModule = { getConfig: async () => ({ ...defaultAppConfig, security: { ...defaultAppConfig.security, offlineAccessMinutes: config.minutes } }) };
+		const access = new OfflineAccessModule({ appFolder: folder } as MainContextModule, configModule as unknown as ConfigModule);
+		await access.loadLimit();
+		access.select(status);
+		access.verified();
+		vi.setSystemTime(BASE_TIME + 30 * 60_000);
+		config.minutes = 24 * 60;
+		await access.loadLimit();
+		vi.setSystemTime(BASE_TIME + 2 * 60 * 60_000);
+		expect(access.block).toBeUndefined();
+		config.minutes = 90;
+		await access.loadLimit();
+		expect(access.block).toBe("offline-expired");
+	});
+
 	it("never extends the window beyond 24 hours", async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(BASE_TIME);

@@ -14,8 +14,8 @@ export type AppConfig = {
 		/** Locks the vault when the session is locked or the computer goes to sleep */
 		lockOnSystemLock: boolean;
 		/**
-		 * Minutes the cached vault stays usable without a successful online sync. Only set in the configuration file;
-		 * values above 24 hours (1440) are lowered to 24 hours, values below 1 minute raised to 1 minute.
+		 * Minutes the cached vault stays usable without a successful online sync; values above 24 hours (1440)
+		 * are lowered to 24 hours, values below 1 minute raised to 1 minute.
 		 */
 		offlineAccessMinutes: number;
 	};
