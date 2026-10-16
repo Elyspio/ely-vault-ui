@@ -91,6 +91,7 @@ export class VaultModule extends LogModule {
 
 	public async getState(): Promise<SessionState> {
 		let template: BwStatus["template"];
+		await this.offlineAccess.loadLimit();
 
 		if (this.bwServeModule.isRunning) {
 			template = (await this.bwServeModule.request<BwStatus>("GET", "/status")).template;

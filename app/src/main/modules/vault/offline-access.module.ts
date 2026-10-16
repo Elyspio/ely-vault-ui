@@ -5,10 +5,13 @@ import { performance } from "node:perf_hooks";
 import { inject, injectable } from "inversify";
 import { MainContextModule } from "../context/main.context.module";
 import { LogModule } from "../log.module";
+import { ConfigModule } from "../config/config.module";
 import type { BwStatus } from "../bitwarden/bw.types";
 import type { VaultAccessBlock } from "@shared/types/vault.types";
 import { appMessage } from "@shared/i18n/message";
+import { offlineAccessMs } from "@shared/config/app.config";
 
+/** Longest offline window; `security.offlineAccessMinutes` can only shorten it */
 export const OFFLINE_ACCESS_MS = 24 * 60 * 60_000;
 export const VAULT_SYNC_INTERVAL_MS = 15 * 60_000;
 
@@ -21,9 +24,22 @@ export class OfflineAccessModule extends LogModule {
 	private record: AccessRecord | null = null;
 	private monotonicDeadline: number | null = null;
 	private observedTime = 0;
+	private limitMs = OFFLINE_ACCESS_MS;
 
-	public constructor(@inject(MainContextModule) private readonly context: MainContextModule) {
+	public constructor(
+		@inject(MainContextModule) private readonly context: MainContextModule,
+		@inject(ConfigModule) private readonly configModule: ConfigModule
+	) {
 		super("OfflineAccessModule");
+	}
+
+	/** Reads the configured window (capped at 24 hours); called before an account is selected */
+	public async loadLimit() {
+		const limitMs = offlineAccessMs((await this.configModule.getConfig()).security.offlineAccessMinutes);
+		if (limitMs === this.limitMs) return;
+		this.limitMs = limitMs;
+		// A deadline computed with the previous window is recomputed on the next selection
+		this.account = null;
 	}
 
 	private get storePath() {
@@ -44,7 +60,7 @@ export class OfflineAccessModule extends LogModule {
 			// Missing or malformed evidence never creates a lease.
 		}
 		if (this.record && this.record.verifiedAt !== null) {
-			this.monotonicDeadline = performance.now() + Math.max(0, OFFLINE_ACCESS_MS - (Date.now() - this.record.verifiedAt));
+			this.monotonicDeadline = performance.now() + Math.max(0, this.limitMs - (Date.now() - this.record.verifiedAt));
 		}
 	}
 
@@ -66,7 +82,7 @@ export class OfflineAccessModule extends LogModule {
 			return "offline-expired";
 		}
 		this.observedTime = now;
-		if (now - this.record.verifiedAt >= OFFLINE_ACCESS_MS || (this.monotonicDeadline !== null && performance.now() >= this.monotonicDeadline)) {
+		if (now - this.record.verifiedAt >= this.limitMs || (this.monotonicDeadline !== null && performance.now() >= this.monotonicDeadline)) {
 			this.record.verifiedAt = null;
 			try {
 				this.persist();
@@ -80,7 +96,7 @@ export class OfflineAccessModule extends LogModule {
 
 	public get remainingMs() {
 		if (this.block || !this.record?.verifiedAt) return 0;
-		return Math.max(0, Math.min(this.record.verifiedAt + OFFLINE_ACCESS_MS - Date.now(), (this.monotonicDeadline ?? Infinity) - performance.now()));
+		return Math.max(0, Math.min(this.record.verifiedAt + this.limitMs - Date.now(), (this.monotonicDeadline ?? Infinity) - performance.now()));
 	}
 
 	/** Persist clock observations across restarts, without changing the verification time. */
@@ -99,7 +115,7 @@ export class OfflineAccessModule extends LogModule {
 	public verified() {
 		if (this.record?.rejected) throw new Error(appMessage("vaultAuthenticationRequired"));
 		this.replace(Date.now(), false);
-		this.monotonicDeadline = performance.now() + OFFLINE_ACCESS_MS;
+		this.monotonicDeadline = performance.now() + this.limitMs;
 	}
 
 	public reject() {

@@ -17,6 +17,13 @@ import { SshKeyModule } from "./ssh.key.module";
 import loginFixture from "./fixtures/login-passkey.json";
 import { appMessage } from "@shared/i18n/message";
 import type { I18nModule } from "../i18n/i18n.module";
+import type { ConfigModule } from "../config/config.module";
+import { defaultAppConfig, offlineAccessMs } from "@shared/config/app.config";
+
+/** Configuration with the given offline access window (default 24 hours) */
+function configWith(offlineAccessMinutes = defaultAppConfig.security.offlineAccessMinutes) {
+	return { getConfig: async () => ({ ...defaultAppConfig, security: { ...defaultAppConfig.security, offlineAccessMinutes } }) } as unknown as ConfigModule;
+}
 
 /** Native dialog texts: their key is enough here */
 const i18n = { t: async (key: string) => key } as unknown as I18nModule;
@@ -49,6 +56,7 @@ vi.mock("../security/clipboard.module", () => ({ ClipboardModule: class {} }));
 vi.mock("../ipc.module", () => ({ IpcModule: class {} }));
 vi.mock("../security/certificate.module", () => ({ CertificateModule: class {} }));
 vi.mock("../context/main.context.module", () => ({ MainContextModule: class {} }));
+vi.mock("../config/config.module", () => ({ ConfigModule: class {} }));
 
 const PASSWORD = "pw";
 const SERVER = "https://vault.example";
@@ -355,7 +363,7 @@ async function setup(seed?: (serve: FakeBwServe) => void): Promise<Harness> {
 	const ipc = { sendToMainWindow: vi.fn() };
 	const sshKeys = new SshKeyModule(i18n);
 	const folder = fs.mkdtempSync(path.join(os.tmpdir(), "elyvault-access-test-"));
-	const access = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
+	const access = new OfflineAccessModule({ appFolder: folder } as MainContextModule, configWith());
 	const module = new VaultModule(
 		{} as unknown as BwCliModule,
 		serve as unknown as BwServeModule,
@@ -602,7 +610,7 @@ describe("persisted offline access evidence", () => {
 		access.select(status);
 		access.verified();
 		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS - 1);
-		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
+		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule, configWith());
 		restarted.select(status);
 		expect(restarted.block).toBeUndefined();
 		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
@@ -618,7 +626,7 @@ describe("persisted offline access evidence", () => {
 		access.select(status);
 		access.verified();
 		access.reject();
-		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
+		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule, configWith());
 		restarted.select(status);
 		expect(restarted.block).toBe("authentication-required");
 		expect(() => restarted.verified()).toThrow();
@@ -637,7 +645,7 @@ describe("persisted offline access evidence", () => {
 		vi.setSystemTime(BASE_TIME + 120_000);
 		access.observe();
 		vi.setSystemTime(BASE_TIME + 60_000);
-		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
+		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule, configWith());
 		restarted.select(status);
 		expect(restarted.block).toBe("offline-expired");
 		vi.setSystemTime(BASE_TIME + 180_000);
@@ -662,9 +670,50 @@ describe("persisted offline access evidence", () => {
 		const file = path.join(folder, "offline-access.json");
 		const record = JSON.parse(fs.readFileSync(file, "utf8"));
 		fs.writeFileSync(file, JSON.stringify({ ...record, verifiedAt: BASE_TIME + 60_000, observedAt: BASE_TIME + 60_000 }));
-		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule);
+		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule, configWith());
 		restarted.select(status);
 		expect(restarted.block).toBe("offline-expired");
+	});
+
+	it("applies a shorter configured window, including to existing evidence", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { access, folder } = await setup();
+		access.select(status);
+		access.verified();
+		const restarted = new OfflineAccessModule({ appFolder: folder } as MainContextModule, configWith(1));
+		await restarted.loadLimit();
+		restarted.select(status);
+		vi.setSystemTime(BASE_TIME + 59_999);
+		expect(restarted.block).toBeUndefined();
+		vi.setSystemTime(BASE_TIME + 60_000);
+		expect(restarted.block).toBe("offline-expired");
+	});
+
+	it("never extends the window beyond 24 hours", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(BASE_TIME);
+		const { folder } = await setup();
+		const access = new OfflineAccessModule({ appFolder: folder } as MainContextModule, configWith(7 * 24 * 60));
+		await access.loadLimit();
+		access.select(status);
+		access.verified();
+		vi.setSystemTime(BASE_TIME + OFFLINE_ACCESS_MS);
+		expect(access.block).toBe("offline-expired");
+	});
+
+	it.each([
+		[1, 60_000],
+		[90, 90 * 60_000],
+		[1440, OFFLINE_ACCESS_MS],
+		[100_000, OFFLINE_ACCESS_MS],
+		[0, 60_000],
+		[-5, 60_000],
+		[Number.NaN, OFFLINE_ACCESS_MS],
+		["60", OFFLINE_ACCESS_MS],
+		[undefined, OFFLINE_ACCESS_MS],
+	])("caps the configured window: %s minutes", (minutes, expected) => {
+		expect(offlineAccessMs(minutes)).toBe(expected);
 	});
 
 	it("fails closed when verification evidence cannot be written", async () => {

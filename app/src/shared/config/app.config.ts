@@ -13,6 +13,11 @@ export type AppConfig = {
 		clipboardClearSeconds: number | null;
 		/** Locks the vault when the session is locked or the computer goes to sleep */
 		lockOnSystemLock: boolean;
+		/**
+		 * Minutes the cached vault stays usable without a successful online sync. Only set in the configuration file;
+		 * values above 24 hours (1440) are lowered to 24 hours, values below 1 minute raised to 1 minute.
+		 */
+		offlineAccessMinutes: number;
 	};
 	display: {
 		/** Fetches website icons through the server's icon service */
@@ -60,6 +65,7 @@ export const defaultAppConfig: AppConfig = {
 		autoLockMinutes: 15,
 		clipboardClearSeconds: 30,
 		lockOnSystemLock: true,
+		offlineAccessMinutes: 24 * 60,
 	},
 	display: {
 		showFavicons: true,
@@ -83,6 +89,13 @@ export const defaultAppConfig: AppConfig = {
 		bounds: null,
 	},
 };
+
+/** Offline access window in milliseconds: never longer than 24 hours, whatever the configuration says */
+export function offlineAccessMs(minutes: unknown): number {
+	const max = defaultAppConfig.security.offlineAccessMinutes;
+	const value = typeof minutes === "number" && Number.isFinite(minutes) ? Math.min(max, Math.max(1, minutes)) : max;
+	return value * 60_000;
+}
 
 export const panelWidthLimits = {
 	sidebar: { min: 200, max: 440 },
