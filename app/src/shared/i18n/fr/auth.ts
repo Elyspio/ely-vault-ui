@@ -60,6 +60,11 @@ export const auth: Translation<typeof en> = {
 		pending: "Déchiffrement…",
 		withHello: "Déverrouiller avec Windows Hello",
 		logout: "Se déconnecter ou changer de compte",
+		access: {
+			offlineExpired:
+				"Sans connexion au serveur du coffre, le coffre peut être déverrouillé pendant {{duration}} après la dernière synchronisation réussie (Paramètres → Sécurité → Accès hors ligne). Connectez-vous au serveur, puis déverrouillez pour vérifier votre accès.",
+			authenticationRequired: "Le serveur a refusé votre authentification : le coffre ne peut pas être ouvert avant une reconnexion en ligne.",
+		},
 	},
 	hello: {
 		title: "Déverrouiller avec Windows Hello ?",

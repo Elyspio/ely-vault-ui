@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { alpha, Alert, Avatar, Button, CircularProgress, Link, Stack } from "@mui/material";
+import { alpha, Alert, Avatar, Button, CircularProgress, Link, Stack, Tooltip, Typography } from "@mui/material";
 import LockOpenRounded from "@mui/icons-material/LockOpenRounded";
 import FingerprintRounded from "@mui/icons-material/FingerprintRounded";
+import CloudOffRounded from "@mui/icons-material/CloudOffRounded";
+import { offlineAccessMs } from "@shared/config/app.config";
 import { useAppDispatch, useAppSelector } from "@store";
 import { helloUnlock, logout, unlock } from "@modules/session/session.async.actions";
 import { webContainer } from "@core/di/web.container";
@@ -16,8 +18,11 @@ export function UnlockScreen() {
 	const { t: message } = useTranslation("messages");
 	const { pending, error } = useAppSelector((state) => state.session);
 	const account = useAppSelector((state) => state.session.current);
+	const offlineAccessMinutes = useAppSelector((state) => offlineAccessMs(state.config.current.security.offlineAccessMinutes) / 60_000);
 	const [password, setPassword] = useState("");
 	const [helloEnabled, setHelloEnabled] = useState(false);
+	const { t: settings } = useTranslation("settings");
+	const durationText = (minutes: number) => (minutes % 60 === 0 ? settings("durations.hours", { count: minutes / 60 }) : settings("durations.minutes", { count: minutes }));
 
 	// Windows Hello opens right away when the window has the focus (not after an auto-lock while away)
 	useEffect(() => {
@@ -37,6 +42,9 @@ export function UnlockScreen() {
 	}, [dispatch]);
 
 	const host = account?.serverUrl ? new URL(account.serverUrl).host : "";
+	const accessKey = account?.accessBlock === "authentication-required" ? "vaultAuthenticationRequired" : "vaultOfflineExpired";
+	// The reason is already shown by the access hint
+	const shownError = account?.accessBlock && error === message(accessKey) ? null : error;
 
 	return (
 		<AuthLayout
@@ -77,15 +85,28 @@ export function UnlockScreen() {
 				}}
 			>
 				<Stack spacing={2}>
-					{account?.accessBlock && !error && (
-						<Alert severity="warning" variant="outlined">
-							{message(account.accessBlock === "authentication-required" ? "vaultAuthenticationRequired" : "vaultOfflineExpired")}
-						</Alert>
+					{account?.accessBlock && (
+						<Tooltip
+							title={
+								account.accessBlock === "authentication-required"
+									? t("unlock.access.authenticationRequired")
+									: t("unlock.access.offlineExpired", { duration: durationText(offlineAccessMinutes) })
+							}
+						>
+							<Typography
+								variant="body2"
+								tabIndex={0}
+								sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, color: "warning.main", cursor: "help" }}
+							>
+								<CloudOffRounded fontSize="small" />
+								{message(accessKey)}
+							</Typography>
+						</Tooltip>
 					)}
 					<PasswordField autoFocus label={t("unlock.masterPasswordLabel")} value={password} onChange={(event) => setPassword(event.target.value)} />
-					{error && (
+					{shownError && (
 						<Alert severity="error" variant="outlined">
-							{error}
+							{shownError}
 						</Alert>
 					)}
 					<Button
