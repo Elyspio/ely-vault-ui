@@ -85,6 +85,8 @@ const sections: { key: SectionKey; icon: ReactNode }[] = [
 	{ key: "account", icon: <PersonRounded /> },
 ];
 
+const lockedSections: SectionKey[] = ["display", "updates"];
+
 export function SettingsDialog() {
 	const { t } = useTranslation(["settings", "common"]);
 	const dispatch = useAppDispatch();
@@ -96,14 +98,18 @@ export function SettingsDialog() {
 	const [confirmLogout, setConfirmLogout] = useState(false);
 	const autoType = useAutoTypeAvailability();
 	const pendingUpdate = useAppSelector(selectPendingUpdate);
-	const [active, setActive] = useState<SectionKey>("security");
+	const unlocked = account?.status === "unlocked";
+	// Locked or logged out: only the settings that do not weaken the vault protection
+	const visibleSections = unlocked ? sections : sections.filter((s) => lockedSections.includes(s.key));
+	const [selected, setActive] = useState<SectionKey>("security");
+	const active = visibleSections.some((s) => s.key === selected) ? selected : visibleSections[0].key;
 
 	// On opening (state adjusted during render): an update waiting for the user (titlebar badge) opens its section
 	const [wasOpen, setWasOpen] = useState(open);
 	if (wasOpen !== open) {
 		setWasOpen(open);
 		setConfirmLogout(false);
-		if (open) setActive(pendingUpdate ? "updates" : "security");
+		if (open) setActive(pendingUpdate ? "updates" : unlocked ? "security" : "display");
 	}
 
 	const close = () => dispatch(setSettingsOpen(false));
@@ -132,7 +138,7 @@ export function SettingsDialog() {
 					}}
 				>
 					<Typography sx={{ px: 1.25, pb: 1.5, fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>{t("dialog.title")}</Typography>
-					{sections.map((s) => (
+					{visibleSections.map((s) => (
 						<SidebarItem
 							key={s.key}
 							label={t(`sections.${s.key}.label`)}

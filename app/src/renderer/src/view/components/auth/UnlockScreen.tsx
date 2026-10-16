@@ -12,6 +12,14 @@ import { SessionService } from "@services/session.service";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "@components/shared/PasswordField";
 
+/** Windows Hello opens by itself only on the first unlock screen after startup, not after a lock */
+let startupHello = true;
+
+/** Called once the vault is open: the unlock screens after a lock wait for the user */
+export function endStartupHello() {
+	startupHello = false;
+}
+
 export function UnlockScreen() {
 	const dispatch = useAppDispatch();
 	const { t } = useTranslation("auth");
@@ -24,7 +32,7 @@ export function UnlockScreen() {
 	const { t: settings } = useTranslation("settings");
 	const durationText = (minutes: number) => (minutes % 60 === 0 ? settings("durations.hours", { count: minutes / 60 }) : settings("durations.minutes", { count: minutes }));
 
-	// Windows Hello opens right away when the window has the focus (not after an auto-lock while away)
+	// At startup, Windows Hello opens right away when the window has the focus
 	useEffect(() => {
 		let active = true;
 		void webContainer
@@ -33,7 +41,7 @@ export function UnlockScreen() {
 			.then(({ enabled }) => {
 				if (!active) return;
 				setHelloEnabled(enabled);
-				if (enabled && document.hasFocus()) void dispatch(helloUnlock());
+				if (enabled && startupHello && document.hasFocus()) void dispatch(helloUnlock());
 			})
 			.catch(() => undefined);
 		return () => {

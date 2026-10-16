@@ -10,6 +10,7 @@ import { Toaster } from "@components/shared/Toaster";
 import { LoginScreen } from "@components/auth/LoginScreen";
 import { UnlockScreen } from "@components/auth/UnlockScreen";
 import { VaultScreen } from "@components/vault/VaultScreen";
+import { SettingsDialog } from "@components/settings/SettingsDialog";
 import { RepromptProvider } from "@hooks/useVaultActions";
 
 export function App() {
@@ -53,6 +54,7 @@ export function App() {
 							</Box>
 						</Box>
 					</Box>
+					<SettingsDialog />
 					<Toaster />
 				</RepromptProvider>
 			</ThemeProvider>
