@@ -11,7 +11,8 @@ win:
     executableName: ElyVault
 nsis:
     artifactName: ${name}-${version}-setup.${ext}
-    shortcutName: ${productName}
+    # Start menu search matches word prefixes: "Vault" (and the extra "Coexya Vault" shortcut, build/installer.nsh)
+    shortcutName: Vault
     uninstallDisplayName: ${productName}
 linux:
     target:
